@@ -1,0 +1,238 @@
+NOTE on acronyms:
+KLR - Kernel learning rate
+MLR - Multi-layer perceptron learning rate
+BS - batch size
+S= - stride = 
+
+MODEL 1
+128x128x3 → 124x124x15 → 120x120x75 → 4x4x75 sum pooling → 1200 → 512 → 47 
+            5x5 kernels  5x5 kernels
+11 mins for 1000 training examples (256x256 images)
+56 seconds for 100 training examples (128x128 single thread)
+43 seconds for 100 training examples (128x128 no alpha mutli thread)
+7 mins 35 seconds for 1000 training examples (128x128 no alpha mutli thread)
+12% accuracy after 43,000 training examples
+15% accuracy after 53,000 training examples
+21% after 62,000
+Still around 21% at 82,000
+25% after 117,000
+Still has similar accuracy on training data and so overfitting has not occurred
+25% after 162,000 (11 epochs)
+0.0001f, 0.01f is good
+Batch size 10 was used
+
+MODEL 2
+242x234x3 -> 118x118x30 -> 58x58x90 -> 28x28x180 -> 4x4x180 max pooling -> 2880 -> 1440 -> 47
+        30 7x7 s=2    90 3x3 s=2   180 3x3 s=2       
+Batch size of 64
+times for 256 training examples (includes the initial save):
+images threads, cnn threads, batch size
+1,1,64: 1:30 missed 4
+1,4,64: 1:12 missed 10
+4,4,64: 0:57 missed 6
+8,4,64: 0:49 missed 14
+4,8,64: 0:55 missed 18
+8,8,64: 0:46 missed 14
+16,8,64: 0:56 missed 16
+16,4,64: 1:10 missed 13
+4,4,128 0:45 missed 4
+2x as quick as before
+16,000 training examples took 1:08:56 and got 5% accuracy with KLR = 10^-4, MLR = 10^-6
+16,640 KLR = 5*10^-4, MLR = 10^-5  6%
+32,640 8%
+45,440 8%
+I think the learning rate is too high - only a few popular classes make up the majority of predictions
+4,480 KLR = 10^-4, MLR = 10^-6 0%
+20,480 2%
+Learning rate is not too high
+36,480 KLR = 5*10^-4, MLR = 5*10^-6 2%
+68,480 9%
+I think the model might be the issue
+
+MODEL 1 (AGAIN)
+Back to the original model (but with max pooling)
+Interesting, the old model seems to have more of a favourite at first
+0 3% KLR = 10-2, MLR = 10^-4
+new old model (i.e. old with max pooling and mult-threading) takes 1:12 for 256 training examples (similar performance)
+16,000 13% (already greater than the previous model)
+32,000 12%
+learning rate too high?
+16,000 KLR = 10^-3, MLR = 10^-5 4%
+27,500 KLR = 2*10^-3, MLR = 2*10^-5 8%
+43,500 8%
+55,660 KLR = 5*10^-3, MLR = 5*10^-5 11%
+71,660 15%
+87,660 17%
+118,100 15%
+
+MODEL 3
+new model + similar plants error function
+230x230x3 → 112x112x30 → 110x110x60 → 54x54x120 → 26x26x120 → 12x12x240 → 2x2x240 → 960 → 960 → 47 
+    30 7x7 s=2      60 5x5    120 3x3 s=2  120 3x3 s=2   240 3x3 s=2   Max Pool
+1:03 for 256 images (missed 8) with 2nd kernel as 3x3
+1:16 with a 5x5 in second layer
+Kernel values are around 10^-1 and kernel grad was 10^-2
+Weights are around 10^-2 and weights grad was around 10^-1 
+BS=64 5*10^-4,5*10^-6
+2,560 5%
+16,000 5%
+32,000 7%
+42,550 10%
+80,950 10%
+
+REAL CONVOLUTIONS (MODEL 1)
+Changed how convolutions work. Different channels can now interact - see notes
+Also now has padding
+Takes 1 second for a forwards pass
+Takes 3 seconds for a backwards pass
+6:41 for 256 images (missed 14)
+6x slower
+KLR = 10^-4
+MLR = 2*10^-5
+As much as I want an apples to apples comparison, 6hrs for 1 epoch isn't worth it
+
+MODEL 4 (little model with real convolutions)
+128x128x3
+64x64x30 (3x3x30 conv stride 2)
+32x32x60 (3x3x60 conv stride 2)
+16x16x120 (3x3x120 conv stride 2)
+4x4x120 (max pool)
+1920 FC
+1920 FC
+47 FC
+KLR = 5*10^-4, MLR = 10^-5
+1:07 for 256 images (missed 8)
+16,000
+1 hr(s) 40 min(s) 19 sec(s)
+1.0% Semi-decent variety
+Learning rate too low or too high?
+KLR = 10^-5, MLR = 10^-6
+Took: 1 hr(s) 57 min(s) 48 sec(s)
+2.0% semi-decent varriety
+
+Debug:
+Methods:
+convolution - Works without padding, padding had a bug (not all the original values were copied (didn't add ykernelRadius)) - not sure how much of an effect it had
+maxPool - Haven't 100% checked the output but, upon small inspection and logical check, seems to work
+parseImg - works (proof by compressionTest)
+poolingConvBackwards ------\
+finalPoolingConvBackwards -- The logic on the convolution bounds for padding were wrong. This would majorly stop learning as for a stride of 2, the kernel could be accidentally be learning on the pixels it didn't affect
+convBackwards -------------/
+mlpBackwards - Read through checked
+backwards - Think this works
+forwards - Think this works
+reset - Read through checked
+CNN - Read through checked
+
+Check LR:
+Aiming for each 64 training examples to produce a gradient that could scale up to the magnitude of the current value every 500 batches
+LR*maxValue*500 = initValue
+LR = initValue/(maxValue*500)
+Max kernel gradient was 20 so assume 50
+KLR = 2*10^-5 
+Biggest weight gradient is around 200 so assume 500
+MLR = 4*10^-8, will use 10^-7
+
+0 2% Bias to parlor palm
+16,000 5%,3%,4%,0% Varied outputs
+KLR = 10^-4, MLR = 5*10^-7 
+32,000 4%,3%,4%
+
+No padding 
+142x142x3
+70x70x30 (3x3x30 conv stride 2)
+34x34x60 (3x3x60 conv stride 2)
+16x16x120 (3x3x120 conv stride 2)
+4x4x120 (max pool)
+1920 FC
+1920 FC
+47 FC
+KLR = 10^-4, MLR = 5*10^-7 
+0 3%,3%
+16,000 4%,4%,3%
+KLR = 10^-3,MLR = 10^-5
+32,000 2%,3%,5%,2%
+
+Fixed the biases
+KLR = 10^-3
+MLR = 10^-5
+0 3% Prayer Plant Heavy Bias
+16,000 1%
+
+try a really small model e.g. 4x4->3x3 and check it does what you think
+after doing this, I discovered that the bias has a very large impact
+therefore, correcting the (not) summation of the bias derivatives bug may fix the model
+Turned off biases and padding
+0 3%
+14,080 6%,7%,2%,3%,4%,5%,6%,6%,5%
+This might actually be real accuracy
+I've turned off the biases, padding and similar plants
+Keep training - If it gets better, keep going, else lower LRs
+30,080 5%,4%,4%,8%,7%,7%,6%
+ChatGPT can't find anything and so maybe it is the learning rate
+I also compared it to the working code and everything looks pretty similar
+LR is too high?
+KLR = 2*10^-4
+MLR = 5*10^-6
+0 1%
+16,000 3%,2%
+
+KLR = 10^-3
+MLR = 10^-5 
+is good
+I'll turn back on biases and padding and see if I can get good accuracy
+Similarity is still turned off
+Also added 5x5 convolutions as these did well originally and make logical sense for plants
+128x128x3
+64x64x30 (5x5x30 conv stride 2)
+32x32x60 (3x3x60 conv stride 2)
+16x16x120 (3x3x120 conv stride 2)
+4x4x120 (max pool)
+1920 FC
+960 FC
+47 FC
+
+256 6%,3%,0%
+16,000 9%,6%,5%,3%,10%,6%,1%,4%,10% mean = 6%
+Major Lilium bias (but does always get lilium correct)
+32,000 1%,6%,8%,8%,6%,10%,9%,7%,5% mean = 6.7%
+Still gets (almost) every Lilium correct but also tries others namely, ZZ plant
+48,000 4%,6%,2%,6%,4%,7%,3%,4%,5% mean = 4.6%
+KLR = 10^-2,MLR = 10^-4
+64,000 6%,5%,6%,5%,6%,3%
+Training seems unstable
+Methods to fix:
+LR too high - current configuration not tested on a lower LR
+Too many negatives - a negative output will produce a small gradient due to leakyRelu.
+Therefore, negative weights could get stuck. Especially biases as outputs can be close to 0
+and so adding a negative bias every time will stop learning
+Add softmax and derivative - stops crazy large errors and makes it a bit more properer
+
+MODEL 5
+Added:
+He Initialisation
+Input normalisation
+Softmax with cross entropy loss
+New image loading library 
+
+256 training examples - 1min 42secs
+LR is now for both MLP and Convolutional layers
+LR = 10^-4
+0: 0%,0%,0%,1%,1%,0%
+6,400: 10%,12%,13%,12%,8%,11%,13% mean: 11.3%
+12,800: 14%,18%,12%,17%,17%,8%,13%,10% mean: 13.6%
+19,200: 19%,15%,8%,11%,8%,14%,11%,13%,15%,17% mean: 13.1%
+LR = 10^-5
+6,400: 6%,3%,4%,1%,1%,4%,3%,9% mean: 3.9%
+19,200: 11%,5%,4%,4%,3%,3%,3%,6% mean: 4.9%
+35,200: 7.4% (1000 testing examples)
+LR = 4*10^-5
+51,200: 10.7%
+67,700: 14.4%
+83,700: 16.2%
+99,700: 16.8%
+128,500: 20.8%
+156,020: 21.8%
+184,180: 21.3% Training accuracy: 36%
+
+MODEL 6 (C++)
