@@ -14,8 +14,4 @@ extern const std::string ANSI_GREEN;
 
 class InputMismatchException:public exception;
 
-typedef std::vector<std::vector<float>> d2;
-typedef std::vector<std::vector<std::vector<float>>> d3;
-typedef std::vector<std::vector<std::vector<std::vector<float>>>> d4;
-typedef std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> d5;
 #endif
