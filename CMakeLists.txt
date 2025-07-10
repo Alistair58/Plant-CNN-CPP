@@ -25,7 +25,8 @@ target_link_libraries(plantcnn
         )
 
 target_include_directories(plantcnn PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR/src}
+        ${CMAKE_CURRENT_LIST_DIR/lib}
 )
 
 

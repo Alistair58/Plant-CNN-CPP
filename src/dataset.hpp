@@ -1,12 +1,15 @@
 #ifndef DATASET_HPP
 #define DATASET_HPP
 
-#include<iostream>
-#include<string>
-#include<vector>
-#include<unordered_map>
-#include<filesystem>
-#include"plantimage.hpp"
+#include <iostream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <filesystem>
+#include "plantimage.hpp"
+#include <cstdlib>
+#include <nlohmann/json.hpp>
+#include "globals.hpp"
 namespace fs = std::filesystem;
 
 
@@ -24,8 +27,8 @@ class Dataset {
         std::unordered_map<std::string,int> plantToIndex;
 
         Dataset(std::string dirPathInp);
-        float *getPixelMeans();
-        float *getPixelStdDevs();
+        float getPixelMeans();
+        float getPixelStdDevs();
         PlantImage *randomImage(bool test);
 
 

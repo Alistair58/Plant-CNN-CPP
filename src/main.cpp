@@ -1,12 +1,14 @@
-#include<string>
-#include<filesystem>
-#include<iostream>
-#include<chrono>
-#include"cnn.hpp"
-#include"cnnutils.hpp"
-#include"dataset.hpp"
-#include"plantimage.hpp"
+#include <string>
+#include <filesystem>
+#include <iostream>
+#include <chrono>
+#include "cnn.hpp"
+#include "cnnutils.hpp"
+#include "dataset.hpp"
+#include "plantimage.hpp"
 #include "globals.hpp"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 static float LR = 0.00004f;
 std::filesystem::path currDir = std::filesystem::current_path();
@@ -14,7 +16,12 @@ std::string datasetDirPath = "C:/Users/Alistair/Pictures/house_plant_species";
 const std::string ANSI_RED = "\u001B[31m";
 const std::string ANSI_RESET = "\u001B[0m";
 const std::string ANSI_GREEN = "\u001B[32m";
+int missedCount = 0;
 
+//TODO
+//Change the matrix implementation to be continguous in memory
+//Probably should call it tensor
+//And look at ChatGPT example
 
 int main(int argc,char **argv){
     Dataset *d = new Dataset(datasetDirPath);
@@ -70,10 +77,10 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
 
 
 static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, int numCnnThreads) { //batch size must be a multiple of numThreads
-    CNN* cnns[numCnnThreads];
-    std::thread cnnThreads[numCnnThreads];
-    std::thread imageThreads[numImageThreads];
-    PlantImage* plantImages[batchSize];
+    std::vector<CNN*> cnns(numCnnThreads);
+    std::vector<std::thread> cnnThreads(numCnnThreads);
+    std::vector<std::thread> imageThreads(numImageThreads);
+    std::vector<PlantImage*> plantImages(batchSize);
     for(int iT=0;iT<numImageThreads;iT++){
         imageThreads[iT] = std::thread(
             [](int threadId){
@@ -88,64 +95,54 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
         if(cT>0){
             cnns[cT] = new CNN(n,LR,d);
         }
-        final int cnnThreadId = cT; //has to be final
-        Thread cnnThread = new Thread(new Runnable(){
-            public int threadId = cnnThreadId;
-            @Override
-            public void run(){
+        cnnThreads[cT]= std::thread(
+            [](int threadId){
                 for (int i=threadId;i<batchSize;i+=numCnnThreads) {
-                    long startTime = System.currentTimeMillis();
-                    while(null == plantImages[i] && System.currentTimeMillis()-5000<startTime){
+                    long startTime = getCurrTime();
+                    while(nullptr == plantImages[i] && getCurrTime()-5000<startTime){
                         //Give up if we can't get the image in 5 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
-                        try {
-                            Thread.sleep(10);
-                        } catch (InterruptedException e) {
-                        }
+                        usleep(10);
                     }
-                    if(null != plantImages[i] && !"".equals(plantImages[i].label)) cnns[threadId].backwards(plantImages[i].data,plantImages[i].label);
+                    if(nullptr != plantImages[i] && plantImages[i]->label.length()>0) cnns[threadId].backwards(plantImages[i]->data,plantImages[i]->label);
                     else missedCount++;
                     //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
                 }
-            }
-        });
-        cnnThreads[cT] = cnnThread;
-        cnnThread.start();
+            },cT
+        );
     }
-    for(int t=0;t<Math.max(numCnnThreads,numImageThreads);t++){
-        try { 
-            auto future = std::async(std::launch::async, &std::thread::join, &imageThreads[t]);
-            if (future.wait_for(std::chrono::seconds(10)) //10s max wait
-                == std::future_status::timeout) {
-                    std::terminate()
-            }
-            if(t<numImageThreads) .join(10000); 
-            if(t<numCnnThreads) cnnThreads[t].join(10000);
-        } catch (InterruptedException e) {
-            System.out.println(e);
+    for(int t=0;t<max(numCnnThreads,numImageThreads);t++){
+        if(t<numImageThreads){
+            join(&imageThreads[t],10);
+            
         }
+        if(t<numCnnThreads){
+            join(&cnnThreads[t],10);
+
     }
     n->applyGradients(cnns);
 }
 
-static void compressionTest(Dataset d,CNN cnn,String fname){
-    PlantImage testing = 
-    (null == fname)? d.randomImage(false) : new PlantImage(fname, "");
-    float[][][] img = cnn.parseImg(testing.data);
-    File outputfile = new File(currDir+"/plantcnn/testing.jpg");
-    BufferedImage bufferedImage = new BufferedImage(cnn.mapDimens[0], cnn.mapDimens[0], BufferedImage.TYPE_INT_RGB);
-    Color colour;
-    for (int i = 0; i < img[0].length; i++) {
-        for (int j = 0; j < img[0][i].length; j++) {
-            colour = new Color(img[0][i][j]/255,img[1][i][j]/255,img[2][i][j]/255); //Color wants floats between 0 and 1
-            bufferedImage.setRGB(j, i,colour.getRGB() );
-
+static void compressionTest(Dataset *d,CNN *cnn,std::string fname){
+    PlantImage *testing = 
+    (nullptr == fname)? d->randomImage(false) : new PlantImage(fname, "");
+    d3 img = cnn->parseImg(testing.data);
+    unsigned char *data = new unsigned char[cnn->mapDimens[0]*cnn->mapDimens[0]*3];
+    for(int y=0;y<height;y++){
+        for(int x=0;x<width;x++){
+            int i = (y*width + x)*3;
+            data[i] = img[0][y][x];
+            data[i+1] = img[1][y][x];
+            data[i+2] = img[2][y][x];
         }
     }
-    try {
-        ImageIO.write(bufferedImage, "jpg", outputfile);
-    } catch (IOException e) {
-        System.out.println(e);
+    if(!stbi_write_jpg(currDir+"/plantcnn/testing.jpg",width,height,3,data,width*height*3)){
+        std::cerr << "Could not save image\n";
     }
-    System.out.println(testing.label+" "+testing.index);
+    else {
+        std::cout << "Saved testing.jpg\n";
+    }
+    std::cout << testing.label+" "+testing.index << std::endl;
+    delete[] data;
 }
+
