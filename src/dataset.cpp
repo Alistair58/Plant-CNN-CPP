@@ -9,7 +9,7 @@ void Dataset::loadPixelStats(){
         statsFile.close();
 
         if(jsonStats.size()!=3) throw InputMismatchException();
-        pixelStats = jsonStats.get<d2>();
+        pixelStats = jsonStats.get<Tensor>();
         if((int)pixelStats[2][0]!=this.size){
             std::cout << 
             (Main.ANSI_RED+"Stats file mismatch warning:\n\tThe dataset has "

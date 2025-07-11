@@ -2,30 +2,31 @@
 
 //----------------------------------------------------
 //IMAGE-RELATED
-d3 CnnUtils::parseImg(d3 img){
+Tensor CnnUtils::parseImg(Tensor img){
     //The produced images may have a slight black border around them
     //Keeping a constant stride doesn't stretch the image 
     //but as it is an integer means that it will create a border
     //e.g. a 258x258 image would be given a stride length of 2 and so would only have 128 pixels in the remaining image
-    int channels = img.size();
-    int imHeight = img[0].size();
-    int imWidth = img[0][0].size();
+    std::vector<int> imgDimens = img.getDimens();
+    int channels = imgDimens[0];
+    int imHeight = imgDimens[1];
+    int imWidth = imgDimens[2];
     //ceil so that we take too large steps and so we take <=mapDimens[0] steps
     //If we floor it, we go out of the mapDimens[0]xmapDimens[0] bounds (as we aren't striding far enough)
     int xStride = (int) std::ceil((float)imWidth/mapDimens[0]); //Reducing size to mapDimens[0] x mapDimens[0] via a Gaussian blur
     int yStride = (int) std::ceil((float)imHeight/mapDimens[0]); 
-    d2 gKernel = gaussianBlurKernel(xStride,yStride);
-    d3 result = newMatrix({channels,imHeight,imWidth});
-    d4 d4Img(channels,d3(1)); //convolution requires a 3d array (image with multiple channels) 
+    Tensor gKernel = gaussianBlurKernel(xStride,yStride);
+    Tensor result = newMatrix({channels,imHeight,imWidth});
+    Tensor TensorImg(channels,Tensor(1)); //convolution requires a 3d array (image with multiple channels) 
     //but we only want to process one channel at a time and so we have to store each channel in a separate 3d array
     for(int l=0;l<channels;l++){
-        d4Img[l][0] = img[l];
-        result[l] = convolution(d4Img[l],{gKernel}, xStride, yStride,mapDimens[0],mapDimens[0],false);
+        TensorImg[l][0] = img[l];
+        result[l] = convolution(TensorImg[l],{gKernel}, xStride, yStride,mapDimens[0],mapDimens[0],false);
     }
     return result;
 }
 
-d3 CnnUtils::normaliseImg(d3 img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
+Tensor CnnUtils::normaliseImg(Tensor img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
     for(int c=0;c<img.size();c++){
         for(int i=0;i<img[c].size();i++){
             for(int j=0;j<img[c][i].size();j++){
@@ -36,8 +37,8 @@ d3 CnnUtils::normaliseImg(d3 img,std::vector<float> pixelMeans,std::vector<float
     return img;
 }
 
-d2 CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd sized
-    d2 kernel(height,std::vector<float>(width));
+Tensor CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd sized
+    Tensor kernel(height,std::vector<float>(width));
     float stdDev = (float)(width+height)/8; //say that items that are half the kernel radius away is the stdDev
     int xCentre = (int)width/2;
     int yCentre = (int)height/2;
@@ -51,7 +52,7 @@ d2 CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd sized
     return kernel;
 }
 
-d2 CnnUtils::maxPool(d2 image,int xStride,int yStride){ 
+Tensor CnnUtils::maxPool(Tensor image,int xStride,int yStride){ 
     int xKernelRadius = (int) floor(xStride/2); //Not actually a radius, actually half the width
     int yKernelRadius = (int) floor(yStride/2); 
     int imHeight = image.size();
@@ -59,7 +60,7 @@ d2 CnnUtils::maxPool(d2 image,int xStride,int yStride){
     float max;
     int resHeight = (int)floor((float)(imHeight)/yStride);
     int resWidth = (int) floor((float)(imWidth)/xStride);
-    d2 result(resHeight,std::vector<float>(resWidth));
+    Tensor result(resHeight,std::vector<float>(resWidth));
     int newY,newX = newY =0;
     for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
         for(int x=xKernelRadius;x<=imWidth-xKernelRadius;x+=xStride){
@@ -81,12 +82,12 @@ d2 CnnUtils::maxPool(d2 image,int xStride,int yStride){
 }
 
 //variable size output
-d2 CnnUtils::convolution(d3 image,d3 kernel,int xStride,int yStride,bool padding){ 
+Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,bool padding){ 
     int xKernelRadius = (int) floor(kernel[0][0].size()/2); //Not actually a radius, actually half the width
     int yKernelRadius = (int) floor(kernel[0].size()/2);
     float sum;
-    d2 result;
-    d3 paddedImage(image.size());
+    Tensor result;
+    Tensor paddedImage(image.size());
     if(padding){
         int paddedHeight = image[0].size()+yKernelRadius*2;
         int paddedWidth = image[0][0].size()+xKernelRadius*2;
@@ -142,10 +143,10 @@ d2 CnnUtils::convolution(d3 image,d3 kernel,int xStride,int yStride,bool padding
 
 
 //fixed size output
-d2 CnnUtils::convolution(d3 image,d3 kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding){ 
+Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding){ 
     //by padding a normal convolution with 0s
-    d2 result = newMatrix({newHeight,newWidth});
-    d2 convResult = convolution(image, kernel, xStride, yStride,padding);
+    Tensor result = newMatrix({newHeight,newWidth});
+    Tensor convResult = convolution(image, kernel, xStride, yStride,padding);
     for(int i=0;i<newHeight;i++){
         for(int j=0;j<newWidth;j++){
             result[i][j] = (i<convResult.size() && j<convResult[i].size())?convResult[i][j]:0;
@@ -219,9 +220,9 @@ void CnnUtils::reset(){
     }
 }
 
-d5 CnnUtils::loadKernels(bool loadNew){
+Tensor CnnUtils::loadKernels(bool loadNew){
     if(loadNew){
-        d5 lKernels = newMatrix({numMaps.size()-1,0,0,0,0});
+        Tensor lKernels = newMatrix({numMaps.size()-1,0,0,0,0});
         for(int l=0;l<lKernels.size();l++){
             if(kernelSizes[l]==0){
                 lKernels[l] = newMatrix({0,0,0,0});
@@ -241,14 +242,14 @@ d5 CnnUtils::loadKernels(bool loadNew){
         nlohmann::json::json jsonKernels;
         kernelsFile >> jsonKernels;
         kernelsFile.close();
-        d5 lKernels = jsonKernels.get<d5>();
+        Tensor lKernels = jsonKernels.get<Tensor>();
         return lKernels;
     }
 }
 
-d3 CnnUtils::loadWeights(bool loadNew){
+Tensor CnnUtils::loadWeights(bool loadNew){
     if(loadNew){
-        d3 lWeights = newMatrix({numNeurons.size()-1,0,0});
+        Tensor lWeights = newMatrix({numNeurons.size()-1,0,0});
         for(int l=0;l<numNeurons.size()-1;l++){
             lWeights[l] = newMatrix({numNeurons[l+1],numNeurons[l]+1});//bias
         }
@@ -259,7 +260,7 @@ d3 CnnUtils::loadWeights(bool loadNew){
         nlohmann::json::json jsonWeights;
         weightsFile >> jsonWeights;
         weightsFile.close();
-        d3 lWeights = jsonWeights.get<d3>();
+        Tensor lWeights = jsonWeights.get<Tensor>();
         return lWeights;
     }
 }

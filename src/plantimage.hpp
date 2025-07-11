@@ -1,7 +1,7 @@
 #ifndef PLANTIMAGE_HPP
 #define PLANTIMAGE_HPP
 
-#include "matrices.hpp"
+#include "tensor.hpp"
 #include "globals.hpp"
 #include <string>
 #include <iostream>
@@ -10,12 +10,12 @@
 
 class PlantImage {
     public:
-        d3 data;
+        Tensor data;
         std::string label = "";
         int index = -1;
 
         PlantImage::PlantImage(std::string fname, std::string plantName);
-        d3 fileToImageArr(std::string fName);
+        Tensor fileToImageArr(std::string fName);
 };
 
 #endif PLANTIMAGE_HPP

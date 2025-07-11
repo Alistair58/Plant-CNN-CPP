@@ -13,8 +13,8 @@ PlantImage::PlantImage(std::string fname, std::string plantName){ //fname can be
     
 }
 
-d3 fileToImageArr(std::string fName){
-    d3 result = newMatrix<d2>({1,1,1});
+Tensor fileToImageArr(std::string fName){
+    Tensor result = newMatrix<Tensor>({1,1,1});
     result[0][0][0] = -1;
     long startTime = getCurrTime();
 
@@ -28,7 +28,7 @@ d3 fileToImageArr(std::string fName){
     //std::cout << "Getting image took "+std::to_string(getCurrTime()-startTime)+"ms" << std::endl;
 
     
-    result = newMatrix<d2>({3,height,width}); //RGB
+    result = newMatrix<Tensor>({3,height,width}); //RGB
     //There is no alpha as most images in this dataset are jpeg which don't have an alpha channel
     int pixel;
     long parsingStart = getCurrTime();

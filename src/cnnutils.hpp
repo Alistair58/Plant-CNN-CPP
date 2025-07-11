@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <limits>
 #include "globals.hpp"
-#include "matrices.hpp"
+#include "tensor.hpp"
 #include "dataset.hpp"
 #include <algorithm>
 #include <random>
@@ -15,13 +15,13 @@
 
 class CnnUtils {
     protected:
-        d5 kernels; //the kernels are stored [layer][currLayerChannel][prevLayerChannel][y][x] 
+        Tensor kernels; //the kernels are stored [layer][currLayerChannel][prevLayerChannel][y][x] 
     //if there is a bias on a cxkxk kernel, it is at index [c-1][k-1][k]
-        d5 kernelsGrad; //This is NOT negative - you must subtract it from the kernels
-        d2 activations;
-        d3 weights;
-        d3 weightsGrad; //Also not negative
-        d4 maps; //Note: the input image is included in "maps" for simplicity
+        Tensor kernelsGrad; //This is NOT negative - you must subtract it from the kernels
+        Tensor activations;
+        Tensor weights;
+        Tensor weightsGrad; //Also not negative
+        Tensor maps; //Note: the input image is included in "maps" for simplicity
         Dataset *d;
         std::vector<float> numNeurons;
         std::vector<float> numMaps; //includes the result of pooling (except final pooling)
@@ -34,21 +34,21 @@ class CnnUtils {
 
         //UTILS
         void reset();
-        d5 loadKernels(bool loadNew);
-        d3 loadWeights(bool loadNew);
+        Tensor loadKernels(bool loadNew);
+        Tensor loadWeights(bool loadNew);
         //For debugging use
         void saveActivations();
 
     public:
         //IMAGE-RELATED
-        d3 parseImg(d3 img);
-        d3 normaliseImg(d3 img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs);
-        d2 gaussianBlurKernel(int width,int height);
-        d2 maxPool(d2 image,int xStride,int yStride);
+        Tensor parseImg(Tensor img);
+        Tensor normaliseImg(Tensor img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs);
+        Tensor gaussianBlurKernel(int width,int height);
+        Tensor maxPool(Tensor image,int xStride,int yStride);
         //variable size output
-        d2 convolution(d3 image,d3 kernel,int xStride,int yStride,bool padding);
+        Tensor convolution(Tensor image,Tensor kernel,int xStride,int yStride,bool padding);
         //fixed size output
-        d2 convolution(d3 image,d3 kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding)
+        Tensor convolution(Tensor image,Tensor kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding)
 
         //MATH UTILS
         std::vector<float> softmax(std::vector<float> inp);

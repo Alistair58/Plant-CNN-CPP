@@ -126,7 +126,7 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
 static void compressionTest(Dataset *d,CNN *cnn,std::string fname){
     PlantImage *testing = 
     (nullptr == fname)? d->randomImage(false) : new PlantImage(fname, "");
-    d3 img = cnn->parseImg(testing.data);
+    Tensor img = cnn->parseImg(testing.data);
     unsigned char *data = new unsigned char[cnn->mapDimens[0]*cnn->mapDimens[0]*3];
     for(int y=0;y<height;y++){
         for(int x=0;x<width;x++){

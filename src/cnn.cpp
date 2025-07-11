@@ -19,7 +19,7 @@ CNN::CNN(float LR,Dataset *dataset,bool restart){
     kernelsGrad = arrayCopy5D(kernels,0);
     weightsGrad = arrayCopy3D(weights,0);
     this->LR = LR;
-    this->activations = newMatrix<d1>({numNeurons.size(),0});
+    this->activations = newMatrix<Tensor>({numNeurons.size(),0});
     for(int l=0;l<numNeurons.size();l++){
         activations[l] = vector<int>(numNeurons[l]);
     }
