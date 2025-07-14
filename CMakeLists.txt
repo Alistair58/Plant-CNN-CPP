@@ -5,13 +5,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(plantcnn CXX)
 
-include(FetchContent)
-FetchContent_Declare(
-  json
-  URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp
-)
-FetchContent_MakeAvailable(json)
-
 add_executable(plantcnn
     main.cpp
     cnn.cpp 

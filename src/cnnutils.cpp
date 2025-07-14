@@ -8,6 +8,9 @@ Tensor CnnUtils::parseImg(Tensor img){
     //but as it is an integer means that it will create a border
     //e.g. a 258x258 image would be given a stride length of 2 and so would only have 128 pixels in the remaining image
     std::vector<int> imgDimens = img.getDimens();
+    if(imgDimens.size()!=3){
+        throw std::invalid_argument("Image must have 3 dimensions for parseImg");
+    }
     int channels = imgDimens[0];
     int imHeight = imgDimens[1];
     int imWidth = imgDimens[2];
@@ -16,21 +19,27 @@ Tensor CnnUtils::parseImg(Tensor img){
     int xStride = (int) std::ceil((float)imWidth/mapDimens[0]); //Reducing size to mapDimens[0] x mapDimens[0] via a Gaussian blur
     int yStride = (int) std::ceil((float)imHeight/mapDimens[0]); 
     Tensor gKernel = gaussianBlurKernel(xStride,yStride);
-    Tensor result = newMatrix({channels,imHeight,imWidth});
-    Tensor TensorImg(channels,Tensor(1)); //convolution requires a 3d array (image with multiple channels) 
+    Tensor gKernel3d = Tensor({1,xStride,yStride});
+    gKernel3d.slice({0}) = gKernel;
+    Tensor result = Tensor({channels,imHeight,imWidth});
+    Tensor img4d = Tensor({3,1,imHeight,imWidth}); //convolution requires a 3d array (image with multiple channels) 
     //but we only want to process one channel at a time and so we have to store each channel in a separate 3d array
     for(int l=0;l<channels;l++){
-        TensorImg[l][0] = img[l];
-        result[l] = convolution(TensorImg[l],{gKernel}, xStride, yStride,mapDimens[0],mapDimens[0],false);
+        img4d.slice({l,0}) = img.slice({l});
+        result.slice({l}) = convolution(img4d.slice({l}),gKernel3d, xStride, yStride,mapDimens[0],mapDimens[0],false);
     }
     return result;
 }
 
 Tensor CnnUtils::normaliseImg(Tensor img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
-    for(int c=0;c<img.size();c++){
-        for(int i=0;i<img[c].size();i++){
-            for(int j=0;j<img[c][i].size();j++){
-                img[c][i][j] = (img[c][i][j]-pixelMeans[c])/pixelStdDevs[c];
+    std::vector<int> imgDimens = img.getDimens();
+    if(imgDimens.size()!=3){
+        throw std::invalid_argument("Image must have 3 dimensions for normaliseImg");
+    }
+    for(int c=0;c<imgDimens[0];c++){
+        for(int i=0;i<imgDimens[1];i++){
+            for(int j=0;j<imgDimens[2];j++){
+                *img[{c,i,j}] = ((*img[{c,i,j}])-pixelMeans[c])/pixelStdDevs[c];
             }
         }
     }
@@ -38,13 +47,13 @@ Tensor CnnUtils::normaliseImg(Tensor img,std::vector<float> pixelMeans,std::vect
 }
 
 Tensor CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd sized
-    Tensor kernel(height,std::vector<float>(width));
+    Tensor kernel({height,width});
     float stdDev = (float)(width+height)/8; //say that items that are half the kernel radius away is the stdDev
     int xCentre = (int)width/2;
     int yCentre = (int)height/2;
     for(int y=0;y<height;y++){
         for(int x=0;x<width;x++){
-            kernel[y][x] = std::min((float) ((float) (1/(2*M_PI*pow(stdDev,2)))
+            (*kernel[{y,x}]) = std::min((float) ((float) (1/(2*M_PI*pow(stdDev,2)))
             *exp(-(pow(x-xCentre,2)+pow(y-yCentre,2))/(2*pow(stdDev,2)))),255.0f);
             //https://en.wikipedia.org/wiki/Gaussian_blur
         }
@@ -55,24 +64,28 @@ Tensor CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd si
 Tensor CnnUtils::maxPool(Tensor image,int xStride,int yStride){ 
     int xKernelRadius = (int) floor(xStride/2); //Not actually a radius, actually half the width
     int yKernelRadius = (int) floor(yStride/2); 
-    int imHeight = image.size();
-    int imWidth = image[0].size();
+    std::vector<int> imgDimens = image.getDimens();
+    if(imgDimens.size()!=2){
+        throw std::invalid_argument("Image must have 2 dimensions for maxPool");
+    }
+    int imHeight = imgDimens[0];
+    int imWidth = imgDimens[1];
     float max;
     int resHeight = (int)floor((float)(imHeight)/yStride);
     int resWidth = (int) floor((float)(imWidth)/xStride);
-    Tensor result(resHeight,std::vector<float>(resWidth));
+    Tensor result({resHeight,resWidth});
     int newY,newX = newY =0;
     for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
         for(int x=xKernelRadius;x<=imWidth-xKernelRadius;x+=xStride){
             max = -std::numeric_limits<float>::infinity();
             for(int j=0;j<yStride;j++){
                 for(int i=0;i<xStride;i++){
-                    if(image[y+j-yKernelRadius][x+i-xKernelRadius]>max){
-                        max = image[y+j-yKernelRadius][x+i-xKernelRadius];
+                    if((*image[{(y+j-yKernelRadius),(x+i-xKernelRadius)}])>max){
+                        max = *image[{(y+j-yKernelRadius),(x+i-xKernelRadius)}];
                     }
                 }
             }
-            result[newY][newX] = max;
+            *result[{newY,newX}] = max;
             newX++;
         }
         newX=0;
@@ -83,41 +96,49 @@ Tensor CnnUtils::maxPool(Tensor image,int xStride,int yStride){
 
 //variable size output
 Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,bool padding){ 
-    int xKernelRadius = (int) floor(kernel[0][0].size()/2); //Not actually a radius, actually half the width
-    int yKernelRadius = (int) floor(kernel[0].size()/2);
+    std::vector<int> imgDimens = image.getDimens();
+    std::vector<int> kernelDimens = kernel.getDimens();
+    if(imgDimens.size()!=3){
+        throw std::invalid_argument("Image must have 3 dimensions for convolution");
+    }
+    if(kernelDimens.size()!=3){
+        throw std::invalid_argument("Kernel must have 3 dimensions for convolution");
+    }
+    if(kernelDimens[0]!=imgDimens[0]){
+        throw std::invalid_argument("The image and kernel must have the same number of channels for convolution");
+    }
+    int xKernelRadius = (int) floor(kernelDimens[2]/2); //Not actually a radius, actually half the width
+    int yKernelRadius = (int) floor(kernelDimens[1]/2);
     float sum;
-    Tensor result;
-    Tensor paddedImage(image.size());
+    Tensor paddedImage(imgDimens);
     if(padding){
-        int paddedHeight = image[0].size()+yKernelRadius*2;
-        int paddedWidth = image[0][0].size()+xKernelRadius*2;
-        for(int l=0;l<image.size();l++){ //for each image channel
-            std::vector channel(paddedHeight,std::vector<float>(paddedWidth,0));
-            paddedImage[l] = channel;
-            for(int y=yKernelRadius;y<image[l].size()+yKernelRadius;y++){
-                std::copy(
-                    image[l][y-yKernelRadius].begin(),
-                    image[l][y-yKernelRadius].end(),
-                    paddedImage[l][y].begin()+xKernelRadius
-                );
+        int paddedHeight = imgDimens[1]+yKernelRadius*2;
+        int paddedWidth = imgDimens[2]+xKernelRadius*2;
+        for(int l=0;l<imgDimens[0];l++){ //for each image channel
+            for(int y=yKernelRadius;y<imgDimens[1]+yKernelRadius;y++){
+                for(int x=xKernelRadius;x<imgDimens[2]+xKernelRadius;x++){
+                    *paddedImage[{l,y,x}] = *image[{l,(y-yKernelRadius),(x-xKernelRadius)}];
+                }
             }
         }
     }
     else{
-        paddedImage = image; //The assignment operator performs a deep copy of the vector
+        paddedImage = image; //The assignment operator performs a value by value copy of the data
     }
-    int imHeight = paddedImage[0].size(); //assumption that all channels have same dimensions
-    int imWidth = paddedImage[0][0].size();
-    result = newMatrix({
-        (int)Math.ceil((float)(imHeight-2*yKernelRadius)/yStride),
-        (int)Math.ceil((float)(imWidth-2*xKernelRadius)/xStride)
+    std::vector<int> paddedImgDimens = paddedImage.getDimens();
+    int imHeight = paddedImgDimens[1]; //assumption that all channels have same dimensions
+    int imWidth = paddedImgDimens[2];
+    Tensor result({
+        (int)ceil((float)(imHeight-2*yKernelRadius)/yStride),
+        (int)ceil((float)(imWidth-2*xKernelRadius)/xStride)
     });
-    for(int l=0;l<paddedImage.size();l++){
+    for(int l=0;l<paddedImgDimens[0];l++){
         int newY,newX = newY =0;
         for(int y=yKernelRadius;y<imHeight-yKernelRadius;y+=yStride){
             for(int x=xKernelRadius;x<imWidth-xKernelRadius;x+=xStride){
                 sum = 0;
-                for(int j=0;j<kernel[l].size();j++){
+                for(int j=0;j<kernelDimens[1];j++){
+                    //TODO figure out biases 
                     for(int i=0;i<kernel[l][0].size();i++){ //[l][0] as the last kernel has the bias which we don't want 
                         sum += kernel[l][j][i] *  paddedImage[l][y+j-yKernelRadius][x+i-xKernelRadius];
                     }

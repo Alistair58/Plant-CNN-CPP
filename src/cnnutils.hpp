@@ -11,7 +11,7 @@
 #include "dataset.hpp"
 #include <algorithm>
 #include <random>
-#include <nlohmann/json.hpp>
+#include "json.hpp"
 
 class CnnUtils {
     protected:

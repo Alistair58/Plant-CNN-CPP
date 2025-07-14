@@ -8,7 +8,7 @@
 #include <filesystem>
 #include "plantimage.hpp"
 #include <cstdlib>
-#include <nlohmann/json.hpp>
+#include "json.hpp"
 #include "globals.hpp"
 namespace fs = std::filesystem;
 
@@ -24,7 +24,7 @@ class Dataset {
         void loadPixelStats();
     public:
         std::vector<std::string> plantNames;
-        std::unordered_map<std::string,int> plantToIndex;
+        unordered_map<std::string,int> plantToIndex;
 
         Dataset(std::string dirPathInp);
         float getPixelMeans();

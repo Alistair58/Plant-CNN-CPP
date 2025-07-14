@@ -53,6 +53,12 @@
         "format": "cpp",
         "span": "cpp",
         "variant": "cpp",
-        "cstdarg": "cpp"
+        "cstdarg": "cpp",
+        "ranges": "cpp",
+        "valarray": "cpp",
+        "any": "cpp",
+        "cstring": "cpp",
+        "forward_list": "cpp",
+        "map": "cpp"
     }
 }
