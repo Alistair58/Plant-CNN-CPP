@@ -11,7 +11,7 @@
 #include "stb_image_write.h"
 
 static float LR = 0.00004f;
-std::filesystem::path currDir = std::filesystem::current_path();
+std::string currDir = std::filesystem::current_path().string();
 std::string datasetDirPath = "C:/Users/Alistair/Pictures/house_plant_species";
 const std::string ANSI_RED = "\u001B[31m";
 const std::string ANSI_RESET = "\u001B[0m";

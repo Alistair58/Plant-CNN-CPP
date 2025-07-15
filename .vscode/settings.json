@@ -59,6 +59,13 @@
         "any": "cpp",
         "cstring": "cpp",
         "forward_list": "cpp",
-        "map": "cpp"
+        "map": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp",
+        "condition_variable": "cpp",
+        "fstream": "cpp",
+        "future": "cpp",
+        "mutex": "cpp"
     }
 }

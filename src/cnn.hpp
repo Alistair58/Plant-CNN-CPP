@@ -10,9 +10,9 @@ class CNN : CnnUtils{
         //CONSTRUCTORS 
         //Creating a fresh CNN
         CNN(float LR,Dataset *dataset,bool restart);
-        //Creating a copy from a template CNN
-        CNN(CNN *template,float LR,Dataset *dataset);
-
+        //Creating a copy from an original CNN
+        CNN(CNN *original,float LR,Dataset *dataset);
+    
         //KEY METHODS 
         std::string forwards(Tensor imageInt);
         void backwards(Tensor imageInt,std::string answer);

@@ -28,12 +28,18 @@ Tensor::Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]>
 }
 
 float *Tensor::operator[](const std::vector<int> indices) const{
-    if(indices.size()==dimens.size()){
-        return (data.get()+flattenIndex(indices)+offset);
-    }
-    else{
+    if(indices.size()!=dimens.size()){
         throw std::invalid_argument("The length of \"indices\" must match the number of dimensions in the Tensor");
     }
+    return (*this)[flattenIndex(indices)];
+}
+
+float *Tensor::operator[](int flatIndex) const{
+    int realIndex = flatIndex+offset;
+    if(realIndex>=totalSize){
+        throw std::out_of_range("Index "+std::to_string(realIndex)+" out of bounds for size "+std::to_string(totalSize));
+    }
+    return (data.get()+realIndex);
 }
 
 Tensor Tensor::slice(const std::vector<int> indices) const{

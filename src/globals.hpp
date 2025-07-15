@@ -6,20 +6,27 @@
 #include <vector>
 #include <exception>
 #include <chrono>
+#include <thread>
+#include <future>
 
-extern std::filesystem::path currDir;
+extern std::string currDir;
 extern std::string datasetDirPath;
 extern const std::string ANSI_RED;
 extern const std::string ANSI_RESET;
 extern const std::string ANSI_GREEN;
 
-class InputMismatchException:public exception;
+typedef std::vector<float> d1;
+typedef std::vector<d1> d2; 
+typedef std::vector<d2> d3; 
+typedef std::vector<d3> d4; 
+typedef std::vector<d4> d5; 
+
 
 inline long getCurrTime(){
-    std::chrono::milliseconds time = duration_cast< milliseconds >(
-        system_clock::now().time_since_epoch()
+    std::chrono::milliseconds time = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()
     );
-    return (long) time;
+    return (long) time.count();
 }
 
 inline std::vector<std::string> strSplit(std::string str,std::vector<char> delimiters){
