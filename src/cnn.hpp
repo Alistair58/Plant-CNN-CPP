@@ -5,7 +5,7 @@
 #include "tensor.hpp"
 #include "cnnutils.hpp"
 
-class CNN : CnnUtils{
+class CNN : public CnnUtils{
     public:
         //CONSTRUCTORS 
         //Creating a fresh CNN

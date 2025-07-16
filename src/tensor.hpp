@@ -5,13 +5,14 @@
 #include <string>
 #include <stdexcept>
 #include <memory>
+#include "globals.hpp"
 
 class Tensor{
     std::shared_ptr<float[]> data;
     //A class can't have an object of itself and so it must be a pointer
     Tensor *biases = nullptr;
     int offset; //how far this tensor's data is into the shared_ptr
-    //OFFSET MUST BE USED FOR EVERY INDEX ACCESS
+    //OFFSET MUST BE USED FOR EVERY RAW INDEX ACCESS
     std::vector<int> dimens; //e.g. 5x4x6 {5,4,6}
     std::vector<int> childSizes; //e.g. {24,6,1}
     size_t totalSize;
@@ -34,6 +35,8 @@ class Tensor{
         //Data value assignment by another tensor
         //The values are copied - the memory is not shared
         void operator=(const Tensor &t);
+        template <typename dn>
+        dn toVector() const;
 
         std::shared_ptr<float[]> getData() const { return data; }
         std::vector<int> getDimens() const { return dimens; }
@@ -43,6 +46,10 @@ class Tensor{
 
     private:
         size_t flattenIndex(const std::vector<int> indices) const;
+        template <typename dn>
+        dn buildNestedVector(int depth = 0, int offset = 0) const;
+        template<typename dn>
+        constexpr int nestedVectorDepth();
 };
 
 

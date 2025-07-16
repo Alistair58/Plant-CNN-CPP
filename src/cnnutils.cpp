@@ -225,19 +225,13 @@ float CnnUtils::CnnUtils::normalDistRandom(float mean,float stdDev){
 //UTILS
 
 void CnnUtils::reset(){
-    for(int i=0;i<activations.size();i++){
-        for(int j=0;j<activations[i].size();j++){
-            activations[i][j] = 0;
-        }
+    size_t activationsSize = activations.getTotalSize();
+    for(int i=0;i<activationsSize;i++){
+        *(activations[i]) = 0;
     }
-    for(int l=0;l<numMaps.size();l++){
-        for(int i=0;i<numMaps[l];i++){
-            for(int j=0;j<mapDimens[l];j++){ 
-                for(int k=0;k<mapDimens[l];k++){
-                    maps[l][i][j][k] = 0;
-                }
-            }
-        }
+    size_t mapsSize = maps.getTotalSize();
+    for(int i=0;i<mapsSize;i++){   
+        *(maps[i]) = 0;
     }
 }
 
@@ -258,7 +252,7 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
         return result;
     }
     else{
-        std::ifstream kernelsFile(currDir+"/plantcnn/src/main/resources/kernels.json");
+        std::ifstream kernelsFile(currDir+"/plantcnn/src/main/resources/kernelWeights.json");
         nlohmann::json jsonKernels;
         kernelsFile >> jsonKernels;
         kernelsFile.close();
@@ -314,7 +308,7 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
         return result;
     }
     else{
-        std::ifstream weightsFile(currDir+"/plantcnn/src/main/resources/weights.json");
+        std::ifstream weightsFile(currDir+"/plantcnn/src/main/resources/mlpWeights.json");
         nlohmann::json jsonWeights;
         weightsFile >> jsonWeights;
         weightsFile.close();
@@ -349,82 +343,56 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
 }
        
 void CnnUtils::applyGradients(){ //(and reset gradients)
-    for(int i=0;i<kernels.getTotalSize();i++){
-        float gradVal = *kernelsGrad[i];
-        if(!(floatCmp(gradVal,0.0f))){
-            if(std::isnan(gradVal)){
-                std::cout << "NaN kernel gradient i: "+std::to_string(i) << std::endl;
-                *(kernelsGrad[i]) = 0;
-                continue;
-            }
-            float adjustedGrad = gradVal * LR;
-            if(adjustedGrad>10){
-                std::cout << "Very large kernel gradient: "+std::to_string(adjustedGrad) << std::endl;
-                adjustedGrad = 0;
-            }
-            *kernels[i] -= adjustedGrad; //adjust this CNN's weights (as it will be cloned next batch)
-            *kernelsGrad[i] = 0;
-        }   
-    }
-    for (int i=0;i<weights.getTotalSize();i++) {
-        float gradVal = *weightsGrad[i];
-        if(!(floatCmp(gradVal,0.0f))){
-            if(std::isnan(gradVal)){
-                std::cout << "NaN MLP gradient i:"+std::to_string(i) << std::endl;
-                *(weightsGrad[i]) = 0;
-                continue;
-            }
-            float adjustedGrad = gradVal * LR;
-            if(adjustedGrad>10){
-                std::cout << "Very large weight gradient: "+std::to_string(adjustedGrad) << std::endl;
-                adjustedGrad = 0;
-            }
-            *weights[i] -= adjustedGrad;
-            *weightsGrad[i] = 0;
-        }
-    }
-
-    
+    applyGradient(&kernels,&kernelsGrad);
+    applyGradient(&weights,&weightsGrad);
 }
 
 void CnnUtils::applyGradients(std::vector<CNN*>& cnns){ //(and reset gradients)
     //this cnn must be included in cnns
     for(int n=0;n<cnns.size();n++){
-        for(int i=0;i<kernels.getTotalSize();i++){
-            float gradVal = *(cnns[n]->kernelsGrad[i]);
-            if(!(floatCmp(gradVal,0.0f))){
-                if(std::isnan(gradVal)){
-                    std::cout << "NaN kernel gradient i: "+std::to_string(i) << std::endl;
-                    *(cnns[n]->kernelsGrad[i]) = 0;
-                    continue;
-                }
-                float adjustedGrad = gradVal * LR;
-                if(adjustedGrad>10){
-                    std::cout << "Very large kernel gradient: "+std::to_string(adjustedGrad) << std::endl;
-                    adjustedGrad = 0;
-                }
-                *kernels[i] -= adjustedGrad; //adjust this CNN's weights (as it will be cloned next batch)
-                *(cnns[n]->kernelsGrad[i]) = 0;
-            }   
-        }
-        for (int i=0;i<weights.getTotalSize();i++) {
-            float gradVal = *(cnns[n]->weightsGrad[i]);
-            if(!(floatCmp(gradVal,0.0f))){
-                if(std::isnan(gradVal)){
-                    std::cout << "NaN MLP gradient i:"+std::to_string(i) << std::endl;
-                    *(cnns[n]->weightsGrad[i]) = 0;
-                    continue;
-                }
-                float adjustedGrad = gradVal * LR;
-                if(adjustedGrad>10){
-                    std::cout << "Very large weight gradient: "+std::to_string(adjustedGrad) << std::endl;
-                    adjustedGrad = 0;
-                }
-                *weights[i] -= adjustedGrad;
-                *(cnns[n]->weightsGrad[i]) = 0;
-            }
+        applyGradient(&kernels,&(cnns[n]->kernelsGrad));
+        applyGradient(&weights,&(cnns[n]->weightsGrad));
+    }
+}
+
+void CnnUtils::applyGradient(Tensor *values, Tensor *gradient){ //Main values and biases
+    if(values==nullptr && gradient==nullptr){
+        return; //Occurs if we called it on the biases when we have no biases (e.g. when we are the biases)
+    }
+    if(values==nullptr){
+        throw std::invalid_argument("values cannot be null for applyGradient");
+    }
+    if(gradient==nullptr){
+        throw std::invalid_argument("gradient cannot be null for applyGradient");
+    }
+    std::vector<int> valuesDimens = values->getDimens();
+    std::vector<int> gradientDimens = gradient->getDimens();
+    if(values->getTotalSize()!=gradient->getTotalSize() || valuesDimens.size()!=gradientDimens.size()){
+        throw std::invalid_argument("Tensors must have the dimensions for the gradient to be applied");
+    }
+    for(int i=0;i<valuesDimens.size();i++){
+        if(valuesDimens[i]!=gradientDimens[i]){
+            throw std::invalid_argument("Tensors must have the dimensions for the gradient to be applied");
         }
     }
+    for(int i=0;i<values->getTotalSize();i++){
+        float gradVal = *((*gradient)[i]);
+        if(!(floatCmp(gradVal,0.0f))){
+            if(std::isnan(gradVal)){
+                std::cout << "NaN gradient i: "+std::to_string(i) << std::endl;
+                *((*gradient)[i]) = 0;
+                continue;
+            }
+            float adjustedGrad = gradVal * LR;
+            if(adjustedGrad>10){
+                std::cout << "Very large gradient: "+std::to_string(adjustedGrad) << std::endl;
+                adjustedGrad = 0;
+            }
+            *((*values)[i]) -= adjustedGrad; //adjust this CNN's weights (as it will be cloned next batch)
+            *((*gradient)[i]) = 0;
+        }   
+    }
+    applyGradient(values->getBiases(),gradient->getBiases());
 }
 
 void CnnUtils::resetKernels(){
@@ -476,10 +444,17 @@ void CnnUtils::resetWeights() {
 
 
 void CnnUtils::CnnUtils::saveWeights() {
-    std::ofstream weightsFile(currDir+"/plantcnn/src/main/resources/weights.json");
-    nlohmann::json::json jsonWeights = weights;
+    std::ofstream weightsFile(currDir+"/plantcnn/src/main/resources/mlpWeights.json");
+    d3 weightsVec = weights.toVector<d3>();
+    nlohmann::json jsonWeights = weightsVec;
     weightsFile << jsonWeights.dump();
     weightsFile.close();
+
+    std::ofstream biasesFile(currDir+"/plantcnn/src/main/resources/mlpBiases.json");
+    d2 biasesVec = (weights.getBiases())->toVector<d2>();
+    nlohmann::json jsonBiases = biasesVec;
+    biasesFile << jsonBiases.dump();
+    biasesFile.close()
 }
 
 void CnnUtils::saveKernels() {

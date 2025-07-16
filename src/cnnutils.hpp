@@ -71,6 +71,9 @@ class CnnUtils {
         void saveKernels();
 
         //(GET|SET)TERS;
+    private:
+        //INTERNAL UTILS
+        void applyGradient(Tensor *values, Tensor *gradient)
 };
 
 #endif
