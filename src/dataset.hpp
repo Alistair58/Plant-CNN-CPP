@@ -2,12 +2,14 @@
 #define DATASET_HPP
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <filesystem>
-#include "plantimage.hpp"
 #include <cstdlib>
+#include <regex>
+#include "plantimage.hpp"
 #include "json.hpp"
 #include "globals.hpp"
 namespace fs = std::filesystem;
@@ -19,18 +21,19 @@ class Dataset {
         int size; 
         std::string dirPath;
         std::vector<std::string> fileExtensions; //Includes the dots
-        std::vector<std::vector<float>> pixelStats;
-        
+        d2 pixelStats;
+
         void loadPixelStats();
     public:
         std::vector<std::string> plantNames;
-        unordered_map<std::string,int> plantToIndex;
+        std::unordered_map<std::string,int> plantToIndex;
 
         Dataset(std::string dirPathInp);
-        float getPixelMeans();
-        float getPixelStdDevs();
+        std::vector<float> getPixelMeans();
+        std::vector<float> getPixelStdDevs();
         PlantImage *randomImage(bool test);
-
+        PlantImage randomImageObj(bool test);
+        void compilePixelStats();
 
 };
 

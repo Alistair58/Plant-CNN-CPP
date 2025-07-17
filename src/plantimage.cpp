@@ -14,8 +14,8 @@ PlantImage::PlantImage(std::string fname, std::string plantName){ //fname can be
 }
 
 Tensor fileToImageArr(std::string fName){
-    Tensor result = newMatrix<Tensor>({1,1,1});
-    result[0][0][0] = -1;
+    Tensor result({1,1,1});
+    *(result[0]) = -1;
     long startTime = getCurrTime();
 
     int width,height,channels;
@@ -25,24 +25,30 @@ Tensor fileToImageArr(std::string fName){
         std::cout << "Could not load \""+fName+"\"" << std::endl;
         return result;
     }
-    //std::cout << "Getting image took "+std::to_string(getCurrTime()-startTime)+"ms" << std::endl;
 
+    #if DEBUG
+        std::cout << "Getting image took "+std::to_string(getCurrTime()-startTime)+"ms" << std::endl;
+    #endif
     
-    result = newMatrix<Tensor>({3,height,width}); //RGB
+    result = Tensor({3,height,width}); //RGB
     //There is no alpha as most images in this dataset are jpeg which don't have an alpha channel
     int pixel;
     long parsingStart = getCurrTime();
     for (int y=0;y<height;y++) {
         for (int x=0;x<width;x++) {
             int i = (y*width + x)*channels;
-            result[0][y][x] = img[i]; //R
-            result[1][y][x] = img[i+1];//G
-            result[2][y][x] = img[i+2]; //B
+            *result[{0,y,x}] = img[i]; //R
+            *result[{1,y,x}] = img[i+1];//G
+            *result[{2,y,x}] = img[i+2]; //B
             //A, if present, is the 3rd offset
         }
     }
     stbi_image_free(img);
-    //std::cout << "Parsing image took "+std::to_string(getCurrTime()-parsingStart)+"ms" << std::endl;
+
+    #if DEBUG
+        std::cout << "Parsing image took "+std::to_string(getCurrTime()-parsingStart)+"ms" << std::endl;
+    #endif
+    
     return result;
 
 

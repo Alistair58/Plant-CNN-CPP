@@ -10,12 +10,13 @@
 
 class PlantImage {
     public:
-        Tensor data;
+        Tensor data = Tensor({0});
         std::string label = "";
         int index = -1;
 
-        PlantImage::PlantImage(std::string fname, std::string plantName);
+        PlantImage() {};
+        PlantImage(std::string fname, std::string plantName);
         Tensor fileToImageArr(std::string fName);
 };
 
-#endif PLANTIMAGE_HPP
+#endif

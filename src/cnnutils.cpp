@@ -1,8 +1,9 @@
 #include "cnnutils.hpp"
 
+
 //----------------------------------------------------
 //IMAGE-RELATED
-Tensor CnnUtils::parseImg(Tensor img){
+Tensor CnnUtils::parseImg(Tensor& img){
     //The produced images may have a slight black border around them
     //Keeping a constant stride doesn't stretch the image 
     //but as it is an integer means that it will create a border
@@ -26,12 +27,13 @@ Tensor CnnUtils::parseImg(Tensor img){
     //but we only want to process one channel at a time and so we have to store each channel in a separate 3d array
     for(int l=0;l<channels;l++){
         img4d.slice({l,0}) = img.slice({l});
-        result.slice({l}) = convolution(img4d.slice({l}),gKernel3d, xStride, yStride,mapDimens[0],mapDimens[0],false);
+        Tensor sliced = img4d.slice({l});
+        result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0],mapDimens[0],false);
     }
     return result;
 }
 
-Tensor CnnUtils::normaliseImg(Tensor img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
+Tensor CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
     std::vector<int> imgDimens = img.getDimens();
     if(imgDimens.size()!=3){
         throw std::invalid_argument("Image must have 3 dimensions for normaliseImg");
@@ -61,7 +63,7 @@ Tensor CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd si
     return kernel;
 }
 
-Tensor CnnUtils::maxPool(Tensor image,int xStride,int yStride){ 
+Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){ 
     int xKernelRadius = (int) floor(xStride/2); //Not actually a radius, actually half the width
     int yKernelRadius = (int) floor(yStride/2); 
     std::vector<int> imgDimens = image.getDimens();
@@ -95,7 +97,7 @@ Tensor CnnUtils::maxPool(Tensor image,int xStride,int yStride){
 }
 
 //variable size output
-Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,bool padding){ 
+Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding){ 
     std::vector<int> imgDimens = image.getDimens();
     std::vector<int> kernelDimens = kernel.getDimens();
     if(imgDimens.size()!=3){
@@ -110,10 +112,17 @@ Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,
     int xKernelRadius = (int) floor(kernelDimens[2]/2); //Not actually a radius, actually half the width
     int yKernelRadius = (int) floor(kernelDimens[1]/2);
     float sum;
-    Tensor paddedImage(imgDimens);
+    std::vector<int> paddedImgDimens;
     if(padding){
         int paddedHeight = imgDimens[1]+yKernelRadius*2;
         int paddedWidth = imgDimens[2]+xKernelRadius*2;
+        paddedImgDimens = {imgDimens[0],paddedHeight,paddedWidth};
+    }
+    else{
+        paddedImgDimens = imgDimens;
+    }
+    Tensor paddedImage(paddedImgDimens);
+    if(padding){
         for(int l=0;l<imgDimens[0];l++){ //for each image channel
             for(int y=yKernelRadius;y<imgDimens[1]+yKernelRadius;y++){
                 for(int x=xKernelRadius;x<imgDimens[2]+xKernelRadius;x++){
@@ -125,7 +134,6 @@ Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,
     else{
         paddedImage = image; //The assignment operator performs a value by value copy of the data
     }
-    std::vector<int> paddedImgDimens = paddedImage.getDimens();
     int imHeight = paddedImgDimens[1]; //assumption that all channels have same dimensions
     int imWidth = paddedImgDimens[2];
     Tensor result({
@@ -139,13 +147,17 @@ Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,
                 sum = 0;
                 for(int j=0;j<kernelDimens[1];j++){
                     //TODO figure out biases 
-                    for(int i=0;i<kernel[l][0].size();i++){ //[l][0] as the last kernel has the bias which we don't want 
-                        sum += kernel[l][j][i] *  paddedImage[l][y+j-yKernelRadius][x+i-xKernelRadius];
+                    for(int i=0;i<kernelDimens[2];i++){ 
+                        sum += (*(kernel[{l,j,i}])) *  (*(paddedImage[{l,(y+j-yKernelRadius),(x+i-xKernelRadius)}]));
                     }
                 }
                 //Biases
-                if(kernel[l][kernel[l].size()-1].size()==kernel[l][0].size()+1){//if we have an extra num on the end it will be the bias
-                    sum += kernel[l][kernel[l].size()-1][kernel[l][0].size()]; //this occurs on the last channel
+                Tensor *biases = kernel.getBiases();
+                if(biases->getTotalSize()==1){//for a 3D kernel, there should only 1 bias
+                    sum += *((*biases)[0]); 
+                }
+                else if(biases->getTotalSize()>1){
+                    throw std::invalid_argument("Too many biases for a 3D kernel");
                 }
                 result[newY][newX] += sum; 
                 newX++;
@@ -154,9 +166,10 @@ Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,
             newY++;
         }
     }
-    for(int y=0;y<result.size();y++){
-        for(int x=0;x<result[y].size();x++){
-            result[y][x] = leakyRelu(result[y][x]); //has to be here as otherwise we would relu before we've done all the channels
+    std::vector<int> resultDimens = result.getDimens();
+    for(int y=0;y<resultDimens[0];y++){
+        for(int x=0;x<resultDimens[1];x++){
+            *result[{y,x}] = leakyRelu(*result[{y,x}]); //has to be here as otherwise we would relu before we've done all the channels
         }
     }
     return result;
@@ -164,13 +177,14 @@ Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,
 
 
 //fixed size output
-Tensor CnnUtils::convolution(Tensor image,Tensor kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding){ 
+Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding){ 
     //by padding a normal convolution with 0s
-    Tensor result = newMatrix({newHeight,newWidth});
+    Tensor result({newHeight,newWidth});
     Tensor convResult = convolution(image, kernel, xStride, yStride,padding);
+    std::vector<int> convResultDimens = convResult.getDimens();
     for(int i=0;i<newHeight;i++){
         for(int j=0;j<newWidth;j++){
-            result[i][j] = (i<convResult.size() && j<convResult[i].size())?convResult[i][j]:0;
+            (*result[{i,j}]) = (i<convResultDimens[0] && j<convResultDimens[1])?(*convResult[{i,j}]):0;
         }
     }
     return result;
@@ -185,10 +199,10 @@ std::vector<float> CnnUtils::softmax(std::vector<float> inp){
     float sum = 0.0f;
     for(int i=0;i<inp.size();i++){
         //e^15 is quite big (roughly 2^22)
-        sum += exp(max(min(15,inp[i]),-15)); 
+        sum += exp(std::max(std::min(15.0f,inp[i]),-15.0f)); 
     }
     for(int i=0;i<inp.size();i++){
-        result[i] = (float) (exp(max(min(15,inp[i]),-15))/sum);
+        result[i] = (float) (exp(std::max(std::min(15.0f,inp[i]),-15.0f))/sum);
     }
     return result;
 }
@@ -252,7 +266,7 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
         return result;
     }
     else{
-        std::ifstream kernelsFile(currDir+"/plantcnn/src/main/resources/kernelWeights.json");
+        std::ifstream kernelsFile(currDir+"/res/kernelWeights.json");
         nlohmann::json jsonKernels;
         kernelsFile >> jsonKernels;
         kernelsFile.close();
@@ -275,7 +289,7 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
                 }
             }
         }
-        std::ifstream kernelBiasesFile(currDir+"/plantcnn/src/main/resources/kernelBiases.json");
+        std::ifstream kernelBiasesFile(currDir+"/res/kernelBiases.json");
         nlohmann::json jsonBiases;
         kernelBiasesFile >> jsonBiases;
         kernelBiasesFile.close();
@@ -308,7 +322,7 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
         return result;
     }
     else{
-        std::ifstream weightsFile(currDir+"/plantcnn/src/main/resources/mlpWeights.json");
+        std::ifstream weightsFile(currDir+"/res/mlpWeights.json");
         nlohmann::json jsonWeights;
         weightsFile >> jsonWeights;
         weightsFile.close();
@@ -323,7 +337,7 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
                 }
             }
         }
-        std::ifstream mlpBiasesFile(currDir+"/plantcnn/src/main/resources/mlpBiases.json");
+        std::ifstream mlpBiasesFile(currDir+"/res/mlpBiases.json");
         nlohmann::json jsonBiases;
         mlpBiasesFile >> jsonBiases;
         mlpBiasesFile.close();
@@ -444,30 +458,46 @@ void CnnUtils::resetWeights() {
 
 
 void CnnUtils::CnnUtils::saveWeights() {
-    std::ofstream weightsFile(currDir+"/plantcnn/src/main/resources/mlpWeights.json");
+    std::ofstream weightsFile(currDir+"/res/mlpWeights.json");
     d3 weightsVec = weights.toVector<d3>();
     nlohmann::json jsonWeights = weightsVec;
     weightsFile << jsonWeights.dump();
     weightsFile.close();
 
-    std::ofstream biasesFile(currDir+"/plantcnn/src/main/resources/mlpBiases.json");
+    std::ofstream biasesFile(currDir+"/res/mlpBiases.json");
     d2 biasesVec = (weights.getBiases())->toVector<d2>();
     nlohmann::json jsonBiases = biasesVec;
     biasesFile << jsonBiases.dump();
-    biasesFile.close()
+    biasesFile.close();
 }
 
 void CnnUtils::saveKernels() {
-    std::ofstream kernelsFile(currDir+"/plantcnn/src/main/resources/kernels.json");
-    nlohmann::json::json jsonKernels = kernels;
+    std::ofstream kernelsFile(currDir+"/res/kernelWeights.json");
+    d5 kernelsVec = kernels.toVector<d5>();
+    nlohmann::json jsonKernels = kernelsVec;
     kernelsFile << jsonKernels.dump();    
     kernelsFile.close();
+
+    std::ofstream biasesFile(currDir+"/res/kernelBiases.json");
+    d2 biasesVec = (kernels.getBiases())->toVector<d2>();
+    nlohmann::json jsonBiases = biasesVec;
+    biasesFile << jsonBiases.dump();
+    biasesFile.close();
 }
 
 void CnnUtils::saveActivations(){  //For debugging use
-    std::ofstream activationsFile(currDir+"/plantcnn/src/main/resources/activations.json");
-    nlohmann::json::json jsonActivations = activations;
+    std::ofstream activationsFile(currDir+"/res/activations.json");
+    d2 activationsVec = activations.toVector<d2>();
+    nlohmann::json jsonActivations = activationsVec;
     activationsFile << jsonActivations.dump();
     activationsFile.close();
 }
 
+void CnnUtils::resetGrad(std::vector<Tensor>& grad){
+    for(Tensor t:grad){
+        size_t size = t.getTotalSize();
+        for(size_t i=0;i<size;i++){
+            *(t[i]) = 0;
+        }
+    }
+}

@@ -11,21 +11,22 @@ CNN::CNN(float LR,Dataset *dataset,bool restart){
     kernelSizes = {5,3,3};  //0 represents a pooling layer, the last one is excluded
     strides = {2,2,2,4}; //pooling strides are included
     padding = true;
-    verbose = false;
 
     this->d = dataset;
     this->kernels = loadKernels(restart);
     this->weights = loadWeights(restart);
-    kernelsGrad = arrayCopy5D(kernels,0);
-    weightsGrad = arrayCopy3D(weights,0);
+    kernelsGrad = kernels; //Copies the Tensor objects by value
+    weightsGrad = weights;
+    resetGrad(kernelsGrad); //Don't want to apply the weights to themselves on the first iteration
+    resetGrad(weightsGrad);
     this->LR = LR;
-    this->activations = newMatrix<Tensor>({numNeurons.size(),0});
+    this->activations = std::vector<Tensor>(numNeurons.size());
     for(int l=0;l<numNeurons.size();l++){
-        activations[l] = vector<int>(numNeurons[l]);
+        activations[l] = Tensor({numNeurons[l]});
     }
-    this.maps = new float[numMaps.size()][][][];
+    this->maps = std::vector<Tensor>(numMaps.size());
     for(int l=0;l<numMaps.size();l++){
-        maps[l] = new float[numMaps[l]][mapDimens[l]][mapDimens[l]];
+        maps[l] = Tensor({numMaps[l],mapDimens[l],mapDimens[l]});
     }
     if(restart){
         resetKernels();
@@ -33,28 +34,29 @@ CNN::CNN(float LR,Dataset *dataset,bool restart){
     }
 }
 
-//Creating a copy from a template CNN
-CNN::CNN(CNN template,float LR,Dataset dataset) {
-    numNeurons = template.numNeurons;
-    numMaps = template.numMaps;
-    mapDimens = template.mapDimens;
-    kernelSizes = template.kernelSizes;
-    strides = template.strides;
-    padding = template.padding;
-    verbose = template.verbose;
-    this.d = dataset;
-    this.kernels = arrayCopy5D(template.kernels);
-    this.weights = arrayCopy3D(template.weights);
-    kernelsGrad = arrayCopy5D(kernels,0);
-    weightsGrad = arrayCopy3D(weights,0);
-    this.LR = LR;
-    this.activations = new float[numNeurons.size()][];
+//Creating a copy from a template CNN (I can't call it template)
+CNN::CNN(CNN *original,float LR,Dataset *dataset) {
+    numNeurons = original->numNeurons;
+    numMaps = original->numMaps;
+    mapDimens = original->mapDimens;
+    kernelSizes = original->kernelSizes;
+    strides = original->strides;
+    padding = original->padding;
+    d = dataset; //sharing the same dataset
+    kernels = original->kernels;
+    weights = original->weights;
+    kernelsGrad = kernels;
+    weightsGrad = weights;
+    resetGrad(kernelsGrad); //Don't want to apply the weights to themselves on the first iteration
+    resetGrad(weightsGrad);
+    this->LR = LR;
+    this->activations = std::vector<Tensor>(numNeurons.size());
     for(int l=0;l<numNeurons.size();l++){
-        activations[l] = new float[numNeurons[l]];
+        activations[l] = Tensor({numNeurons[l]});
     }
-    this.maps = new float[numMaps.size()][][][];
+    this->maps = std::vector<Tensor>(numMaps.size());
     for(int l=0;l<numMaps.size();l++){
-        maps[l] = new float[numMaps[l]][mapDimens[l]][mapDimens[l]]; //Already initialised to 0
+        maps[l] = Tensor({numMaps[l],mapDimens[l],mapDimens[l]});
     }
 }
 
@@ -110,10 +112,10 @@ std::string CNN::forwards(int[][][] imageInt){
             result = i;
         }
     }
-    if(verbose){
+    #if DEBUG
         System.out.println(Arrays.toString(activations[activations.size()-1]));
         System.out.println("Forwards took "+(System.currentTimeMillis()-startTime)+"ms");
-    }
+    #endif
     return d.plantNames.get(result);
 }
 
@@ -144,7 +146,9 @@ void CNN::backwards(int[][][] imageInt,String answer){ //adds the gradient to it
     }
 
     mlpBackwards(dcDzs); 
-    if(verbose) System.out.println("Backwards MLP took "+String.valueOf(System.currentTimeMillis()-mlpStart)+"ms");
+    #if DEBUG
+        System.out.println("Backwards MLP took "+String.valueOf(System.currentTimeMillis()-mlpStart)+"ms");
+    #endif
     //x is the image pixel value and so these dcDxs are the derivatives based on pixels which are carried backwards
     float[][][][] dcDxs = new float[numMaps.size()-2][][][];
     //No dcDxs for first or last (last goes straight into the MLP)
@@ -172,10 +176,10 @@ void CNN::backwards(int[][][] imageInt,String answer){ //adds the gradient to it
         }
         
     }
-    if(verbose){
+    #if DEBUG
         System.out.println("Backwards Convolution took "+String.valueOf(System.currentTimeMillis()-convolutionStart)+"ms");
         System.out.println("Backwards took "+String.valueOf(System.currentTimeMillis()-mlpStart)+"ms");
-    }
+    #endif
 }
 
 

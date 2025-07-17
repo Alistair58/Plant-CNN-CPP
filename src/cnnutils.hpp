@@ -17,13 +17,14 @@
 
 class CnnUtils {
     protected:
-        Tensor kernels; //the kernels are stored [layer][currLayerChannel][prevLayerChannel][y][x] 
+        //Things with mutliple layers are stored as vectors as each layer can have different sized tensors
+        std::vector<Tensor> kernels; //the kernels are stored [layer][currLayerChannel][prevLayerChannel][y][x] 
     //if there is a bias on a cxkxk kernel, it is at index [c-1][k-1][k]
-        Tensor kernelsGrad; //This is NOT negative - you must subtract it from the kernels
-        Tensor activations;
-        Tensor weights;
-        Tensor weightsGrad; //Also not negative
-        Tensor maps; //Note: the input image is included in "maps" for simplicity
+        std::vector<Tensor> kernelsGrad; //This is NOT negative - you must subtract it from the kernels
+        std::vector<Tensor> activations;
+        std::vector<Tensor> weights;
+        std::vector<Tensor> weightsGrad; //Also not negative
+        std::vector<Tensor> maps; //Note: the input image is included in "maps" for simplicity
         Dataset *d;
         std::vector<int> numNeurons;
         std::vector<int> numMaps; //includes the result of pooling (except final pooling)
@@ -31,7 +32,6 @@ class CnnUtils {
         std::vector<int> kernelSizes; //0 represents a pooling layer, the last one is excluded
         std::vector<int> strides; //pooling strides are included
         bool padding;
-        bool verbose;
         float LR;
 
         //UTILS
@@ -43,14 +43,14 @@ class CnnUtils {
 
     public:
         //IMAGE-RELATED
-        Tensor parseImg(Tensor img);
-        Tensor normaliseImg(Tensor img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs);
+        Tensor parseImg(Tensor& img);
+        Tensor normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs);
         Tensor gaussianBlurKernel(int width,int height);
-        Tensor maxPool(Tensor image,int xStride,int yStride);
+        Tensor maxPool(Tensor& image,int xStride,int yStride);
         //variable size output
-        Tensor convolution(Tensor image,Tensor kernel,int xStride,int yStride,bool padding);
+        Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding);
         //fixed size output
-        Tensor convolution(Tensor image,Tensor kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding);
+        Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding);
 
         //MATH UTILS
         std::vector<float> softmax(std::vector<float> inp);
@@ -69,11 +69,14 @@ class CnnUtils {
         void resetWeights();
         void saveWeights();
         void saveKernels();
+        void resetGrad(std::vector<Tensor>& grad);
 
-        //(GET|SET)TERS;
+        //(GET|SET)TERS
+        std::vector<int> getNumMaps(){ return numMaps; }
+        std::vector<int> getMapDimens(){ return mapDimens; }
     private:
         //INTERNAL UTILS
-        void applyGradient(Tensor *values, Tensor *gradient)
+        void applyGradient(Tensor *values, Tensor *gradient);
 };
 
 #endif

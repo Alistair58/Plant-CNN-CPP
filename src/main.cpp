@@ -9,6 +9,7 @@
 #include "globals.hpp"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#include <unistd.h>
 
 static float LR = 0.00004f;
 std::string currDir = std::filesystem::current_path().string();
@@ -35,12 +36,12 @@ int main(int argc,char **argv){
 static void test(CNN *n, Dataset *d, int numTest) {
     int correctCount = 0;
     for (int i = 0; i < numTest; i++) {
-        PlantImage pI = d.randomImage(true);
-        if(pI.label.length()==0){
-            std::string response = n.forwards(pI.data);
-            bool correct = response==pI.label;
+        PlantImage *pI = d->randomImage(true);
+        if(pI->label.length()==0){
+            std::string response = n->forwards(pI->data);
+            bool correct = response==pI->label;
             std::cout << (((correct)?ANSI_GREEN:ANSI_RED)
-            +pI.label +" ("+std::to_string(pI.index)+ ") Computer said: " + response+ANSI_RESET) << std::endl;
+            +pI->label +" ("+std::to_string(pI->index)+ ") Computer said: " + response+ANSI_RESET) << std::endl;
             if(correct) correctCount++;
         }
         else i--;
@@ -49,9 +50,7 @@ static void test(CNN *n, Dataset *d, int numTest) {
 }
 
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads) {
-    std::chrono::milliseconds startTime = duration_cast< milliseconds >(
-        system_clock::now().time_since_epoch()
-    );
+    long startTime = getCurrTime();
     int missedCount = 0;
     for (int i = 0; i < numBatches; i++) { // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,numCnnThreads);
@@ -65,14 +64,16 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
     n->saveWeights();
     n->saveKernels();
     std::cout << "Done" << std::endl;
-    std::chrono::milliseconds endTime = duration_cast< milliseconds >(
-        system_clock::now().time_since_epoch()
-    );
+    long endTime = getCurrTime();
     int secs = (int)((endTime-startTime)/1000);
     int mins = (int) (secs/60);
     int hours = (int) (mins/60);
-    std::cout << "Took: "+hours+" hr(s) "+mins%60+" min(s) "+secs%60+" sec(s)" << std::endl;
-    std::cout << "Missed: "+String.valueOf(missedCount) << std::endl;
+    std::cout << "Took: "+
+        std::to_string(hours)+" hr(s) "+
+        std::to_string(mins%60)+" min(s) "+
+        std::to_string(secs%60)+" sec(s)"
+    << std::endl;
+    std::cout << "Missed: "+std::to_string(missedCount) << std::endl;
 }
 
 
@@ -83,11 +84,11 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
     std::vector<PlantImage*> plantImages(batchSize);
     for(int iT=0;iT<numImageThreads;iT++){
         imageThreads[iT] = std::thread(
-            [](int threadId){
+            [](int threadId,int batchSize,int numImageThreads,std::vector<PlantImage*> plantImages,Dataset *d){
                 for(int i=threadId;i<batchSize;i+=numImageThreads){
-                    plantImages[i] = d.randomImage(false);
+                    plantImages[i] = d->randomImage(false);
                 }
-            },iT 
+            },iT,batchSize,numImageThreads,plantImages,d
         );
     }
     cnns[0] = n;
@@ -96,53 +97,62 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
             cnns[cT] = new CNN(n,LR,d);
         }
         cnnThreads[cT]= std::thread(
-            [](int threadId){
+            [](int threadId,int batchSize,int numCnnThreads,std::vector<PlantImage*> plantImages,Dataset *d,std::vector<CNN*> cnns){
                 for (int i=threadId;i<batchSize;i+=numCnnThreads) {
                     long startTime = getCurrTime();
-                    while(nullptr == plantImages[i] && getCurrTime()-5000<startTime){
+                    while(plantImages[i]->index==-1 && getCurrTime()-5000<startTime){
                         //Give up if we can't get the image in 5 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
-                        usleep(10);
+                        usleep(10000); //10ms
                     }
-                    if(nullptr != plantImages[i] && plantImages[i]->label.length()>0) cnns[threadId].backwards(plantImages[i]->data,plantImages[i]->label);
+                    if(plantImages[i]->index!=-1 && plantImages[i]->label.length()>0) cnns[threadId]->backwards(plantImages[i]->data,plantImages[i]->label);
                     else missedCount++;
                     //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
                 }
-            },cT
+            },cT,batchSize,numCnnThreads,plantImages,d,cnns
         );
     }
-    for(int t=0;t<max(numCnnThreads,numImageThreads);t++){
+    for(int t=0;t<std::max(numCnnThreads,numImageThreads);t++){
         if(t<numImageThreads){
             join(&imageThreads[t],10);
-            
         }
         if(t<numCnnThreads){
             join(&cnnThreads[t],10);
-
+        }
     }
     n->applyGradients(cnns);
+    for(PlantImage *ptr:plantImages){
+        delete ptr;
+    }
+    for(CNN *ptr:cnns){
+        delete ptr;
+    }
 }
 
 static void compressionTest(Dataset *d,CNN *cnn,std::string fname){
     PlantImage *testing = 
-    (nullptr == fname)? d->randomImage(false) : new PlantImage(fname, "");
-    Tensor img = cnn->parseImg(testing.data);
-    unsigned char *data = new unsigned char[cnn->mapDimens[0]*cnn->mapDimens[0]*3];
+    (fname.length()==0)? d->randomImage(false) : new PlantImage(fname, "");
+    Tensor img = cnn->parseImg(testing->data);
+    std::vector<int> mapDimens = cnn->getMapDimens();
+    unsigned char *data = new unsigned char[mapDimens[0]*mapDimens[0]*3];
+    std::vector<int> imgDimens = img.getDimens();
+    int height = imgDimens[1];
+    int width = imgDimens[2];
     for(int y=0;y<height;y++){
         for(int x=0;x<width;x++){
             int i = (y*width + x)*3;
-            data[i] = img[0][y][x];
-            data[i+1] = img[1][y][x];
-            data[i+2] = img[2][y][x];
+            data[i] = (int)*img[{0,y,x}];
+            data[i+1] = (int)*img[{1,y,x}];
+            data[i+2] = (int)*img[{2,y,x}];
         }
     }
-    if(!stbi_write_jpg(currDir+"/plantcnn/testing.jpg",width,height,3,data,width*height*3)){
+    if(!stbi_write_jpg((currDir+"/plantcnn/testing.jpg").c_str(),width,height,3,data,width*height*3)){
         std::cerr << "Could not save image\n";
     }
     else {
         std::cout << "Saved testing.jpg\n";
     }
-    std::cout << testing.label+" "+testing.index << std::endl;
+    std::cout << testing->label+" "+std::to_string(testing->index) << std::endl;
     delete[] data;
 }
 
