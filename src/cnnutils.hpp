@@ -61,6 +61,17 @@ class CnnUtils {
             return (x+std::numeric_limits<float>::min()>=y && x-std::numeric_limits<float>::min()<=y);
         }
         float normalDistRandom(float mean,float stdDev);
+        //Does a modulo but the sign of the output is the sign of y
+        //e.g. 
+        //floorMod(-5,2) = 1
+        //floorMod(5,-2) = -1
+        int floorMod(int x, int y) {
+            x %= y;
+            if (x<0) {
+                x += y;
+            }
+            return x;
+        }
 
         //UTILS
         void applyGradients();

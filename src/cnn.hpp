@@ -2,6 +2,7 @@
 #define CNN_HPP
 
 #include <string>
+#include <unordered_map>
 #include "tensor.hpp"
 #include "cnnutils.hpp"
 
@@ -14,14 +15,14 @@ class CNN : public CnnUtils{
         CNN(CNN *original,float LR,Dataset *dataset);
     
         //KEY METHODS 
-        std::string forwards(Tensor imageInt);
-        void backwards(Tensor imageInt,std::string answer);
+        std::string forwards(Tensor& imageInt);
+        void backwards(Tensor& imageInt,std::string answer);
     private:
         //BACKPROPAGATION-RELATED
-        void mlpBackwards(Tensor dcDzs);
-        void convBackwards(Tensor dcDxs, int l,bool padding);
-        void finalPoolingConvBackwards(Tensor dcDzs,Tensor dcDxs,bool padding);
-        void poolingConvBackwards(Tensor dcDxs, int l,bool padding);
+        void mlpBackwards(std::vector<Tensor>& dcDzs);
+        void convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding);
+        void finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tensor>& dcDxs,bool padding);
+        void poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding);
 };
 
 #endif
