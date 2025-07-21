@@ -16,7 +16,7 @@ class PlantImage {
 
         PlantImage() {};
         PlantImage(std::string fname, std::string plantName);
-        Tensor fileToImageArr(std::string fName);
+        Tensor fileToImageTensor(std::string fName);
 };
 
 #endif

@@ -31,13 +31,13 @@ inline long getCurrTime(){
     return (long) time.count();
 }
 
-inline std::vector<std::string> strSplit(std::string str,std::vector<char> delimiters){
+std::vector<std::string> strSplit(std::string str,std::vector<char> delimiters){
     std::vector<std::string> res;
     int lastI = 0;
     for(int i=1;i<str.length();i++){
         for(char c:delimiters){
             if(c==str[i]){
-                std::string substring = str.substr(lastI,i-lastI-1);
+                std::string substring = str.substr(lastI,i-lastI);
                 res.push_back(substring);
                 lastI = i+1;
                 break;
@@ -47,7 +47,7 @@ inline std::vector<std::string> strSplit(std::string str,std::vector<char> delim
     return res;
 }
 
-inline bool join(std::thread *thread,int timeoutSeconds){
+bool join(std::thread *thread,int timeoutSeconds){
     auto future = std::async(std::launch::async, &std::thread::join, thread);
     if (future.wait_for(std::chrono::seconds(timeoutSeconds)) //10s max wait
         == std::future_status::timeout) {

@@ -16,17 +16,6 @@ Tensor::Tensor(const std::vector<int> inputDimens){
     offset = 0;
 }
 
-Tensor::Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]> ptr,int pOffset){
-    dimens = inputDimens;
-    float numElems = 1;
-    childSizes.resize(dimens.size());
-    for(int i=dimens.size()-1;i>=0;i--){
-        childSizes[i] = numElems;
-        numElems *= dimens[i];
-    }
-    data = ptr;
-    offset = pOffset;
-}
 
 float *Tensor::operator[](const std::vector<int> indices) const{
     if(indices.size()!=dimens.size()){
@@ -46,7 +35,8 @@ float *Tensor::operator[](int flatIndex) const{
 Tensor Tensor::slice(const std::vector<int> indices) const{
     std::vector<int> subDimens = {dimens.begin()+(dimens.size()-indices.size()),dimens.end()};
     int subOffset = 0;
-    for(int i=0;i<(dimens.size()-indices.size());i++){
+    //For every dimension that the sub-tensor is missing, add it to the offset
+    for(int i=0;i<indices.size();i++){
         subOffset += indices[i]*childSizes[i];
     }
     Tensor subTensor = Tensor(subDimens,data,subOffset);
@@ -74,7 +64,7 @@ void Tensor::operator=(const Tensor &t){
 
 size_t Tensor::flattenIndex(const std::vector<int> indices) const{
     if (indices.size() != dimens.size()) {
-        throw std::invalid_argument("Tensor indices provided do not match tensor shape");
+        throw std::invalid_argument("Tensor indices provided do not match tensor dimensions");
     }
     size_t index = 0;
     for (size_t i=0;i<dimens.size();i++) {
@@ -101,7 +91,7 @@ dn Tensor::buildNestedVector(int depth = 0, int vectorOffset = 0) const{
     else {
         dn vec(dimens[depth]);
         for (int i=0;i<dimens[depth];i++) {
-            int newOffset = vectorOffset + i * t.childSizes[depth];
+            int newOffset = vectorOffset + i * childSizes[depth];
             //get the value_type of our current template type
             //e.g. value_type of d3 is d2
             vec[i] = buildNestedVector<typename dn::value_type>(depth+1,newOffset);
@@ -114,10 +104,10 @@ template<typename dn>
 //constexpr means that the value of this can be calculated at compile time
 //e.g. nestedVectorDepth<d3>() will always return the same value
 constexpr int Tensor::nestedVectorDepth() {
-    if constexpr (std::is_same<T, float>::value) {
+    if constexpr (std::is_same<dn, float>::value) {
         return 0;
     } else {
-        return 1 + nestedVectorDepth<typename T::value_type>();
+        return 1 + nestedVectorDepth<typename dn::value_type>();
     }
 }
 
@@ -132,4 +122,16 @@ dn Tensor::toVector() const{
         );
     }
     return buildNestedVector<dn>(0,0);
+}
+
+Tensor::Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]> ptr,int pOffset){
+    dimens = inputDimens;
+    float numElems = 1;
+    childSizes.resize(dimens.size());
+    for(int i=dimens.size()-1;i>=0;i--){
+        childSizes[i] = numElems;
+        numElems *= dimens[i];
+    }
+    data = ptr;
+    offset = pOffset;
 }

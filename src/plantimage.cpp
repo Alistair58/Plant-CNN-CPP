@@ -4,19 +4,21 @@ PlantImage::PlantImage(std::string fname, std::string plantName){ //fname can be
     if(fname.length()>2 && fname.substr(0,3)!="C:/"){
         fname = datasetDirPath+fname; 
     }
-    this->data = fileToImageArr(fname);
+    this->data = fileToImageTensor(fname);
     this->label = plantName;
     std::vector<std::string> fnameSplit = strSplit(fname,{'.','/'});
     if(fnameSplit.size()>1){
+        // C:/.../plantType/123.jpg
         this->index = std::stoi(fnameSplit[fnameSplit.size()-2]);
     }
-    
 }
 
-Tensor fileToImageArr(std::string fName){
+Tensor fileToImageTensor(std::string fName){
     Tensor result({1,1,1});
     *(result[0]) = -1;
-    long startTime = getCurrTime();
+    #if DEBUG
+        long startTime = getCurrTime();
+    #endif
 
     int width,height,channels;
     unsigned char *img = stbi_load(fName.c_str(),&width,&height,&channels,0);
@@ -33,7 +35,9 @@ Tensor fileToImageArr(std::string fName){
     result = Tensor({3,height,width}); //RGB
     //There is no alpha as most images in this dataset are jpeg which don't have an alpha channel
     int pixel;
-    long parsingStart = getCurrTime();
+    #if DEBUG
+        long parsingStart = getCurrTime();
+    #endif
     for (int y=0;y<height;y++) {
         for (int x=0;x<width;x++) {
             int i = (y*width + x)*channels;

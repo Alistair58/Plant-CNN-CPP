@@ -20,17 +20,38 @@ const std::string ANSI_GREEN = "\u001B[32m";
 int missedCount = 0;
 
 //TODO
-//Change the matrix implementation to be continguous in memory
-//Probably should call it tensor
-//And look at ChatGPT example
+//Code review:
+
+//tensor.hpp _/
+//tensor.cpp _/
+//plantimage.hpp _/
+//plantimage.cpp _/
+//globals.hpp
+//dataset.hpp
+//dataset.cpp
+//cnnutils.hpp
+//cnnutils.cpp
+//cnn.hpp
+//cnn.cpp 
 
 int main(int argc,char **argv){
-    Dataset *d = new Dataset(datasetDirPath);
-    CNN *cnn = new CNN(LR,d,false);
-    train(cnn,d,500,64,4,4); 
-    test(cnn,d,1000);
-    delete d;
-    delete cnn;
+    std::string testStr1 = "this.is.a.test.String";
+    std::vector<std::string> res1 = strSplit(testStr1,{'.'});
+    for(std::string str:res1){
+        std::cout << str+" ";
+    }
+    std::cout << "\n";
+    std::string testStr2 = "..this.is.a.test.Strin.g..";
+    std::vector<std::string> res2 = strSplit(testStr2,{'.'});
+    for(std::string str:res2){
+        std::cout << str+" ";
+    }
+    // Dataset *d = new Dataset(datasetDirPath);
+    // CNN *cnn = new CNN(LR,d,false);
+    // train(cnn,d,500,64,4,4); 
+    // test(cnn,d,1000);
+    // delete d;
+    // delete cnn;
 }
     
 static void test(CNN *n, Dataset *d, int numTest) {

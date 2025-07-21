@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <limits>
+#include <numbers>
 #include "globals.hpp"
 #include "tensor.hpp"
 #include "dataset.hpp"
@@ -53,10 +54,20 @@ class CnnUtils {
         Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding);
 
         //MATH UTILS
-        std::vector<float> softmax(std::vector<float> inp);
-        float sigmoid(float num);
-        float relu(float num);
-        float leakyRelu(float num);
+        std::vector<float> softmax(std::vector<float> inp){}
+        inline float sigmoid(float num){
+            if (num > 200) return 1;
+            if (num < -200) return 0;
+            return 1 / (float) (1 + std::exp(-num));
+        }
+        inline float relu(float num){
+            if (num <= 0) return 0;
+            return num;
+        }
+        inline float leakyRelu(float num){
+            if (num <= 0) return num*0.01f;
+            return num;
+        }
         inline bool floatCmp(float x,float y){
             return (x+std::numeric_limits<float>::min()>=y && x-std::numeric_limits<float>::min()<=y);
         }
@@ -65,7 +76,7 @@ class CnnUtils {
         //e.g. 
         //floorMod(-5,2) = 1
         //floorMod(5,-2) = -1
-        int floorMod(int x, int y) {
+        inline int floorMod(int x, int y) {
             x %= y;
             if (x<0) {
                 x += y;
@@ -87,7 +98,8 @@ class CnnUtils {
         std::vector<int> getMapDimens(){ return mapDimens; }
     private:
         //INTERNAL UTILS
-        void applyGradient(Tensor *values, Tensor *gradient);
+        void applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient);
 };
+
 
 #endif

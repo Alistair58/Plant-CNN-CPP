@@ -1,5 +1,5 @@
-#ifndef tensor.hpp
-#define tensor.hpp
+#ifndef TENSOR_HPP
+#define TENSOR_HPP
 #include <vector>
 #include <stdlib.h>
 #include <string>
@@ -19,9 +19,6 @@ class Tensor{
     public:
         //Fresh Tensor constructor
         Tensor(const std::vector<int> inputDimens);
-        Tensor(const std::vector<int> inputDimens);
-        //Sub-Tensor constructor
-        Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]> ptr,int pOffset);
         //Biases must only be used for a single tensor
         ~Tensor(){ delete biases; }
         //Differs from traditional subscript - returns the address
@@ -38,18 +35,25 @@ class Tensor{
         template <typename dn>
         dn toVector() const;
 
-        std::shared_ptr<float[]> getData() const { return data; }
         std::vector<int> getDimens() const { return dimens; }
         size_t getTotalSize() const { return totalSize; }
         Tensor *getBiases() const { return biases; }
         void setBiases(Tensor *pBiases) { biases = pBiases; }
 
     private:
+        //Sub-Tensor constructor
+        Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]> ptr,int pOffset);
         size_t flattenIndex(const std::vector<int> indices) const;
+        
+
+        
+        //Part of toVector
         template <typename dn>
         dn buildNestedVector(int depth = 0, int offset = 0) const;
         template<typename dn>
         constexpr int nestedVectorDepth();
+
+        std::shared_ptr<float[]> getData() const { return data; }
 };
 
 
