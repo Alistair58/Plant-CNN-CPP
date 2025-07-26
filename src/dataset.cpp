@@ -73,7 +73,7 @@ PlantImage *Dataset::randomImage(bool test){
             fname = dirPath+"/"+plantName+"/"+std::to_string(subIndex);
             for(std::string fileExtension:fileExtensions){ //Try all file extensions
                 PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName);
-                if(plantImage->data[0] > 0){ //valid image
+                if(*(plantImage->data[0]) > 0){ //valid image
                     return plantImage;
                 }
             } 
@@ -143,16 +143,16 @@ void Dataset::compilePixelStats(){
         //save after each type of plant
         numPlants+=categorySize;
         for(int c=0;c<3;c++){
-            stats[0][c] = stats[0][c]/numPlants;
-            stats[1][c] = stats[1][c]/numPlants;
+            stats[0][c] = ((double) stats[0][c])/numPlants;
+            stats[1][c] = ((double) stats[1][c])/numPlants;
         }
         stats[2][0] = numPlants;
         std::ofstream statsFile(currDir+"/res/stats.json");
         statsFile << stats.dump();
         statsFile.close();
         for(int c=0;c<3;c++){ //resume
-            stats[0][c] = stats[0][c]*numPlants;
-            stats[1][c] = stats[1][c]*numPlants;
+            stats[0][c] = ((double) stats[0][c])*numPlants;
+            stats[1][c] = ((double) stats[1][c])*numPlants;
         }
     }
 }

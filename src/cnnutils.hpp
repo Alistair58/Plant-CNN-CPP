@@ -14,7 +14,8 @@
 #include <algorithm>
 #include <random>
 #include "json.hpp"
-#include "cnn.hpp"
+
+class CNN; //forward declaration needed for compilation of applyGradients
 
 class CnnUtils {
     protected:
@@ -54,7 +55,7 @@ class CnnUtils {
         Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding);
 
         //MATH UTILS
-        std::vector<float> softmax(std::vector<float> inp){}
+        std::vector<float> softmax(std::vector<float> inp);
         inline float sigmoid(float num){
             if (num > 200) return 1;
             if (num < -200) return 0;

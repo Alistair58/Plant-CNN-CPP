@@ -1,4 +1,5 @@
 #include "cnnutils.hpp"
+#include "cnn.hpp" //Needs to be in the .cpp file to avoid a circular dependency but we still need member functions
 
 //----------------------------------------------------
 //IMAGE-RELATED

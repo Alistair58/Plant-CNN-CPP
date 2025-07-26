@@ -19,6 +19,11 @@ const std::string ANSI_RESET = "\u001B[0m";
 const std::string ANSI_GREEN = "\u001B[32m";
 int missedCount = 0;
 
+static void compressionTest(Dataset *d,CNN *cnn,std::string fname);
+static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, int numCnnThreads);
+static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads);
+static void test(CNN *n, Dataset *d, int numTest);
+
 //TODO
 //Code review:
 
@@ -54,7 +59,7 @@ int main(int argc,char **argv){
     // delete cnn;
 }
     
-static void test(CNN *n, Dataset *d, int numTest) {
+static void test(CNN *n, Dataset *d, int numTest){
     int correctCount = 0;
     for (int i = 0; i < numTest; i++) {
         PlantImage *pI = d->randomImage(true);
@@ -70,7 +75,7 @@ static void test(CNN *n, Dataset *d, int numTest) {
     std::cout << ("Accuracy: "+std::to_string((float)correctCount*100/numTest)+"%") <<std::endl;
 }
 
-static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads) {
+static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads){
     long startTime = getCurrTime();
     int missedCount = 0;
     for (int i = 0; i < numBatches; i++) { // numBatches of batchSize
@@ -98,7 +103,7 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
 }
 
 
-static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, int numCnnThreads) { //batch size must be a multiple of numThreads
+static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, int numCnnThreads){ //batch size must be a multiple of numThreads
     std::vector<CNN*> cnns(numCnnThreads);
     std::vector<std::thread> cnnThreads(numCnnThreads);
     std::vector<std::thread> imageThreads(numImageThreads);

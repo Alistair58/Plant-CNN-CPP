@@ -1,0 +1,3 @@
+C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build/CMakeFiles/Plant-CNN-CPP.dir
+C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build/CMakeFiles/edit_cache.dir
+C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build/CMakeFiles/rebuild_cache.dir

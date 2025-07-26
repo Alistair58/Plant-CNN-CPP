@@ -8,15 +8,18 @@
 #include "globals.hpp"
 
 class Tensor{
-    std::shared_ptr<float[]> data;
+    std::shared_ptr<float[]> data = nullptr;
     //A class can't have an object of itself and so it must be a pointer
     Tensor *biases = nullptr;
-    int offset; //how far this tensor's data is into the shared_ptr
+    int offset = 0; //how far this tensor's data is into the shared_ptr
     //OFFSET MUST BE USED FOR EVERY RAW INDEX ACCESS
     std::vector<int> dimens; //e.g. 5x4x6 {5,4,6}
     std::vector<int> childSizes; //e.g. {24,6,1}
-    size_t totalSize;
+    size_t totalSize = 0;
     public:
+        //Default constructor, needed for initialising an empty vector with size
+        //All the attributes are initialised and so nothing needs to happen
+        Tensor(){};
         //Fresh Tensor constructor
         Tensor(const std::vector<int> inputDimens);
         //Biases must only be used for a single tensor

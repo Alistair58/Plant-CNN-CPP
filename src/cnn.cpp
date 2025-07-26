@@ -97,7 +97,7 @@ std::string CNN::forwards(Tensor& imageInt){
         pooledChannel = maxPool(prevChannel,strides[strides.size()-1],strides[strides.size()-1]);
         for(int y=0;y<poolingDimen;y++){
             for(int x=0;x<poolingDimen;x++){
-                *((activations[0])[i*poolingArea+y*poolingDimen+x]) = *((pooled[i])[{y,x}]);
+                *((activations[0])[i*poolingArea+y*poolingDimen+x]) = *(pooled[{i,y,x}]);
             }
         }
     }
@@ -128,7 +128,7 @@ std::string CNN::forwards(Tensor& imageInt){
         System.out.println("Forwards took "+(System.currentTimeMillis()-startTime)+"ms");
     #endif
     return d->plantNames[result];
-}
+} 
 
 void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to its internal gradient arrays
     forwards(imageInt); //set all the activations
@@ -208,7 +208,7 @@ void CNN::mlpBackwards(std::vector<Tensor>& dcDzs){
             for(int j=0;j<numNeurons[l];j++){//NOTE: Weights gradient != negative gradient
                 weightsGrad[l][i][j] += (*dcDzs[l+1][i]) * (*activations[l][j]);
                 //dC/dw = dC/da_i+1 * da_i+1/dz * dz/dw
-                *dcDzs[l][j] +=  (*dcDzs[l+1][i]) * (*weights[l][{i,j}]) * ((activations[l][j]<=0)?0.01f:1);//next layer
+                *dcDzs[l][j] +=  (*dcDzs[l+1][i]) * (*weights[l][{i,j}]) * ((*(activations[l][j])<=0)?0.01f:1);//next layer
                 //dC/dz_i = dC/dz_i+1 * dz_i+1/da_i * da_i/dz_i
             }
             //bias

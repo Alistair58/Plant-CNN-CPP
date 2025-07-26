@@ -37,4 +37,4 @@ class Dataset {
 
 };
 
-#endif DATASET_HPP
+#endif

@@ -1,6 +1,5 @@
 #include "tensor.hpp"
 
-
 Tensor::Tensor(const std::vector<int> inputDimens){
     dimens = inputDimens;
     float numElems = 1;
