@@ -51,13 +51,67 @@ class Tensor{
 
         
         //Part of toVector
+        
         template <typename dn>
         dn buildNestedVector(int depth = 0, int offset = 0) const;
         template<typename dn>
-        constexpr int nestedVectorDepth();
+        static constexpr int nestedVectorDepth();
 
         std::shared_ptr<float[]> getData() const { return data; }
 };
 
+
+//Template methods need to be in the header file
+template <typename dn>
+dn Tensor::buildNestedVector(int depth, int vectorOffset) const{
+    dn vec(dimens[depth]);
+    for (int i=0;i<dimens[depth];i++) {
+        int newOffset = vectorOffset + i * childSizes[depth];
+        //get the value_type of our current template type
+        //e.g. value_type of d3 is d2
+        vec[i] = buildNestedVector<typename dn::value_type>(depth+1,newOffset);
+    }
+    return vec;
+}
+
+//Base case
+template<>
+inline d1 Tensor::buildNestedVector<d1>(int depth,int vectorOffset) const{
+    d1 leaf(dimens[depth]);
+    for (int i=0;i<dimens[depth];i++) {
+        leaf[i] = data[vectorOffset + i];
+    }
+    return leaf;
+}
+
+//Basest case - shouldn't ever be reached but compiler wants itS
+template<>
+inline float Tensor::buildNestedVector<float>(int depth, int vectorOffset) const {
+    return data[vectorOffset];
+}
+
+template<typename dn>
+//constexpr means that the value of this can be calculated at compile time
+//e.g. nestedVectorDepth<d3>() will always return the same value
+constexpr int Tensor::nestedVectorDepth() {
+    if constexpr (std::is_same<dn, float>::value) {
+        return 0;
+    } else {
+        return 1 + nestedVectorDepth<typename dn::value_type>();
+    }
+}
+
+template <typename dn>
+dn Tensor::toVector() const{
+    constexpr int requestedDepth = nestedVectorDepth<dn>();
+    int tensorDepth = (int) dimens.size();
+    if (requestedDepth != tensorDepth) {
+        throw std::invalid_argument(
+            "Requested vector depth (" + std::to_string(requestedDepth) +
+            ") does not match tensor dimensions (" + std::to_string(tensorDepth) + ")."
+        );
+    }
+    return buildNestedVector<dn>(0,0);
+}
 
 #endif

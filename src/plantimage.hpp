@@ -5,8 +5,8 @@
 #include "globals.hpp"
 #include <string>
 #include <iostream>
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "utils.hpp"
 
 class PlantImage {
     public:

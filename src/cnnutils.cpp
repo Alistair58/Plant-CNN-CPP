@@ -16,7 +16,7 @@ Tensor CnnUtils::parseImg(Tensor& img){
     int imHeight = imgDimens[1];
     int imWidth = imgDimens[2];
     //ceil so that we take too large steps and so we take <=mapDimens[0] steps
-    //If we floor it, we go out of the mapDimens[0]xmapDimens[0] bounds (as we aren't striding far enough)
+    //If we floor it, we go out of the mapDimens[0] x mapDimens[0] bounds (as we aren't striding far enough)
     int xStride = (int) std::ceil((float)imWidth/mapDimens[0]); //Reducing size to mapDimens[0] x mapDimens[0] via a Gaussian blur
     int yStride = (int) std::ceil((float)imHeight/mapDimens[0]); 
     Tensor gKernel = gaussianBlurKernel(xStride,yStride);
@@ -33,7 +33,7 @@ Tensor CnnUtils::parseImg(Tensor& img){
     return result;
 }
 
-Tensor CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
+void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
     std::vector<int> imgDimens = img.getDimens();
     if(imgDimens.size()!=3){
         throw std::invalid_argument("Image must have 3 dimensions for normaliseImg");
@@ -45,7 +45,6 @@ Tensor CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vec
             }
         }
     }
-    return img;
 }
 
 Tensor CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd sized
@@ -64,7 +63,7 @@ Tensor CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd si
 }
 
 Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){ 
-    int xKernelRadius = (int) floor(xStride/2); //Not actually a radius, actually half the width
+    int xKernelRadius = (int) floor(xStride/2); //Not actually a radius, actually half the width of the kernel
     int yKernelRadius = (int) floor(yStride/2); 
     std::vector<int> imgDimens = image.getDimens();
     if(imgDimens.size()!=2){

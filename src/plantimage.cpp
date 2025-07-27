@@ -13,7 +13,7 @@ PlantImage::PlantImage(std::string fname, std::string plantName){ //fname can be
     }
 }
 
-Tensor fileToImageTensor(std::string fName){
+Tensor PlantImage::fileToImageTensor(std::string fName){
     Tensor result({1,1,1});
     *(result[0]) = -1;
     #if DEBUG

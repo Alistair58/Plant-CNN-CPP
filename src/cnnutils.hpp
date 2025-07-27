@@ -21,7 +21,6 @@ class CnnUtils {
     protected:
         //Things with mutliple layers are stored as vectors as each layer can have different sized tensors
         std::vector<Tensor> kernels; //the kernels are stored [layer][currLayerChannel][prevLayerChannel][y][x] 
-    //if there is a bias on a cxkxk kernel, it is at index [c-1][k-1][k]
         std::vector<Tensor> kernelsGrad; //This is NOT negative - you must subtract it from the kernels
         std::vector<Tensor> activations;
         std::vector<Tensor> weights;
@@ -46,38 +45,38 @@ class CnnUtils {
     public:
         //IMAGE-RELATED
         Tensor parseImg(Tensor& img);
-        Tensor normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs);
-        Tensor gaussianBlurKernel(int width,int height);
-        Tensor maxPool(Tensor& image,int xStride,int yStride);
+        static void normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs);
+        static Tensor gaussianBlurKernel(int width,int height);
+        static Tensor maxPool(Tensor& image,int xStride,int yStride);
         //variable size output
-        Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding);
+        static Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding);
         //fixed size output
-        Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding);
+        static Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding);
 
         //MATH UTILS
-        std::vector<float> softmax(std::vector<float> inp);
-        inline float sigmoid(float num){
+        static std::vector<float> softmax(std::vector<float> inp);
+        static inline float sigmoid(float num){
             if (num > 200) return 1;
             if (num < -200) return 0;
             return 1 / (float) (1 + std::exp(-num));
         }
-        inline float relu(float num){
+        static inline float relu(float num){
             if (num <= 0) return 0;
             return num;
         }
-        inline float leakyRelu(float num){
+        static inline float leakyRelu(float num){
             if (num <= 0) return num*0.01f;
             return num;
         }
-        inline bool floatCmp(float x,float y){
-            return (x+std::numeric_limits<float>::min()>=y && x-std::numeric_limits<float>::min()<=y);
+        static inline bool floatCmp(float x,float y,float epsilon = std::numeric_limits<float>::min()){
+            return (x+epsilon>=y && x-epsilon<=y);
         }
-        float normalDistRandom(float mean,float stdDev);
+        static float normalDistRandom(float mean,float stdDev);
         //Does a modulo but the sign of the output is the sign of y
         //e.g. 
         //floorMod(-5,2) = 1
         //floorMod(5,-2) = -1
-        inline int floorMod(int x, int y) {
+        static inline int floorMod(int x, int y) {
             x %= y;
             if (x<0) {
                 x += y;

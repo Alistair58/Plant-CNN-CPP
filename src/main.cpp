@@ -2,14 +2,22 @@
 #include <filesystem>
 #include <iostream>
 #include <chrono>
+#include <unistd.h>
+#include <thread>
 #include "cnn.hpp"
 #include "cnnutils.hpp"
 #include "dataset.hpp"
 #include "plantimage.hpp"
 #include "globals.hpp"
+#include "utils.hpp"
+#include "tensor.hpp"
+
+//The only include with the macro defined
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
-#include <unistd.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 
 static float LR = 0.00004f;
 std::string currDir = std::filesystem::current_path().string();
@@ -31,32 +39,25 @@ static void test(CNN *n, Dataset *d, int numTest);
 //tensor.cpp _/
 //plantimage.hpp _/
 //plantimage.cpp _/
-//globals.hpp
-//dataset.hpp
-//dataset.cpp
-//cnnutils.hpp
+//globals.hpp _/
+//utils.hpp _/
+//utils.cpp _/
+//dataset.hpp _/
+//dataset.cpp _/
+//cnnutils.hpp _/
 //cnnutils.cpp
 //cnn.hpp
 //cnn.cpp 
 
 int main(int argc,char **argv){
-    std::string testStr1 = "this.is.a.test.String";
-    std::vector<std::string> res1 = strSplit(testStr1,{'.'});
-    for(std::string str:res1){
-        std::cout << str+" ";
-    }
-    std::cout << "\n";
-    std::string testStr2 = "..this.is.a.test.Strin.g..";
-    std::vector<std::string> res2 = strSplit(testStr2,{'.'});
-    for(std::string str:res2){
-        std::cout << str+" ";
-    }
-    // Dataset *d = new Dataset(datasetDirPath);
-    // CNN *cnn = new CNN(LR,d,false);
-    // train(cnn,d,500,64,4,4); 
-    // test(cnn,d,1000);
-    // delete d;
-    // delete cnn;
+    Dataset *d = new Dataset(datasetDirPath,0.8f);
+    CNN *cnn = new CNN(LR,d,true);
+    train(cnn,d,1,64,4,4); 
+    test(cnn,d,10);
+    //train(cnn,d,500,64,4,4); 
+    //test(cnn,d,1000);
+    delete d;
+    delete cnn;
 }
     
 static void test(CNN *n, Dataset *d, int numTest){
@@ -140,10 +141,12 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
     }
     for(int t=0;t<std::max(numCnnThreads,numImageThreads);t++){
         if(t<numImageThreads){
-            join(&imageThreads[t],10);
+            //No easy way to kill a thread which calls a blocking external function (without processes)
+            //and so we can't have a timeout
+           imageThreads[t].join();
         }
         if(t<numCnnThreads){
-            join(&cnnThreads[t],10);
+            cnnThreads[t].join();
         }
     }
     n->applyGradients(cnns);

@@ -78,50 +78,7 @@ size_t Tensor::flattenIndex(const std::vector<int> indices) const{
     return index;
 }
 
-template <typename dn>
-dn Tensor::buildNestedVector(int depth = 0, int vectorOffset = 0) const{
-    if (depth == dimens.size()-1) {
-        dn leaf(dimens[depth]);
-        for (int i=0;i<dimens[depth];i++) {
-            leaf[i] = t[vectorOffset + i];
-        }
-        return leaf;
-    } 
-    else {
-        dn vec(dimens[depth]);
-        for (int i=0;i<dimens[depth];i++) {
-            int newOffset = vectorOffset + i * childSizes[depth];
-            //get the value_type of our current template type
-            //e.g. value_type of d3 is d2
-            vec[i] = buildNestedVector<typename dn::value_type>(depth+1,newOffset);
-        }
-        return vec;
-    }
-}
 
-template<typename dn>
-//constexpr means that the value of this can be calculated at compile time
-//e.g. nestedVectorDepth<d3>() will always return the same value
-constexpr int Tensor::nestedVectorDepth() {
-    if constexpr (std::is_same<dn, float>::value) {
-        return 0;
-    } else {
-        return 1 + nestedVectorDepth<typename dn::value_type>();
-    }
-}
-
-template <typename dn>
-dn Tensor::toVector() const{
-    constexpr int requestedDepth = nestedVectorDepth<dn>();
-    int tensorDepth = (int) dimens.size();
-    if (requestedDepth != tensorDepth) {
-        throw std::invalid_argument(
-            "Requested vector depth (" + std::to_string(requestedDepth) +
-            ") does not match tensor dimensions (" + std::to_string(tensorDepth) + ")."
-        );
-    }
-    return buildNestedVector<dn>(0,0);
-}
 
 Tensor::Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]> ptr,int pOffset){
     dimens = inputDimens;

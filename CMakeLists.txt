@@ -11,6 +11,8 @@ add_executable(Plant-CNN-CPP
     src/cnnutils.cpp
     src/dataset.cpp 
     src/plantimage.cpp
+    src/utils.cpp
+    src/tensor.cpp
 )
 
 

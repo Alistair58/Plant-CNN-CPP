@@ -20,11 +20,16 @@ void Dataset::loadPixelStats(){
     }
 }   
 
-Dataset::Dataset(std::string dirPathInp){
+Dataset::Dataset(std::string dirPathInp,float trainTestSplitRatio){
+    if(trainTestSplit>0 && trainTestSplit<=1){
+        trainTestSplit = trainTestSplitRatio;
+    }
+    else{
+        throw std::invalid_argument("trainTestSplitRatio must be between 0 (exclusive) and 1 (inclusive)");
+    }
     this->dirPath = dirPathInp;
     int i = 0;
-    std::string fileExtension;
-    for(const auto &entry:fs::directory_iterator(dirPath)){
+    for(const auto &entry: fs::directory_iterator(dirPath)){
         if(fs::is_directory(entry)){
             indices.push_back(i);
             char *folderPath = (char*) entry.path().c_str();
@@ -35,6 +40,7 @@ Dataset::Dataset(std::string dirPathInp){
                 std::regex allExceptExtensionRegex("^[^\\.]+");
                 char *filePath = (char*) subEntry.path().c_str();
                 std::string fileExtension = std::regex_replace(filePath,allExceptExtensionRegex, "");
+                //If not found in the known file extensions, i.e. new, add it to the known file extensions
                 if(find(fileExtensions.begin(),fileExtensions.end(),fileExtension)==fileExtensions.end()){
                     fileExtensions.push_back(fileExtension);
                 }
@@ -56,21 +62,22 @@ std::vector<float> Dataset::getPixelStdDevs(){
 
 PlantImage *Dataset::randomImage(bool test){
     int index = rand() % this->size;
-    int subIndex,startIndex,prevIndex = this->size;
-    std::string fname,plantName;
+    int prevIndex = this->size;
     for(int i=indices.size()-1;i>=0;i--){ //iterate through plant classes
-        startIndex = indices[i];
+        int startIndex = indices[i];
         if(index >= startIndex){ //until the random number is in this category
-            subIndex = index - startIndex;
+            int subIndex = index - startIndex;
             int categorySize = prevIndex - startIndex;
-            if(test && subIndex<0.8*categorySize){ //80 20 split
-                subIndex = ((int)(0.8*categorySize)) +(rand()%(categorySize+1)-(int)(0.8*categorySize)); //indices start at 1 so we have an extra at the end
+            //If we're testing but the random index isn't in the testing section, put it in the testing section
+            if(test && subIndex<trainTestSplit*categorySize){ //e.g. trainTestSplit = 0.8
+                subIndex = ((int)(trainTestSplit*categorySize)) +(rand()%(categorySize+1)-(int)(trainTestSplit*categorySize)); //indices start at 1 so we have an extra at the end
             }
-            else if(!test && subIndex>0.8*categorySize){ //training
-                subIndex = 1 + (rand()%((int)(0.8f*categorySize))); //image names start at 1.jpg
+            //Same goes for training
+            else if(!test && subIndex>trainTestSplit*categorySize){ //training
+                subIndex = 1 + (rand()%((int)(trainTestSplit*categorySize))); //image names start at 1.jpg
             }
-            plantName = plantNames[i];
-            fname = dirPath+"/"+plantName+"/"+std::to_string(subIndex);
+            std::string plantName = plantNames[i];
+            std::string fname = dirPath+"/"+plantName+"/"+std::to_string(subIndex);
             for(std::string fileExtension:fileExtensions){ //Try all file extensions
                 PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName);
                 if(*(plantImage->data[0]) > 0){ //valid image
@@ -92,12 +99,13 @@ PlantImage Dataset::randomImageObj(bool test){
 }
 
 void Dataset::compilePixelStats(){
+    //  * = stdDevs    Means:R,G,B *:R,G,B  Count  
     nlohmann::json stats = {{0,0,0},{0,0,0},{0}};
     int numPlants = 0;
     for(int i=0;i<this->indices.size();i++){
         std::string plantName = plantNames[i];
         std::cout << "\n"+plantName+"\n" << std::endl;
-        int categorySize = (i+1==indices.size()?size:indices[i+1])-indices[i];
+        int categorySize = ((i+1==indices.size())?size:indices[i+1])-indices[i];
         for(int j=1;j<=categorySize;j++){ //all the plants in this category (indices start at 1)
             std::cout << plantName+" "+std::to_string(j) << std::endl;
             std::string fname = dirPath+"/"+plantName+"/"+std::to_string(j);
@@ -110,6 +118,7 @@ void Dataset::compilePixelStats(){
                     continue;
                 }
                 if(*plantImage.data[0] > 0){
+                    //valid image
                     break;
                 }
             } 
@@ -117,7 +126,7 @@ void Dataset::compilePixelStats(){
                 plantImage.data.getTotalSize()==0 || 
                 plantImage.data.getDimens().size()!=3 || 
                 plantImage.data.getDimens()[0]<3
-            ) continue;
+            ) continue; //problem with actual image; not the loading of it
             std::vector<std::vector<double>> imageStats = {{0,0,0},{0,0,0}}; //means, stdDevs
             for(int c=0;c<3;c++){
                 for(int y=0;y<dataDimens[1];y++){
@@ -131,7 +140,7 @@ void Dataset::compilePixelStats(){
                 float mean = (float) (imageStats[0][c]/(numPixels));
                 float stdDev = (float) sqrt(imageStats[1][c]/(numPixels) - (mean*mean));
                 if(std::isnan(stdDev) || (imageStats[1][c]/(numPixels))<(mean*mean)){
-                    std::cout << "Error" << std::endl;
+                    std::cout << "Numerical error during compilePixelStats" << std::endl;
                 }
                 else{
                     stats[0][c] += mean;

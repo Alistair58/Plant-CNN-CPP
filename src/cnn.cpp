@@ -71,7 +71,7 @@ std::string CNN::forwards(Tensor& imageInt){
     #endif
     reset();
     maps[0] = parseImg(imageInt);
-    maps[0] = normaliseImg(maps[0],d->getPixelMeans(),d->getPixelStdDevs());
+    normaliseImg(maps[0],d->getPixelMeans(),d->getPixelStdDevs());
     //Convolutional and pooling layers
     for(int l=1;l<numMaps.size();l++){
         for(int i=0;i<numMaps[l];i++){

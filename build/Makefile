@@ -248,6 +248,54 @@ src/plantimage.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.s
 .PHONY : src/plantimage.cpp.s
 
+src/tensor.obj: src/tensor.cpp.obj
+.PHONY : src/tensor.obj
+
+# target to build an object file
+src/tensor.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj
+.PHONY : src/tensor.cpp.obj
+
+src/tensor.i: src/tensor.cpp.i
+.PHONY : src/tensor.i
+
+# target to preprocess a source file
+src/tensor.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.i
+.PHONY : src/tensor.cpp.i
+
+src/tensor.s: src/tensor.cpp.s
+.PHONY : src/tensor.s
+
+# target to generate assembly for a file
+src/tensor.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.s
+.PHONY : src/tensor.cpp.s
+
+src/utils.obj: src/utils.cpp.obj
+.PHONY : src/utils.obj
+
+# target to build an object file
+src/utils.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj
+.PHONY : src/utils.cpp.obj
+
+src/utils.i: src/utils.cpp.i
+.PHONY : src/utils.i
+
+# target to preprocess a source file
+src/utils.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.i
+.PHONY : src/utils.cpp.i
+
+src/utils.s: src/utils.cpp.s
+.PHONY : src/utils.s
+
+# target to generate assembly for a file
+src/utils.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.s
+.PHONY : src/utils.cpp.s
+
 # Help Target
 help:
 	@echo The following are some of the valid targets for this Makefile:
@@ -272,6 +320,12 @@ help:
 	@echo ... src/plantimage.obj
 	@echo ... src/plantimage.i
 	@echo ... src/plantimage.s
+	@echo ... src/tensor.obj
+	@echo ... src/tensor.i
+	@echo ... src/tensor.s
+	@echo ... src/utils.obj
+	@echo ... src/utils.i
+	@echo ... src/utils.s
 .PHONY : help
 
 
