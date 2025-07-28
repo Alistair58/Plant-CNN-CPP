@@ -20,6 +20,7 @@
 
 
 static float LR = 0.00004f;
+
 std::string currDir = std::filesystem::current_path().string();
 std::string datasetDirPath = "C:/Users/Alistair/Pictures/house_plant_species";
 const std::string ANSI_RED = "\u001B[31m";
@@ -33,21 +34,8 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
 static void test(CNN *n, Dataset *d, int numTest);
 
 //TODO
-//Code review:
+//Use cmd line gdb to find Tensor assignment error
 
-//tensor.hpp _/
-//tensor.cpp _/
-//plantimage.hpp _/
-//plantimage.cpp _/
-//globals.hpp _/
-//utils.hpp _/
-//utils.cpp _/
-//dataset.hpp _/
-//dataset.cpp _/
-//cnnutils.hpp _/
-//cnnutils.cpp
-//cnn.hpp
-//cnn.cpp 
 
 int main(int argc,char **argv){
     Dataset *d = new Dataset(datasetDirPath,0.8f);
@@ -62,13 +50,13 @@ int main(int argc,char **argv){
     
 static void test(CNN *n, Dataset *d, int numTest){
     int correctCount = 0;
-    for (int i = 0; i < numTest; i++) {
-        PlantImage *pI = d->randomImage(true);
-        if(pI->label.length()==0){
-            std::string response = n->forwards(pI->data);
-            bool correct = response==pI->label;
-            std::cout << (((correct)?ANSI_GREEN:ANSI_RED)
-            +pI->label +" ("+std::to_string(pI->index)+ ") Computer said: " + response+ANSI_RESET) << std::endl;
+    for (int i=0;i<numTest;i++) {
+        PlantImage pI = d->randomImageObj(true);
+        if(pI.label.length()==0){
+            std::string response = n->forwards(pI.data);
+            bool correct = response==pI.label;
+            std::cout << (((correct)?ANSI_GREEN:ANSI_RED) +
+            pI.label +" ("+std::to_string(pI.index)+ ") Computer said: " + response+ANSI_RESET) << std::endl;
             if(correct) correctCount++;
         }
         else i--;
@@ -79,7 +67,7 @@ static void test(CNN *n, Dataset *d, int numTest){
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads){
     long startTime = getCurrTime();
     int missedCount = 0;
-    for (int i = 0; i < numBatches; i++) { // numBatches of batchSize
+    for (int i=0;i<numBatches;i++) { // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,numCnnThreads);
         if(i%10 == 0 && i>0){ //save every 10 batches
             n->saveKernels();
@@ -153,15 +141,16 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
     for(PlantImage *ptr:plantImages){
         delete ptr;
     }
-    for(CNN *ptr:cnns){
-        delete ptr;
+    //start at 1 as we don't want to delete the original CNN (at index 0)
+    for(int i=1;i<cnns.size();i++){
+        delete cnns[i];
     }
 }
 
 static void compressionTest(Dataset *d,CNN *cnn,std::string fname){
-    PlantImage *testing = 
-    (fname.length()==0)? d->randomImage(false) : new PlantImage(fname, "");
-    Tensor img = cnn->parseImg(testing->data);
+    PlantImage testing = 
+    (fname.length()==0)? d->randomImageObj(false) : PlantImage(fname, "");
+    Tensor img = cnn->parseImg(testing.data);
     std::vector<int> mapDimens = cnn->getMapDimens();
     unsigned char *data = new unsigned char[mapDimens[0]*mapDimens[0]*3];
     std::vector<int> imgDimens = img.getDimens();
@@ -175,13 +164,13 @@ static void compressionTest(Dataset *d,CNN *cnn,std::string fname){
             data[i+2] = (int)*img[{2,y,x}];
         }
     }
-    if(!stbi_write_jpg((currDir+"/plantcnn/testing.jpg").c_str(),width,height,3,data,width*height*3)){
+    if(!stbi_write_jpg((currDir+"/testing.jpg").c_str(),width,height,3,data,width*height*3)){
         std::cerr << "Could not save image\n";
     }
     else {
         std::cout << "Saved testing.jpg\n";
     }
-    std::cout << testing->label+" "+std::to_string(testing->index) << std::endl;
+    std::cout << testing.label+" "+std::to_string(testing.index) << std::endl;
     delete[] data;
 }
 

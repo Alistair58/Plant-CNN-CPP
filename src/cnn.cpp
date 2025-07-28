@@ -6,10 +6,10 @@
 //Creating a fresh CNN
 CNN::CNN(float LR,Dataset *dataset,bool restart){
     numNeurons = {1920,960,47};
-    numMaps = {3,30,60,120};//includes the result of pooling (except final pooling)
-    mapDimens = {128,64,32,16};
-    kernelSizes = {5,3,3};  //0 represents a pooling layer, the last one is excluded
-    strides = {2,2,2,4}; //pooling strides are included
+    numMaps =     {3,  30,60,120};//includes the result of pooling (except final pooling)
+    mapDimens =   {128,64,32,16};
+    kernelSizes = {   5, 3, 3  };  //0 represents a pooling layer, the last one is excluded
+    strides =     {   2, 2, 2,4}; //pooling strides are included
     padding = true;
 
     this->d = dataset;
@@ -124,8 +124,13 @@ std::string CNN::forwards(Tensor& imageInt){
         }
     }
     #if DEBUG
-        System.out.println(Arrays.toString(activations[activations.size()-1]));
-        System.out.println("Forwards took "+(System.currentTimeMillis()-startTime)+"ms");
+        d1 outputVec = activations[activations.size()-1].toVector<d1>();
+        std::cout << "[";
+        for(int i=0;i<outputVec.size()-1;i++){
+            std::cout << std::to_string(outputVec[i])+",";
+        }
+        std::cout << std::to_string(outputVec[outputVec.size()-1])+"]" << std::endl;
+        std::cout << "Forwards took "+std::to_string(getCurrTime()-startTime)+"ms" <<std::end;
     #endif
     return d->plantNames[result];
 } 
@@ -192,8 +197,8 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
         
     }
     #if DEBUG
-        System.out.println("Backwards Convolution took "+String.valueOf(System.currentTimeMillis()-convolutionStart)+"ms");
-        System.out.println("Backwards took "+String.valueOf(System.currentTimeMillis()-mlpStart)+"ms");
+        std::cout << "Backwards Convolution took "+std::to_string(getCurrTime()-convolutionStart)+"ms" << std::endl;
+        std::cout << "Backwards took "+std::to_string(getCurrTime()-mlpStart)+"ms" << std::endl;
     #endif
 }
 
@@ -232,7 +237,6 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
                 for(int k=0;k<kernelSize;k++){ //For each element in the kernel (k,j)
                     //Add up all the activations that it sees
                     float sum = 0;
-                    float reusable;
                     int thisY,thisX;
                     thisY = thisX = 0;
                     int yStart, yEnd;
@@ -253,7 +257,7 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
                     for(int y=yStart;y<yEnd;y+=thisStride){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
                         for(int x=xStart;x<xEnd;x+=thisStride){
                             if(!floatCmp(*dcDxs[lSub1][{i,thisY,thisX}],0.0f)){ //yes, l-1 is correct (dcDxs only has numMaps.size()-2 layers)
-                                reusable = *dcDxs[lSub1][{i,thisY,thisX}] //Previous derivative (from pooling)
+                                float reusable = (*dcDxs[lSub1][{i,thisY,thisX}]) //Previous derivative (from pooling)
                             *  ((*maps[l][{i,thisY,thisX}])<=0?0.01f:1); //*Leaky Relu Derivative
                                 sum += (*maps[lSub1][{prevMapI,y,x}]) * reusable;//The previous activation
                                 if(l!=1) *dcDxs[lSub2][{prevMapI,y,x}] += reusable * (*kernels[lSub1][{i,prevMapI,j,k}]); //don't have dcDxs for the first layer
@@ -272,7 +276,7 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
         for(int y=0;y<currDimens;y++){
             for(int x=0;x<currDimens;x++){
                 //Bias has to be here as otherwise it would count the same pixels multiple times
-                biasSum += (*dcDxs[lSub1][{i,y,x}]) * ((*maps[l][{i,y,x}])<=0?0.01f:1); //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression
+                biasSum += (*dcDxs[lSub1][{i,y,x}]) * ((*maps[l][{i,y,x}])<=0?0.01f:1); //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression)
             }            
         }
         *(*kernelBiasesGrad)[i] += biasSum;
@@ -296,7 +300,7 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                 for(int k=0;k<kernelSize;k++){ //For each element in the kernel (k,j)
                     //Add up all the activations that it sees
                     float sum = 0;
-                    int thisY,thisX,mlpIndex,mlpSubIndex;
+                    int thisY,thisX;
                     thisY = thisX = 0;
                     std::vector<bool> done(poolArea); //don't count the max pixel more than once
                     int yStart, yEnd;
@@ -316,8 +320,8 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                     }
                     for(int y=yStart;y<yEnd;y+=thisStride){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (thisX,thisY)
                         for(int x=xStart;x<xEnd;x+=thisStride){ //Derivatve of the corresponding pixel in the next (backwards) layer
-                            mlpSubIndex = (((thisY)/poolStride)*poolWidth) + ((thisX)/poolStride);
-                            mlpIndex = mlpRegion + mlpSubIndex;
+                            int mlpSubIndex = (((thisY)/poolStride)*poolWidth) + ((thisX)/poolStride);
+                            int mlpIndex = mlpRegion + mlpSubIndex;
                             if(floatCmp(*maps[maps.size()-1][{i,thisY,thisX}],*activations[0][mlpIndex]) && !done[mlpSubIndex]){ //only the max element has a derivative
                                 done[mlpSubIndex] = true;
                                 //In the first MLP layer a=relu(x) where x is the max activation pixel from pooling
@@ -334,16 +338,15 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
             }
         }
         float biasSum = 0;
-        int mlpIndex,mlpSubIndex;
         std::vector<bool> done(poolArea);
         for(int y=0;y<currDimens;y++){
             for(int x=0;x<currDimens;x++){
-                mlpSubIndex = (((y)/poolStride)*poolWidth) + ((x)/poolStride);
-                mlpIndex = mlpRegion + mlpSubIndex;
+                int mlpSubIndex = (((y)/poolStride)*poolWidth) + ((x)/poolStride);
+                int mlpIndex = mlpRegion + mlpSubIndex;
                 //Bias has to be here as otherwise it would count the same pixels multiple times
                 if(floatCmp(*maps[maps.size()-1][{i,y,x}],*activations[0][mlpIndex]) && !done[mlpSubIndex]){
                     done[mlpSubIndex] = true;
-                    biasSum += *dcDzs[0][mlpIndex]; //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression
+                    biasSum += *dcDzs[0][mlpIndex]; //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression)
                 }
             }
         }
@@ -366,8 +369,7 @@ void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
                 for(int k=0;k<kernelSize;k++){ //For each element in the kernel (k,j)
                     //Add up all the activations that it sees
                     float sum = 0;
-                    float reusable;
-                    int thisY,thisX,poolX,poolY;
+                    int thisY,thisX;
                     thisY = thisX = 0;
                     std::vector<std::vector<bool>> done(poolDimens,std::vector<bool>(poolDimens));
                     int yStart, yEnd;
@@ -387,11 +389,11 @@ void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
                     }
                     for(int y=yStart;y<yEnd;y+=thisStride){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
                         for(int x=xStart;x<xEnd;x+=thisStride){ //Derivatve of the corresponding pixel in the next (backwards) layer
-                            poolY = ((thisY)/poolStride);
-                            poolX = ((thisX)/poolStride);
+                            int poolY = ((thisY)/poolStride);
+                            int poolX = ((thisX)/poolStride);
                             if(floatCmp(*maps[l][{i,thisY,thisX}],*maps[l+1][{i,poolY,poolX}]) && !done[poolY][poolX] && !floatCmp(*dcDxs[l][{i,poolY,poolX}],0.0f)){ //only the max element has a derivative
                                 done[poolY][poolX] = true;
-                                reusable =  *dcDxs[l][{i,poolY,poolX}]//Previous derivative (from pooling)
+                                float reusable =  *dcDxs[l][{i,poolY,poolX}]//Previous derivative (from pooling)
                                 * ((*maps[l][{i,thisY,thisX}])<=0?0.01f:1); //*Leaky Relu Derivative
                                 if(l!=1) *dcDxs[l-2][{i,y,x}] += reusable * (*kernels[l-1][{i,prevMapI,j,k}]);//*kernel weight
                                 sum += (*maps[l-1][{prevMapI,y,x}]) * reusable; //The activation of the previous layer * the correct derivative from pooling
@@ -406,12 +408,11 @@ void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
             }
         }
         float biasSum = 0;
-        int poolX,poolY;
         std::vector<std::vector<bool>> done(poolDimens,std::vector<bool>(poolDimens));
         for(int y=0;y<currDimens;y++){
             for(int x=0;x<currDimens;x++){
-                poolY = (y/poolStride);
-                poolX = (x/poolStride);
+                int poolY = (y/poolStride);
+                int poolX = (x/poolStride);
                 //Bias has to be here as otherwise it would count the same pixels multiple times
                 if(floatCmp(*maps[l][{i,y,x}],*maps[l+1][{i,poolY,poolX}]) && !done[poolY][poolX]){
                     done[poolY][poolX] = true;

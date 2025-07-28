@@ -32,11 +32,11 @@ class Dataset {
         std::unordered_map<std::string,int> plantToIndex;
 
         Dataset(std::string dirPathIn,float trainTestSplitRatio);
-        std::vector<float> getPixelMeans();
-        std::vector<float> getPixelStdDevs();
-        PlantImage *randomImage(bool test);
-        PlantImage randomImageObj(bool test);
-        void compilePixelStats();
+        std::vector<float> getPixelMeans() const;
+        std::vector<float> getPixelStdDevs() const;
+        PlantImage *randomImage(bool test) const;
+        PlantImage randomImageObj(bool test) const;
+        void compilePixelStats() const;
 
 };
 

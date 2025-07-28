@@ -52,15 +52,15 @@ Dataset::Dataset(std::string dirPathInp,float trainTestSplitRatio){
     std::cout << "Dataset has "+std::to_string(size)+" items" << std::endl;
 }
 
-std::vector<float> Dataset::getPixelMeans(){
+std::vector<float> Dataset::getPixelMeans() const{
     return this->pixelStats[0];
 }
 
-std::vector<float> Dataset::getPixelStdDevs(){
+std::vector<float> Dataset::getPixelStdDevs() const{
     return this->pixelStats[1];
 }
 
-PlantImage *Dataset::randomImage(bool test){
+PlantImage *Dataset::randomImage(bool test) const{
     int index = rand() % this->size;
     int prevIndex = this->size;
     for(int i=indices.size()-1;i>=0;i--){ //iterate through plant classes
@@ -91,14 +91,14 @@ PlantImage *Dataset::randomImage(bool test){
     return new PlantImage("","");
 }
 
-PlantImage Dataset::randomImageObj(bool test){
+PlantImage Dataset::randomImageObj(bool test) const{
     PlantImage *ptr = randomImage(test);
     PlantImage obj = *ptr;
     delete ptr;
     return obj;
 }
 
-void Dataset::compilePixelStats(){
+void Dataset::compilePixelStats() const{
     //  * = stdDevs    Means:R,G,B *:R,G,B  Count  
     nlohmann::json stats = {{0,0,0},{0,0,0},{0}};
     int numPlants = 0;

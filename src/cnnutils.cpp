@@ -71,14 +71,13 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){
     }
     int imHeight = imgDimens[0];
     int imWidth = imgDimens[1];
-    float max;
     int resHeight = (int)floor((float)(imHeight)/yStride);
     int resWidth = (int) floor((float)(imWidth)/xStride);
     Tensor result({resHeight,resWidth});
     int newY,newX = newY =0;
     for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
         for(int x=xKernelRadius;x<=imWidth-xKernelRadius;x+=xStride){
-            max = -std::numeric_limits<float>::infinity();
+            float max = -std::numeric_limits<float>::infinity();
             for(int j=0;j<yStride;j++){
                 for(int i=0;i<xStride;i++){
                     if((*image[{(y+j-yKernelRadius),(x+i-xKernelRadius)}])>max){
@@ -110,7 +109,6 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     }
     int xKernelRadius = (int) floor(kernelDimens[2]/2); //Not actually a radius, actually half the width
     int yKernelRadius = (int) floor(kernelDimens[1]/2);
-    float sum;
     std::vector<int> paddedImgDimens;
     if(padding){
         int paddedHeight = imgDimens[1]+yKernelRadius*2;
@@ -143,7 +141,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         int newY,newX = newY =0;
         for(int y=yKernelRadius;y<imHeight-yKernelRadius;y+=yStride){
             for(int x=xKernelRadius;x<imWidth-xKernelRadius;x+=xStride){
-                sum = 0;
+                float sum = 0;
                 for(int j=0;j<kernelDimens[1];j++){
                     //TODO figure out biases 
                     for(int i=0;i<kernelDimens[2];i++){ 
@@ -158,6 +156,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
                 else if(biases->getTotalSize()>1){
                     throw std::invalid_argument("Too many biases for a 3D kernel");
                 }
+                //No biases is valid
                 result[newY][newX] += sum; 
                 newX++;
             }
@@ -237,7 +236,7 @@ void CnnUtils::reset(){
 std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
     if(loadNew){
         std::vector<Tensor> result(numMaps.size()-1);
-        for(int l=0;l<numMaps.size()-1;l++){
+        for(int l=0;l<(numMaps.size()-1);l++){
             if(kernelSizes[l]==0){
                 result[l] = Tensor({0,0,0,0});
             }
@@ -281,7 +280,7 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
         //2d as there's a bias for each output channel in each layer
         d2 biasesVec = jsonBiases.get<d2>();
         if(biasesVec.size()!=kernelsVec.size()){ //i.e. some layers are missing
-            throw std::invalid_argument("Number of weights does not match number of biases");
+            throw std::invalid_argument("Number of kernel weights does not match number of kernel biases");
         }
         for(int i=0;i<biasesVec.size();i++){
             Tensor *biases = new Tensor({(int)biasesVec[i].size()});
@@ -328,7 +327,7 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
         mlpBiasesFile.close();
         d2 biasesVec = jsonBiases.get<d2>();
         if(biasesVec.size()!=weightsVec.size()){ //i.e. some layers are missing
-            throw std::invalid_argument("Number of weights does not match number of biases");
+            throw std::invalid_argument("Number of MLP weights does not match number of MLP biases");
         }
         for(int i=0;i<biasesVec.size();i++){
             Tensor *biases = new Tensor({(int)biasesVec[i].size()});
@@ -382,7 +381,7 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                     std::cout << "Very large gradient: "+std::to_string(adjustedGrad) << std::endl;
                     adjustedGrad = 0;
                 }
-                *(values[l][i]) -= adjustedGrad; //adjust this CNN's weights (as it will be cloned next batch)
+                *(values[l][i]) -= adjustedGrad; 
                 *(gradient[l][i]) = 0;
             }   
         }
@@ -392,18 +391,17 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
     for(int i=0;i<values.size();i++){
         Tensor *valLayerBiases = values[i].getBiases();
         Tensor *gradLayerBiases = gradient[i].getBiases();
-        if(valLayerBiases!=nullptr){
-            //Dereferencing but still has the same shared_ptr and so the original bias values will still be updated
-            valuesBiases.push_back(*valLayerBiases);
-        }
-        if(gradLayerBiases!=nullptr){
-            gradientBiases.push_back(*gradLayerBiases);
-        }
         if((valLayerBiases==nullptr) != (gradLayerBiases==nullptr)){
             throw std::invalid_argument("Biases must have the same dimensions for the gradient to be applied");
         }
+        if(valLayerBiases!=nullptr && gradLayerBiases!=nullptr){
+            //Dereferencing but still has the same shared_ptr and so the original bias values will still be updated
+            valuesBiases.push_back(*valLayerBiases);
+            gradientBiases.push_back(*gradLayerBiases);
+            applyGradient(valuesBiases,gradientBiases);
+        }
     }
-    applyGradient(valuesBiases,gradientBiases);
+    
 }
 
 void CnnUtils::resetKernels(){
@@ -417,7 +415,7 @@ void CnnUtils::resetKernels(){
             for(int j=0;j<kernelsDimens[1];j++){ //previous channel
                 for(int y=0;y<kernelsDimens[2];y++){
                     for(int x=0;x<kernelsDimens[3];x++){
-                        *kernels[l][{i,j,y,x}] = normalDistRandom(0, stdDev); 
+                        *kernels[l][{i,j,y,x}] = normalDistRandom(0,stdDev); 
                     }
                 }
             }
@@ -435,13 +433,13 @@ void CnnUtils::resetKernels(){
 void CnnUtils::resetWeights() {
     for(int l=0;l<weights.size();l++){ //layer
         std::vector<int> weightsDimens = weights[l].getDimens();
-            for (int i=0;i<weightsDimens[0];i++) { //neurone
-                //He initialisation
-                float stdDev = (float) sqrt(2.0f/weightsDimens[1]);
-                for (int k=0;k<weightsDimens[1];k++) { //previous neurone
-                    *weights[l][{i,k}] = normalDistRandom(0, stdDev);
-                }
+        for (int i=0;i<weightsDimens[0];i++) { //neurone
+            //He initialisation
+            float stdDev = (float) sqrt(2.0f/weightsDimens[1]);
+            for (int j=0;j<weightsDimens[1];j++) { //previous neurone
+                *weights[l][{i,j}] = normalDistRandom(0, stdDev);
             }
+        }
         //set the biases = 0
         Tensor *biases = weights[l].getBiases();
         size_t biasesSize = biases->getTotalSize();
@@ -493,11 +491,11 @@ void CnnUtils::saveKernels() {
 }
 
 void CnnUtils::saveActivations(){  //For debugging use
-    std::ofstream activationsFile(currDir+"/res/activations.json");
     d2 activationsVec(activations.size());
     for(int l=0;l<activations.size();l++){
         activationsVec[l] = activations[l].toVector<d1>();
     }
+    std::ofstream activationsFile(currDir+"/res/activations.json");
     nlohmann::json jsonActivations = activationsVec;
     activationsFile << jsonActivations.dump();
     activationsFile.close();
