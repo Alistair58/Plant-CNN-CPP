@@ -34,13 +34,13 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
 static void test(CNN *n, Dataset *d, int numTest);
 
 //TODO
-//Use cmd line gdb to find Tensor assignment error
+//Make it run
 
 
 int main(int argc,char **argv){
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = new CNN(LR,d,true);
-    train(cnn,d,1,64,4,4); 
+    train(cnn,d,1,4,4,4); 
     test(cnn,d,10);
     //train(cnn,d,500,64,4,4); 
     //test(cnn,d,1000);
@@ -52,7 +52,7 @@ static void test(CNN *n, Dataset *d, int numTest){
     int correctCount = 0;
     for (int i=0;i<numTest;i++) {
         PlantImage pI = d->randomImageObj(true);
-        if(pI.label.length()==0){
+        if(pI.label.length()!=0){
             std::string response = n->forwards(pI.data);
             bool correct = response==pI.label;
             std::cout << (((correct)?ANSI_GREEN:ANSI_RED) +
@@ -65,7 +65,7 @@ static void test(CNN *n, Dataset *d, int numTest){
 }
 
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads){
-    long startTime = getCurrTime();
+    uint64_t startTime = getCurrTimeMs();
     int missedCount = 0;
     for (int i=0;i<numBatches;i++) { // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,numCnnThreads);
@@ -79,7 +79,7 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
     n->saveWeights();
     n->saveKernels();
     std::cout << "Done" << std::endl;
-    long endTime = getCurrTime();
+    uint64_t endTime = getCurrTimeMs();
     int secs = (int)((endTime-startTime)/1000);
     int mins = (int) (secs/60);
     int hours = (int) (mins/60);
@@ -114,13 +114,13 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
         cnnThreads[cT]= std::thread(
             [](int threadId,int batchSize,int numCnnThreads,std::vector<PlantImage*> plantImages,Dataset *d,std::vector<CNN*> cnns){
                 for (int i=threadId;i<batchSize;i+=numCnnThreads) {
-                    long startTime = getCurrTime();
-                    while(plantImages[i]->index==-1 && getCurrTime()-5000<startTime){
+                    uint64_t startTime = getCurrTimeMs();
+                    while((plantImages[i]==nullptr || plantImages[i]->index==-1) && getCurrTimeMs()-5000<startTime){
                         //Give up if we can't get the image in 5 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
                         usleep(10000); //10ms
                     }
-                    if(plantImages[i]->index!=-1 && plantImages[i]->label.length()>0) cnns[threadId]->backwards(plantImages[i]->data,plantImages[i]->label);
+                    if(plantImages[i]!=nullptr && plantImages[i]->index!=-1 && plantImages[i]->label.length()>0) cnns[threadId]->backwards(plantImages[i]->data,plantImages[i]->label);
                     else missedCount++;
                     //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
                 }
@@ -132,9 +132,11 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
             //No easy way to kill a thread which calls a blocking external function (without processes)
             //and so we can't have a timeout
            imageThreads[t].join();
+           std::cout << "Image thread: "+std::to_string(t)+" joined" << std::endl;
         }
         if(t<numCnnThreads){
             cnnThreads[t].join();
+            std::cout << "CNN thread: "+std::to_string(t)+" joined" << std::endl;
         }
     }
     n->applyGradients(cnns);

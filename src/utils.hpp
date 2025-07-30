@@ -8,7 +8,8 @@
 #include <thread>
 
 std::vector<std::string> strSplit(std::string str,std::vector<char> delimiters);
-long getCurrTime();
+uint64_t getCurrTimeMs();
+uint64_t getCurrTimeUs();
 // bool join(std::thread *thread,int timeoutSeconds);
 
 #endif

@@ -29,17 +29,20 @@ Dataset::Dataset(std::string dirPathInp,float trainTestSplitRatio){
     }
     this->dirPath = dirPathInp;
     int i = 0;
-    for(const auto &entry: fs::directory_iterator(dirPath)){
+    for(const fs::directory_entry &entry: fs::directory_iterator(dirPath)){
         if(fs::is_directory(entry)){
             indices.push_back(i);
-            char *folderPath = (char*) entry.path().c_str();
-            std::regex parentFoldersRegex("[^/]+\\/");
+            //e.g. "C:/Users/Alistair/Pictures/house_plant_species\\African Violet (Saintpaulia ionantha)""
+            std::string folderPath = entry.path().string();
+            std::regex parentFoldersRegex(".+\\\\");
             std::string folderName = std::regex_replace(folderPath,parentFoldersRegex,"");
             plantNames.push_back(folderName);
             for(const auto &subEntry:fs::directory_iterator(entry)){
                 std::regex allExceptExtensionRegex("^[^\\.]+");
-                char *filePath = (char*) subEntry.path().c_str();
-                std::string fileExtension = std::regex_replace(filePath,allExceptExtensionRegex, "");
+                std::string filePath = subEntry.path().string();
+                //Some plants have a . in their name and so a regex isn't applicable e.g. "Begonia (Begonia spp.)"
+                std::vector<std::string> filePathSections = strSplit(filePath,{'.'});
+                std::string fileExtension = "."+filePathSections[filePathSections.size()-1];
                 //If not found in the known file extensions, i.e. new, add it to the known file extensions
                 if(find(fileExtensions.begin(),fileExtensions.end(),fileExtension)==fileExtensions.end()){
                     fileExtensions.push_back(fileExtension);
@@ -61,6 +64,7 @@ std::vector<float> Dataset::getPixelStdDevs() const{
 }
 
 PlantImage *Dataset::randomImage(bool test) const{
+    srand(getCurrTimeUs());
     int index = rand() % this->size;
     int prevIndex = this->size;
     for(int i=indices.size()-1;i>=0;i--){ //iterate through plant classes
@@ -81,6 +85,7 @@ PlantImage *Dataset::randomImage(bool test) const{
             for(std::string fileExtension:fileExtensions){ //Try all file extensions
                 PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName);
                 if(*(plantImage->data[0]) > 0){ //valid image
+                    std::cout << "Loaded: "+fname+fileExtension << std::endl;
                     return plantImage;
                 }
             } 

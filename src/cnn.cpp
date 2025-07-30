@@ -67,7 +67,7 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset) {
 
 std::string CNN::forwards(Tensor& imageInt){
     #if DEBUG
-        long startTime = getCurrTime();
+        uint64_t startTime = getCurrTimeMs();
     #endif
     reset();
     maps[0] = parseImg(imageInt);
@@ -130,7 +130,7 @@ std::string CNN::forwards(Tensor& imageInt){
             std::cout << std::to_string(outputVec[i])+",";
         }
         std::cout << std::to_string(outputVec[outputVec.size()-1])+"]" << std::endl;
-        std::cout << "Forwards took "+std::to_string(getCurrTime()-startTime)+"ms" <<std::end;
+        std::cout << "Forwards took "+std::to_string(getCurrTimeMs()-startTime)+"ms" <<std::end;
     #endif
     return d->plantNames[result];
 } 
@@ -139,7 +139,7 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
     forwards(imageInt); //set all the activations
     //Gradients are not reset each time to enable batches
     #if DEBUG
-        long mlpStart = getCurrTime();
+        uint64_t mlpStart = getCurrTimeMs();
     #endif
     //MLP derivs
     if(!(d->plantToIndex.contains(answer))){
@@ -166,7 +166,7 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
 
     mlpBackwards(dcDzs); 
     #if DEBUG
-        std::cout << "Backwards MLP took "+std::to_string(getCurrTime()-mlpStart)+"ms" << std::endl;
+        std::cout << "Backwards MLP took "+std::to_string(getCurrTimeMs()-mlpStart)+"ms" << std::endl;
     #endif
     //x is the image pixel value and so these dcDxs are the derivatives based on pixels which are carried backwards
     std::vector<Tensor> dcDxs(numMaps.size()-2);
@@ -182,7 +182,7 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
         }
     }
     #if DEBUG
-        long convolutionStart = getCurrTime();
+       uint64_t convolutionStart = getCurrTimeMs();
     #endif
     //makes computational sense to do pooling and conv together
     finalPoolingConvBackwards(dcDzs,dcDxs,padding);
@@ -197,8 +197,8 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
         
     }
     #if DEBUG
-        std::cout << "Backwards Convolution took "+std::to_string(getCurrTime()-convolutionStart)+"ms" << std::endl;
-        std::cout << "Backwards took "+std::to_string(getCurrTime()-mlpStart)+"ms" << std::endl;
+        std::cout << "Backwards Convolution took "+std::to_string(getCurrTimeMs()-convolutionStart)+"ms" << std::endl;
+        std::cout << "Backwards took "+std::to_string(getCurrTimeMs()-mlpStart)+"ms" << std::endl;
     #endif
 }
 

@@ -264,7 +264,7 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
             int width = kernelsVec[i][0][0][0].size();
             result[i] = Tensor({numOutChans,numInChans,height,width});
             for(int j=0;j<numOutChans;j++){
-                for(int k=0;k<numOutChans;k++){
+                for(int k=0;k<numInChans;k++){
                     for(int l=0;l<height;l++){
                         for(int m=0;m<width;m++){
                             *((result[i])[{j,k,l,m}]) = kernelsVec[i][j][k][l][m];

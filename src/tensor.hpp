@@ -22,8 +22,20 @@ class Tensor{
         Tensor(){};
         //Fresh Tensor constructor
         Tensor(const std::vector<int> inputDimens);
+
+        //Rule of 5
         //Biases must only be used for a single tensor
         ~Tensor(){ delete biases; }
+        //Copy constructor - needed for deep copy (for biases)
+        Tensor(const Tensor& t);
+        //Copy assignment operator
+        //The values are copied - the memory is not shared
+        Tensor& operator=(const Tensor &t);
+        //Move constructor
+        Tensor(Tensor&& t) noexcept;
+        //Move assignment operator
+        Tensor& operator=(Tensor&& t) noexcept;
+
         //Differs from traditional subscript - returns the address
         float *operator[](const std::vector<int> indices) const;
         //Get an address from a flattened index
@@ -31,10 +43,8 @@ class Tensor{
         //Return a subsection of the tensor
         Tensor slice(const std::vector<int> indices) const;
         //Data value assignment by a flat vector
-        void operator=(const std::vector<float> vals);
-        //Data value assignment by another tensor
-        //The values are copied - the memory is not shared
-        void operator=(const Tensor &t);
+        Tensor& operator=(const std::vector<float> vals);
+        
         template <typename dn>
         dn toVector() const;
 

@@ -24,11 +24,18 @@ std::vector<std::string> strSplit(std::string str,std::vector<char> delimiters){
 }
 
 
-long getCurrTime(){
+uint64_t getCurrTimeMs(){
     std::chrono::milliseconds time = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()
     );
-    return (long) time.count();
+    return (int64_t) time.count();
+}
+
+uint64_t getCurrTimeUs(){
+    std::chrono::microseconds time = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()
+    );
+    return (int64_t) time.count();
 }
 
 // //False if we had to end the thread prematurely, else true

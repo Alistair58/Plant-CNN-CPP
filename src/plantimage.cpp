@@ -17,7 +17,7 @@ Tensor PlantImage::fileToImageTensor(std::string fName){
     Tensor result({1,1,1});
     *(result[0]) = -1;
     #if DEBUG
-        long startTime = getCurrTime();
+        uint64_t startTime = getCurrTimeMs();
     #endif
 
     int width,height,channels;
@@ -29,14 +29,14 @@ Tensor PlantImage::fileToImageTensor(std::string fName){
     }
 
     #if DEBUG
-        std::cout << "Getting image took "+std::to_string(getCurrTime()-startTime)+"ms" << std::endl;
+        std::cout << "Getting image took "+std::to_string(getCurrTimeMs()-startTime)+"ms" << std::endl;
     #endif
     
     result = Tensor({3,height,width}); //RGB
     //There is no alpha as most images in this dataset are jpeg which don't have an alpha channel
     int pixel;
     #if DEBUG
-        long parsingStart = getCurrTime();
+        uint64_t parsingStart = getCurrTimeMs();
     #endif
     for (int y=0;y<height;y++) {
         for (int x=0;x<width;x++) {
@@ -50,7 +50,7 @@ Tensor PlantImage::fileToImageTensor(std::string fName){
     stbi_image_free(img);
 
     #if DEBUG
-        std::cout << "Parsing image took "+std::to_string(getCurrTime()-parsingStart)+"ms" << std::endl;
+        std::cout << "Parsing image took "+std::to_string(getCurrTimeMs()-parsingStart)+"ms" << std::endl;
     #endif
     
     return result;
