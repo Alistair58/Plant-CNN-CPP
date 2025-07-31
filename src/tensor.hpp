@@ -34,7 +34,7 @@ class Tensor{
         //Move constructor
         Tensor(Tensor&& t) noexcept;
         //Move assignment operator
-        Tensor& operator=(Tensor&& t) noexcept;
+        Tensor& operator=(Tensor&& t);
 
         //Differs from traditional subscript - returns the address
         float *operator[](const std::vector<int> indices) const;

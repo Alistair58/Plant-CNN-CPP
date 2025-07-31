@@ -130,8 +130,10 @@ std::string CNN::forwards(Tensor& imageInt){
             std::cout << std::to_string(outputVec[i])+",";
         }
         std::cout << std::to_string(outputVec[outputVec.size()-1])+"]" << std::endl;
-        std::cout << "Forwards took "+std::to_string(getCurrTimeMs()-startTime)+"ms" <<std::end;
+        std::cout << "Forwards took "+std::to_string(getCurrTimeMs()-startTime)+"ms" <<std::endl;
     #endif
+    saveMaps();
+    saveActivations();
     return d->plantNames[result];
 } 
 

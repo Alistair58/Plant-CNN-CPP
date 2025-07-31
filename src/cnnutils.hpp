@@ -41,6 +41,7 @@ class CnnUtils {
         std::vector<Tensor> loadWeights(bool loadNew);
         //For debugging use
         void saveActivations();
+        void saveMaps();
 
     public:
         //IMAGE-RELATED

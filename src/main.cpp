@@ -40,8 +40,8 @@ static void test(CNN *n, Dataset *d, int numTest);
 int main(int argc,char **argv){
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = new CNN(LR,d,true);
-    train(cnn,d,1,4,4,4); 
-    test(cnn,d,10);
+    //train(cnn,d,1,4,4,4); 
+    test(cnn,d,1);
     //train(cnn,d,500,64,4,4); 
     //test(cnn,d,1000);
     delete d;
@@ -66,7 +66,6 @@ static void test(CNN *n, Dataset *d, int numTest){
 
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads){
     uint64_t startTime = getCurrTimeMs();
-    int missedCount = 0;
     for (int i=0;i<numBatches;i++) { // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,numCnnThreads);
         if(i%10 == 0 && i>0){ //save every 10 batches
@@ -115,12 +114,14 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
             [](int threadId,int batchSize,int numCnnThreads,std::vector<PlantImage*> plantImages,Dataset *d,std::vector<CNN*> cnns){
                 for (int i=threadId;i<batchSize;i+=numCnnThreads) {
                     uint64_t startTime = getCurrTimeMs();
-                    while((plantImages[i]==nullptr || plantImages[i]->index==-1) && getCurrTimeMs()-5000<startTime){
-                        //Give up if we can't get the image in 5 seconds
+                    while(plantImages[i]==nullptr && getCurrTimeMs()-30000<startTime){
+                        //Give up if we can't get the image in 30 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
                         usleep(10000); //10ms
                     }
-                    if(plantImages[i]!=nullptr && plantImages[i]->index!=-1 && plantImages[i]->label.length()>0) cnns[threadId]->backwards(plantImages[i]->data,plantImages[i]->label);
+                    if(plantImages[i]!=nullptr && plantImages[i]->index!=-1 && plantImages[i]->label.length()>0){
+                        cnns[threadId]->backwards(plantImages[i]->data,plantImages[i]->label);
+                    }
                     else missedCount++;
                     //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
                 }

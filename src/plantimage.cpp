@@ -14,8 +14,8 @@ PlantImage::PlantImage(std::string fname, std::string plantName){ //fname can be
 }
 
 Tensor PlantImage::fileToImageTensor(std::string fName){
-    Tensor result({1,1,1});
-    *(result[0]) = -1;
+    Tensor result;
+    
     #if DEBUG
         uint64_t startTime = getCurrTimeMs();
     #endif
@@ -52,7 +52,7 @@ Tensor PlantImage::fileToImageTensor(std::string fName){
     #if DEBUG
         std::cout << "Parsing image took "+std::to_string(getCurrTimeMs()-parsingStart)+"ms" << std::endl;
     #endif
-    
+
     return result;
 
 

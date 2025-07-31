@@ -20,10 +20,10 @@ Tensor CnnUtils::parseImg(Tensor& img){
     int xStride = (int) std::ceil((float)imWidth/mapDimens[0]); //Reducing size to mapDimens[0] x mapDimens[0] via a Gaussian blur
     int yStride = (int) std::ceil((float)imHeight/mapDimens[0]); 
     Tensor gKernel = gaussianBlurKernel(xStride,yStride);
-    Tensor gKernel3d = Tensor({1,xStride,yStride});
+    Tensor gKernel3d = Tensor({1,yStride,xStride});
     gKernel3d.slice({0}) = gKernel;
-    Tensor result = Tensor({channels,imHeight,imWidth});
-    Tensor img4d = Tensor({3,1,imHeight,imWidth}); //convolution requires a 3d array (image with multiple channels) 
+    Tensor result = Tensor({channels,mapDimens[0],mapDimens[0]});
+    Tensor img4d = Tensor({channels,1,imHeight,imWidth}); //convolution requires a 3d array (image with multiple channels) 
     //but we only want to process one channel at a time and so we have to store each channel in a separate 3d array
     for(int l=0;l<channels;l++){
         img4d.slice({l,0}) = img.slice({l});
@@ -150,10 +150,10 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
                 }
                 //Biases
                 Tensor *biases = kernel.getBiases();
-                if(biases->getTotalSize()==1){//for a 3D kernel, there should only 1 bias
+                if(biases!=nullptr && biases->getTotalSize()==1){//for a 3D kernel, there should only 1 bias
                     sum += *((*biases)[0]); 
                 }
-                else if(biases->getTotalSize()>1){
+                else if(biases!=nullptr && biases->getTotalSize()>1){
                     throw std::invalid_argument("Too many biases for a 3D kernel");
                 }
                 //No biases is valid
@@ -207,9 +207,10 @@ std::vector<float> CnnUtils::softmax(std::vector<float> inp){
         
 
 float CnnUtils::CnnUtils::normalDistRandom(float mean,float stdDev){
+    std::random_device rd{}; //Non-deterministic seeder
+    std::mt19937 gen{rd()}; //Mersenne twister 
     std::normal_distribution<double> dist(mean,stdDev);
-    std::default_random_engine generator;
-    float result = (float) dist(generator);
+    float result = (float) dist(gen);
     return result;
 }
 
@@ -499,6 +500,17 @@ void CnnUtils::saveActivations(){  //For debugging use
     nlohmann::json jsonActivations = activationsVec;
     activationsFile << jsonActivations.dump();
     activationsFile.close();
+}
+
+void CnnUtils::saveMaps(){  //For debugging use
+    d4 mapsVec(maps.size());
+    for(int l=0;l<maps.size();l++){
+        mapsVec[l] = maps[l].toVector<d3>();
+    }
+    std::ofstream mapsFile(currDir+"/res/maps.json");
+    nlohmann::json jsonMaps = mapsVec;
+    mapsFile << jsonMaps.dump();
+    mapsFile.close();
 }
 
 void CnnUtils::resetGrad(std::vector<Tensor>& grad){

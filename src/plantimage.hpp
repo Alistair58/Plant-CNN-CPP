@@ -10,7 +10,7 @@
 
 class PlantImage {
     public:
-        Tensor data = Tensor({0});
+        Tensor data;
         std::string label = "";
         int index = -1;
 

@@ -52,6 +52,10 @@ Dataset::Dataset(std::string dirPathInp,float trainTestSplitRatio){
         }
     }
     this->size = i;
+    for(int j=0;j<plantNames.size();j++) {
+        plantToIndex[plantNames[j]] =  j;
+    }
+    loadPixelStats();
     std::cout << "Dataset has "+std::to_string(size)+" items" << std::endl;
 }
 
@@ -84,7 +88,7 @@ PlantImage *Dataset::randomImage(bool test) const{
             std::string fname = dirPath+"/"+plantName+"/"+std::to_string(subIndex);
             for(std::string fileExtension:fileExtensions){ //Try all file extensions
                 PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName);
-                if(*(plantImage->data[0]) > 0){ //valid image
+                if(plantImage->data.getTotalSize() > 0){ //valid image
                     std::cout << "Loaded: "+fname+fileExtension << std::endl;
                     return plantImage;
                 }
