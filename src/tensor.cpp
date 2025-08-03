@@ -132,20 +132,6 @@ Tensor& Tensor::operator=(Tensor&& t){
     return *this;
 }
 
-float *Tensor::operator[](const std::vector<int> indices) const{
-    if(indices.size()!=dimens.size()){
-        throw std::invalid_argument("The length of \"indices\" must match the number of dimensions in the Tensor");
-    }
-    return (*this)[flattenIndex(indices)];
-}
-
-float *Tensor::operator[](int flatIndex) const{
-    if(flatIndex>=totalSize){ //totalSize is just for this sub-tensor and so offset does not need to be taken into account for bounds (assuming sub-tensor is valid)
-        throw std::out_of_range("Index "+std::to_string(flatIndex)+" out of bounds for size "+std::to_string(totalSize));
-    }
-    int realIndex = flatIndex+offset;
-    return (data.get()+realIndex);
-}
 
 Tensor Tensor::slice(const std::vector<int> indices) const{ 
     if(indices.size()>=dimens.size()){
@@ -172,23 +158,6 @@ Tensor& Tensor::operator=(const std::vector<float> vals){
 }
 
 
-
-size_t Tensor::flattenIndex(const std::vector<int> indices) const{
-    if (indices.size() != dimens.size()) {
-        throw std::invalid_argument("Tensor indices provided do not match tensor dimensions");
-    }
-    size_t index = 0;
-    for (size_t i=0;i<dimens.size();i++) {
-        if (indices[i]<0 || indices[i]>=dimens[i]){
-            throw std::out_of_range(
-                "Tensor index out of bounds. Index "+std::to_string(indices[i])+
-                " does not exist for size "+std::to_string(dimens[i])+"."
-            );
-        }
-        index += indices[i]*childSizes[i];
-    }
-    return index;
-}
 
 
 

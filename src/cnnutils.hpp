@@ -72,7 +72,6 @@ class CnnUtils {
         static inline bool floatCmp(float x,float y,float epsilon = std::numeric_limits<float>::min()){
             return (x+epsilon>=y && x-epsilon<=y);
         }
-        static float normalDistRandom(float mean,float stdDev);
         //Does a modulo but the sign of the output is the sign of y
         //e.g. 
         //floorMod(-5,2) = 1

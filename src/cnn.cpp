@@ -83,7 +83,13 @@ std::string CNN::forwards(Tensor& imageInt){
             }
             else{   
                 Tensor kernel = kernels[l-1].slice({i});
+                #if DEBUG
+                    uint64_t convStart = getCurrTimeMs();
+                #endif
                 currChannel = convolution(maps[l-1],kernel,strides[l-1],strides[l-1],padding);
+                #if DEBUG
+                    std::cout << "Convolutional layer "+std::to_string(l)+" channel "+std::to_string(i)+" took "+std::to_string(getCurrTimeMs()-convStart)+"ms" << std::endl;
+                #endif 
             }
         }
     }

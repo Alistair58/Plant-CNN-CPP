@@ -34,14 +34,15 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
 static void test(CNN *n, Dataset *d, int numTest);
 
 //TODO
-//Make it run
+//Move away from *Tensor[{i,j,k}] syntax and to raw pointers
+//AVX2
 
 
 int main(int argc,char **argv){
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = new CNN(LR,d,true);
-    //train(cnn,d,1,4,4,4); 
-    test(cnn,d,1);
+    //test(cnn,d,1);
+    train(cnn,d,1,1,1,1); 
     //train(cnn,d,500,64,4,4); 
     //test(cnn,d,1000);
     delete d;
@@ -98,11 +99,11 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
     std::vector<PlantImage*> plantImages(batchSize);
     for(int iT=0;iT<numImageThreads;iT++){
         imageThreads[iT] = std::thread(
-            [](int threadId,int batchSize,int numImageThreads,std::vector<PlantImage*> plantImages,Dataset *d){
+            [](int threadId,int batchSize,int numImageThreads,std::vector<PlantImage*> *plantImages,Dataset *d){
                 for(int i=threadId;i<batchSize;i+=numImageThreads){
-                    plantImages[i] = d->randomImage(false);
+                    (*plantImages)[i] = d->randomImage(false);
                 }
-            },iT,batchSize,numImageThreads,plantImages,d
+            },iT,batchSize,numImageThreads,&plantImages,d
         );
     }
     cnns[0] = n;
@@ -111,33 +112,41 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
             cnns[cT] = new CNN(n,LR,d);
         }
         cnnThreads[cT]= std::thread(
-            [](int threadId,int batchSize,int numCnnThreads,std::vector<PlantImage*> plantImages,Dataset *d,std::vector<CNN*> cnns){
+            [](int threadId,int batchSize,int numCnnThreads,std::vector<PlantImage*> *plantImages,Dataset *d,std::vector<CNN*> *cnns){
                 for (int i=threadId;i<batchSize;i+=numCnnThreads) {
                     uint64_t startTime = getCurrTimeMs();
-                    while(plantImages[i]==nullptr && getCurrTimeMs()-30000<startTime){
+                    while((*plantImages)[i]==nullptr && (getCurrTimeMs()-30000)<startTime){
                         //Give up if we can't get the image in 30 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
-                        usleep(10000); //10ms
+                        //TODO change back to 10ms
+                        usleep(1000000); //1000ms
+                        std::cout << ".";
                     }
-                    if(plantImages[i]!=nullptr && plantImages[i]->index!=-1 && plantImages[i]->label.length()>0){
-                        cnns[threadId]->backwards(plantImages[i]->data,plantImages[i]->label);
+                    std::cout << "\n";
+                    if((*plantImages)[i]!=nullptr && (*plantImages)[i]->index!=-1 && (*plantImages)[i]->label.length()>0){
+                        (*cnns)[threadId]->backwards((*plantImages)[i]->data,(*plantImages)[i]->label);
                     }
                     else missedCount++;
                     //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
                 }
-            },cT,batchSize,numCnnThreads,plantImages,d,cnns
+            },cT,batchSize,numCnnThreads,&plantImages,d,&cnns
         );
     }
     for(int t=0;t<std::max(numCnnThreads,numImageThreads);t++){
         if(t<numImageThreads){
             //No easy way to kill a thread which calls a blocking external function (without processes)
             //and so we can't have a timeout
-           imageThreads[t].join();
-           std::cout << "Image thread: "+std::to_string(t)+" joined" << std::endl;
+            imageThreads[t].join();
+            #if DEBUG
+                std::cout << "Image thread: "+std::to_string(t)+" joined" << std::endl;
+            #endif 
+
         }
         if(t<numCnnThreads){
             cnnThreads[t].join();
-            std::cout << "CNN thread: "+std::to_string(t)+" joined" << std::endl;
+            #if DEBUG
+                std::cout << "CNN thread: "+std::to_string(t)+" joined" << std::endl;
+            #endif
         }
     }
     n->applyGradients(cnns);

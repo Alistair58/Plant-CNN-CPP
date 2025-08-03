@@ -37,9 +37,20 @@ class Tensor{
         Tensor& operator=(Tensor&& t);
 
         //Differs from traditional subscript - returns the address
-        float *operator[](const std::vector<int> indices) const;
+        inline float *operator[](const std::vector<int> indices) const{
+            if(indices.size()!=dimens.size()){
+                throw std::invalid_argument("The length of \"indices\" must match the number of dimensions in the Tensor");
+            }
+            return (*this)[flattenIndex(indices)];
+        }
         //Get an address from a flattened index
-        float *operator[](int flatIndex) const;
+        inline float *operator[](int flatIndex) const{
+            if(flatIndex>=totalSize){ //totalSize is just for this sub-tensor and so offset does not need to be taken into account for bounds (assuming sub-tensor is valid)
+                throw std::out_of_range("Index "+std::to_string(flatIndex)+" out of bounds for size "+std::to_string(totalSize));
+            }
+            int realIndex = flatIndex+offset;
+            return (data.get()+realIndex);
+        }
         //Return a subsection of the tensor
         Tensor slice(const std::vector<int> indices) const;
         //Data value assignment by a flat vector
@@ -51,12 +62,30 @@ class Tensor{
         std::vector<int> getDimens() const { return dimens; }
         size_t getTotalSize() const { return totalSize; }
         Tensor *getBiases() const { return biases; }
+        std::vector<int> getChildSizes() const { return childSizes; }
+        int getOffset() const { return offset; }
         void setBiases(Tensor *pBiases) { biases = pBiases; }
+        std::shared_ptr<float[]> getData() const { return data; }
 
     private:
         //Sub-Tensor constructor
         Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]> ptr,int pOffset);
-        size_t flattenIndex(const std::vector<int> indices) const;
+        inline size_t flattenIndex(const std::vector<int> indices) const{
+            if (indices.size() != dimens.size()) {
+                throw std::invalid_argument("Tensor indices provided do not match tensor dimensions");
+            }
+            size_t index = 0;
+            for (size_t i=0;i<dimens.size();i++) {
+                if (indices[i]<0 || indices[i]>=dimens[i]){
+                    throw std::out_of_range(
+                        "Tensor index out of bounds. Index "+std::to_string(indices[i])+
+                        " does not exist for size "+std::to_string(dimens[i])+"."
+                    );
+                }
+                index += indices[i]*childSizes[i];
+            }
+            return index;
+        }
         
 
         
@@ -67,7 +96,6 @@ class Tensor{
         template<typename dn>
         static constexpr int nestedVectorDepth();
 
-        std::shared_ptr<float[]> getData() const { return data; }
 };
 
 
