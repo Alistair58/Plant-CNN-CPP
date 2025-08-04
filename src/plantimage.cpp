@@ -38,12 +38,19 @@ Tensor PlantImage::fileToImageTensor(std::string fName){
     #if DEBUG
         uint64_t parsingStart = getCurrTimeMs();
     #endif
+    float *resultData = result.getData().get();
+    int gChannel = result.getChildSizes()[0];
+    int bChannel = 2*result.getChildSizes()[0];
     for (int y=0;y<height;y++) {
+        int rRow = y*result.getChildSizes()[1];
+        int gRow = gChannel + rRow;
+        int bRow = bChannel + rRow;
+        int imgIPart = y*width*channels; // i = (y*width + x)*channels
         for (int x=0;x<width;x++) {
-            int i = (y*width + x)*channels;
-            *result[{0,y,x}] = img[i]; //R
-            *result[{1,y,x}] = img[i+1];//G
-            *result[{2,y,x}] = img[i+2]; //B
+            int imgI  = imgIPart + x*channels;
+            resultData[rRow+x] = img[imgI]; //R
+            resultData[gRow+x] = img[imgI+1];//G
+            resultData[bRow+x] = img[imgI+2]; //B
             //A, if present, is the 3rd offset
         }
     }

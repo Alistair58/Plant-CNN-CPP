@@ -42,7 +42,7 @@ int main(int argc,char **argv){
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = new CNN(LR,d,true);
     //test(cnn,d,1);
-    train(cnn,d,1,1,1,1); 
+    train(cnn,d,4,64,4,4); 
     //train(cnn,d,500,64,4,4); 
     //test(cnn,d,1000);
     delete d;

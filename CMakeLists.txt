@@ -4,9 +4,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_TYPE Debug)
 #Enable maximum optimization and native vector instructions
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    add_compile_options(-O3 -march=native -ffast-math -funroll-loops -fopt-info-vec)
-endif()
+#add_compile_options(-O3 -march=native -ffast-math -funroll-loops -fopt-info-vec)
+#Takes a very long time as it goes through all libraries e.g. vector.h and isn't particularly effective 
 message(STATUS "C++ Compiler Flags: ${CMAKE_CXX_FLAGS}")
 project(Plant-CNN-CPP CXX)
 
