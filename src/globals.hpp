@@ -1,7 +1,6 @@
 #ifndef GLOBALS_HPP
 #define GLOBALS_HPP
 
-#define DEBUG 1
 
 #include <string>
 #include <filesystem>

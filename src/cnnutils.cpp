@@ -171,11 +171,16 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
             int resultRow = newY*result.getChildSizes()[0];
             for(int x=xKernelRadius;x<imWidth-xKernelRadius;x+=xStride){
                 float sum = 0;
+                int paddedImageChannelShortct = paddedImageChannel + x-xKernelRadius; //saving the subtractions
                 for(int j=0;j<kernelDimens[1];j++){
                     int kernelRow = kernelChannel + j*kernel.getChildSizes()[1];
-                    int paddedImageRow = paddedImageChannel + (y+j-yKernelRadius)*paddedImage.getChildSizes()[1];
-                    for(int i=0;i<kernelDimens[2];i++){ 
-                        sum += kernelData[kernelRow + i] *  paddedImageData[paddedImageRow + (x+i-xKernelRadius)];
+                    int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImage.getChildSizes()[1];
+                    //AVX2 dot product is efficient for kernels with a width >=8
+                    //We can't do it for the j loop as the paddedImage next row is not contiguous 
+                    //and so the conditional logic would probably be slower than doing multiple avx2 loops
+                    for(int i=0;i<kernelDimens[2];i+=8){
+                        int len = kernelDimens[2]-i;
+                        sum += dotProductUpTo8f(&kernelData[kernelRow+i],len,&paddedImageData[paddedImageRow+i],len); // (x+i-xKernelRadius) but we did the subtraction before
                     }
                 }
                 //Biases
@@ -216,17 +221,17 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
 //fixed size output
 Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding){ 
     //by padding a normal convolution with 0s
-    Tensor result({newHeight,newWidth});
+    Tensor result({newHeight,newWidth}); //The data is 0 initialised
     Tensor convResult = convolution(image, kernel, xStride, yStride,padding);
     std::vector<int> convResultDimens = convResult.getDimens();
     float *convResultData = convResult.getData().get();
     float *resultData = result.getData().get();
     //Neither result will have any offsets
-    for(int y=0;y<newHeight;y++){
+    for(int y=0;y<convResultDimens[0];y++){
         int resultRow = y*result.getChildSizes()[0];
         int convResultRow = y*convResult.getChildSizes()[0];
-        for(int x=0;x<newWidth;x++){
-            resultData[resultRow+x] = (y<convResultDimens[0] && x<convResultDimens[1])?convResultData[convResultRow+x]:0;
+        for(int x=0;x<convResultDimens[1];x++){
+            resultData[resultRow+x] = convResultData[convResultRow+x];
         }
     }
     return result;

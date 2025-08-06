@@ -13,6 +13,7 @@
 #include "dataset.hpp"
 #include <algorithm>
 #include <random>
+#include <immintrin.h>
 #include "json.hpp"
 
 class CNN; //forward declaration needed for compilation of applyGradients
@@ -83,6 +84,8 @@ class CnnUtils {
             }
             return x;
         }
+        static inline float dotProduct8f(float *X,float *Y);
+        static inline float dotProductUpTo8f(float *X,int lenX,float *Y,int lenY);
 
         //UTILS
         void applyGradients();
@@ -101,5 +104,50 @@ class CnnUtils {
         void applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient);
 };
 
+inline float CnnUtils::dotProduct8f(float *X,float *Y){
+    __m256 a = _mm256_loadu_ps(X);       // Load 8 floats
+    __m256 b = _mm256_loadu_ps(Y);       // Load 8 floats
+    __m256 prod = _mm256_mul_ps(a, b);   // Multiply X[i] * Y[i]
+    //Now horizontally sum all 8 floats in prod
+    //lower 4 floats
+    // {x0*y0,x1*y1,...}
+    __m128 low  = _mm256_castps256_ps128(prod);          
+    //upper 4 floats
+    // {x4*y4,x5*y5,...}
+    __m128 high = _mm256_extractf128_ps(prod, 1);    
+    //add lower and upper halves    
+    // {x0*y0+x4*y4,x1*y1+x5*y5,...}
+    __m128 sum128 = _mm_add_ps(low, high);            
+    //Sum the 4 floats in sum128
+    //let xi*yi+x(i+4)*y(i+4) = ri
+    // i.e. r0+r1+r2+r3
+    //We can't access the elements easily and so we do some shuffling (with a bit of unnecessary parallel additions) 
+    // sum128 = {r0,r1,r2,r3}
+    //Duplicate the high bits
+    // shuf = {r1,r1,r3,r3}
+    __m128 shuf = _mm_movehdup_ps(sum128);               
+    // sums = {r0+r1,...,r2+r3,...}
+    __m128 sums = _mm_add_ps(sum128, shuf);       
+    //Move the 2 high floats to the low position
+    // sums = {r2+r3,........} 
+    shuf = _mm_movehl_ps(shuf, sums);
+    //Add lowest floats (r0+r1) + (r2+r3)
+    sums = _mm_add_ss(sums, shuf);      
+    //Final sum in lowest float
+    return _mm_cvtss_f32(sums); 
+}
+
+inline float CnnUtils::dotProductUpTo8f(float *X,int lenX,float *Y,int lenY){
+    if(lenX>=8 && lenY>=8) return dotProduct8f(X,Y);
+    float A[8] = {0};
+    float B[8] = {0};
+    int longest = max(lenX,lenY);
+    for(int i=0;i<longest;i++){
+        if(i<lenX) A[i] = X[i];
+        if(i<lenY) B[i] = Y[i];
+    }
+    return dotProduct8f(A,B);
+    
+}
 
 #endif

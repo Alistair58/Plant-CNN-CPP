@@ -335,15 +335,15 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     float *kernelData = kernels[lastKernelsL].getData().get();
     float *kernelGradData = kernelsGrad[lastKernelsL].getData().get();
     float *kernelBiasesGradData = kernelsGrad[lastKernelsL].getBiases()->getData().get(); //only 1 for each channel (1d)
+    int prevDimens = mapDimens[prevMapsL];
+    int currDimens = mapDimens[lastMapsL];
+    int kernelSize = kernelSizes[lastKernelsL];
+    int kernelRadius = (int) floor(kernelSize/2);
+    int poolStride = strides[strides.size()-1];
+    int thisStride = strides[strides.size()-2];
+    int poolWidth = mapDimens[lastMapsL]/strides[strides.size()-1];
+    int poolArea = poolWidth*poolWidth;
     for(int i=0;i<numMaps[lastMapsL];i++){ //for each final map
-        int prevDimens = mapDimens[prevMapsL];
-        int currDimens = mapDimens[lastMapsL];
-        int kernelSize = kernelSizes[lastKernelsL];
-        int kernelRadius = (int) floor(kernelSize/2);
-        int poolStride = strides[strides.size()-1];
-        int thisStride = strides[strides.size()-2];
-        int poolWidth = mapDimens[lastMapsL]/strides[strides.size()-1];
-        int poolArea = poolWidth*poolWidth;
         int mlpRegion = i*poolArea; 
         int lastMapChannel = i*maps[lastMapsL].getChildSizes()[0];
         int kernelToChannel = i*kernels[lastKernelsL].getChildSizes()[0];
@@ -419,18 +419,35 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
 }
 
 void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
+    int lSub1 = l-1;
+    int lPlus1 = l+1;
+    int prevDimens = mapDimens[lSub1];
+    int currDimens = mapDimens[l];
+    int kernelSize = kernelSizes[lSub1];
+    int kernelRadius = (int) floor(kernelSize/2);
+    int poolStride = strides[l];
+    int thisStride = strides[lSub1];
+    int poolDimens = mapDimens[lPlus1];
+    float *currMapData = maps[l].getData().get(); //None of these will have any offsets i.e. they aren't sub-tensors
+    float *prevMapData = maps[lSub1].getData().get();
+    float *pooledMapData = maps[lPlus1].getData().get();
+    float *pooledDcDxsData = dcDxs[l].getData().get();
+    float *prevDcDxsData = dcDxs[l-2].getData().get();
+    float *kernelData = kernels[lSub1].getData().get();
+    float *kernelGradData = kernelsGrad[lSub1].getData().get();
+    float *kernelBiasesGradData = kernelsGrad[lSub1].getBiases()->getData().get();
     for(int i=0;i<numMaps[l];i++){ //prev (l-1) --conv-> curr (l) --pool-> pooled (l+1)
         //pooling is 1:1 between channels
-        int prevDimens = mapDimens[l-1];
-        int currDimens = mapDimens[l];
-        int kernelSize = kernelSizes[l-1];
-        int kernelRadius = (int) floor(kernelSize/2);
-        int poolStride = strides[l];
-        int thisStride = strides[l-1];
-        int poolDimens = mapDimens[l+1];
+        int currMapChannel = i*maps[l].getChildSizes()[0];
+        int pooledMapChannel = i*maps[lPlus1].getChildSizes()[0];
+        int kernelToChannel = i*kernels[lSub1].getChildSizes()[0];
         for(int prevMapI=0;prevMapI<numMaps[l-1];prevMapI++){
+            int kernelFromChannel = kernelToChannel + prevMapI*kernels[lSub1].getChildSizes()[1];
+            int prevMapChannel = prevMapI*maps[lSub1].getChildSizes()[0];
             for(int j=0;j<kernelSize;j++){
+                int kernelRow = kernelFromChannel + j*kernels[lSub1].getChildSizes()[2];
                 for(int k=0;k<kernelSize;k++){ //For each element in the kernel (k,j)
+                    int kernelIndex = kernelRow + k;
                     //Add up all the activations that it sees
                     float sum = 0;
                     int thisY,thisX;
@@ -452,39 +469,49 @@ void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
                         xEnd = prevDimens - kernelSize+k+1;
                     }
                     for(int y=yStart;y<yEnd;y+=thisStride){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
+                        int poolY = ((thisY)/poolStride);
+                        int currMapRow = currMapChannel + thisY*maps[l].getChildSizes()[1];
+                        int pooledMapRow = pooledMapChannel + poolY*maps[lPlus1].getChildSizes()[1];
+                        int prevMapRow = prevMapChannel + y*maps[lSub1].getChildSizes()[1];
                         for(int x=xStart;x<xEnd;x+=thisStride){ //Derivatve of the corresponding pixel in the next (backwards) layer
-                            int poolY = ((thisY)/poolStride);
                             int poolX = ((thisX)/poolStride);
-                            if(floatCmp(*maps[l][{i,thisY,thisX}],*maps[l+1][{i,poolY,poolX}]) && !done[poolY][poolX] && !floatCmp(*dcDxs[l][{i,poolY,poolX}],0.0f)){ //only the max element has a derivative
+                            int pooledMapIndex = pooledMapRow+poolX;
+                            int currMapIndex = currMapRow+thisX;
+                            int prevMapIndex = prevMapRow+x;
+                            if(floatCmp(currMapData[currMapIndex],pooledMapData[pooledMapIndex]) && !done[poolY][poolX] && !floatCmp(pooledDcDxsData[pooledMapIndex],0.0f)){ //only the max element has a derivative
                                 done[poolY][poolX] = true;
-                                float reusable =  *dcDxs[l][{i,poolY,poolX}]//Previous derivative (from pooling)
-                                * ((*maps[l][{i,thisY,thisX}])<=0?0.01f:1); //*Leaky Relu Derivative
-                                if(l!=1) *dcDxs[l-2][{i,y,x}] += reusable * (*kernels[l-1][{i,prevMapI,j,k}]);//*kernel weight
-                                sum += (*maps[l-1][{prevMapI,y,x}]) * reusable; //The activation of the previous layer * the correct derivative from pooling
+                                float reusable =  pooledDcDxsData[pooledMapIndex]//Previous derivative (from pooling)
+                                * ((currMapData[currMapIndex])<=0?0.01f:1); //*Leaky Relu Derivative
+                                if(l>=2) prevDcDxsData[prevMapIndex] += reusable * (kernelData[kernelIndex]);//*kernel weight
+                                sum += (prevMapData[prevMapIndex]) * reusable; //The activation of the previous layer * the correct derivative from pooling
                             }
                             thisX++;
                         }
                         thisX = 0;
                         thisY++;
                     }
-                    *kernelsGrad[l-1][{i,prevMapI,j,k}] += sum;
+                    kernelGradData[kernelIndex] += sum;
                 }
             }
         }
         float biasSum = 0;
         std::vector<std::vector<bool>> done(poolDimens,std::vector<bool>(poolDimens));
         for(int y=0;y<currDimens;y++){
+            int poolY = (y/poolStride);
+            int currMapRow = currMapChannel + y*maps[l].getChildSizes()[1];
+            int pooledMapRow = pooledMapChannel + poolY*maps[lPlus1].getChildSizes()[1];
             for(int x=0;x<currDimens;x++){
-                int poolY = (y/poolStride);
                 int poolX = (x/poolStride);
+                int currMapIndex = currMapRow + x;
+                int pooledMapIndex = pooledMapRow + poolX;
                 //Bias has to be here as otherwise it would count the same pixels multiple times
-                if(floatCmp(*maps[l][{i,y,x}],*maps[l+1][{i,poolY,poolX}]) && !done[poolY][poolX]){
+                if(floatCmp(currMapData[currMapIndex],pooledMapData[pooledMapIndex]) && !done[poolY][poolX]){
                     done[poolY][poolX] = true;
-                    biasSum += (*dcDxs[l][{i,poolY,poolX}]) * ((*(maps[l][{i,y,x}]))<=0?0.01f:1); //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression)
+                    biasSum += (pooledDcDxsData[pooledMapIndex]) * ((currMapData[currMapIndex])<=0?0.01f:1); //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression)
                 }
             }
         }
-        *kernelsGrad[l-1][{i,(numMaps[l-1]-1),(kernelSize-1),kernelSize}] += biasSum;
+        kernelBiasesGradData[i] += biasSum;
     }
 }
 
