@@ -85,7 +85,6 @@ class CnnUtils {
             return x;
         }
         static inline float dotProduct8f(float *X,float *Y);
-        static inline float dotProductUpTo8f(float *X,int lenX,float *Y,int lenY);
 
         //UTILS
         void applyGradients();
@@ -137,17 +136,5 @@ inline float CnnUtils::dotProduct8f(float *X,float *Y){
     return _mm_cvtss_f32(sums); 
 }
 
-inline float CnnUtils::dotProductUpTo8f(float *X,int lenX,float *Y,int lenY){
-    if(lenX>=8 && lenY>=8) return dotProduct8f(X,Y);
-    float A[8] = {0};
-    float B[8] = {0};
-    int longest = max(lenX,lenY);
-    for(int i=0;i<longest;i++){
-        if(i<lenX) A[i] = X[i];
-        if(i<lenY) B[i] = Y[i];
-    }
-    return dotProduct8f(A,B);
-    
-}
 
 #endif

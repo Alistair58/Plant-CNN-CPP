@@ -1,4 +1,5 @@
 #include "tensor.hpp"
+#include <cstring>
 
 Tensor::Tensor(const std::vector<int> inputDimens){
     dimens = inputDimens;
@@ -42,9 +43,11 @@ Tensor::Tensor(const Tensor& t){
         (*this->biases) = (*tBiases); 
     }
     std::shared_ptr<float[]> tSharedPtr = t.getData();
-    for(int i=0;i<totalSize;i++){
-        data[i+offset] = tSharedPtr[i+t.offset];
-    }
+    std::memcpy(
+        data.get()+offset,
+        tSharedPtr.get()+t.offset,
+        sizeof(float)*totalSize
+    );
 }
 
 Tensor& Tensor::operator=(const Tensor &t){ 
@@ -77,9 +80,12 @@ Tensor& Tensor::operator=(const Tensor &t){
         (*this->biases) = (*tBiases); 
     }
     std::shared_ptr<float[]> tSharedPtr = t.getData();
-    for(int i=0;i<totalSize;i++){
-        data[i+offset] = tSharedPtr[i+t.offset];
-    }
+    //More efficient than a loop
+    std::memcpy(
+        data.get()+offset,
+        tSharedPtr.get()+t.offset,
+        sizeof(float)*totalSize
+    );
     return *this;
 }
 
@@ -122,9 +128,12 @@ Tensor& Tensor::operator=(Tensor&& t){
     }
     this->biases = t.biases;
     std::shared_ptr<float[]> tSharedPtr = t.getData();
-    for(int i=0;i<totalSize;i++){
-        data[i+offset] = tSharedPtr[i+t.offset];
-    }
+    //More efficient than a loop
+    std::memcpy(
+        data.get()+offset,
+        tSharedPtr.get()+t.offset,
+        sizeof(float)*totalSize
+    );
     t.data = nullptr;
     t.biases = nullptr; //prevent the biases from being deleted
     t.offset = 0;

@@ -132,22 +132,36 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     Tensor paddedImage(paddedImgDimens);
     float *imageData = image.getData().get();
     float *paddedImageData = paddedImage.getData().get();
+    std::vector<int> imageChildSizes = image.getChildSizes();
+    std::vector<int> paddedImageChildSizes = paddedImage.getChildSizes();
+    #if DEBUG
+        uint64_t paddingLoopStart = getCurrTimeMs();
+    #endif
     if(padding){
         for(int l=0;l<imgDimens[0];l++){ //for each image channel
-            int imageChannel = l*image.getChildSizes()[0] + image.getOffset();
-            int paddedImageChannel = l*paddedImage.getChildSizes()[0];
-            for(int y=yKernelRadius;y<imgDimens[1]+yKernelRadius;y++){
-                int imageRow = imageChannel + (y-yKernelRadius)*image.getChildSizes()[1];
-                int paddedImageRow = paddedImageChannel + y*paddedImage.getChildSizes()[1];
-                for(int x=xKernelRadius;x<imgDimens[2]+xKernelRadius;x++){
-                    paddedImageData[paddedImageRow+x] = imageData[imageRow+(x-xKernelRadius)];
-                }
+            int imageChannel = l*imageChildSizes[0] + image.getOffset(); 
+            int paddedImageChannel = l*paddedImageChildSizes[0]+xKernelRadius; //saving additions
+            int yLoopBound = imgDimens[1]+yKernelRadius;
+            for(int y=yKernelRadius;y<yLoopBound;y++){
+                int imageRow = imageChannel + (y-yKernelRadius)*imageChildSizes[1];
+                int paddedImageRow = paddedImageChannel + y*paddedImageChildSizes[1];
+                //Memcpy can be vectorised
+                //paddedImage: xKernelRadius to paddedWidth-xKernelRadius
+                //image: 0 to width
+                std::memcpy(
+                    paddedImageData + paddedImageRow,
+                    imageData + imageRow,
+                    sizeof(float) * imgDimens[2]
+                );
             }
         }
     }
     else{
         paddedImage = image; //The assignment operator performs a value by value copy of the data
     }
+    #if DEBUG
+        std::cout << "Padding loop took "+std::to_string(getCurrTimeMs()-paddingLoopStart)+"ms padding was set to "+((padding)?"true":"false") << std::endl;
+    #endif
     int imHeight = paddedImgDimens[1]; //assumption that all channels have same dimensions
     int imWidth = paddedImgDimens[2];
     Tensor result({
@@ -155,43 +169,45 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         (int)ceil((float)(imWidth-2*xKernelRadius)/xStride)
     });
 
-    #if DEBUG
-        uint64_t paddingEnd = getCurrTimeMs();
-        std::cout << "Padding took "+std::to_string(getCurrTimeMs()-convStart)+"ms" << std::endl;
-    #endif
+    
     
     float *kernelData = kernel.getData().get();
     float *resultData = result.getData().get();
+    Tensor *biases = kernel.getBiases();
+    float bias = 0; //for a 3D kernel, there should only 1 bias
+    std::vector<int> kernelChildSizes = kernel.getChildSizes();
+    std::vector<int> resultChildSizes = result.getChildSizes();
+    if(biases!=nullptr && biases->getTotalSize()==1){
+        bias = *((*biases)[0]);
+    }
+    else if(biases!=nullptr && biases->getTotalSize()>1){
+        throw std::invalid_argument("Too many biases for a 3D kernel");
+    }
+    #if DEBUG
+        uint64_t convLoopStart = getCurrTimeMs();
+    #endif
+    //No biases is valid
     for(int l=0;l<paddedImgDimens[0];l++){
         int newY,newX = newY =0;
         //Precomputing multiplications
-        int kernelChannel = l*kernel.getChildSizes()[0] + kernel.getOffset();
-        int paddedImageChannel = l*paddedImage.getChildSizes()[0]; //No offset (we made it)
+        int kernelChannel = l*kernelChildSizes[0] + kernel.getOffset();
+        int paddedImageChannel = l*paddedImageChildSizes[0]; //No offset (we made it)
         for(int y=yKernelRadius;y<imHeight-yKernelRadius;y+=yStride){
-            int resultRow = newY*result.getChildSizes()[0];
+            int resultRow = newY*resultChildSizes[0];
             for(int x=xKernelRadius;x<imWidth-xKernelRadius;x+=xStride){
                 float sum = 0;
                 int paddedImageChannelShortct = paddedImageChannel + x-xKernelRadius; //saving the subtractions
                 for(int j=0;j<kernelDimens[1];j++){
-                    int kernelRow = kernelChannel + j*kernel.getChildSizes()[1];
-                    int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImage.getChildSizes()[1];
+                    int kernelRow = kernelChannel + j*kernelChildSizes[1];
+                    int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImageChildSizes[1];
                     //AVX2 dot product is efficient for kernels with a width >=8
                     //We can't do it for the j loop as the paddedImage next row is not contiguous 
                     //and so the conditional logic would probably be slower than doing multiple avx2 loops
-                    for(int i=0;i<kernelDimens[2];i+=8){
-                        int len = kernelDimens[2]-i;
-                        sum += dotProductUpTo8f(&kernelData[kernelRow+i],len,&paddedImageData[paddedImageRow+i],len); // (x+i-xKernelRadius) but we did the subtraction before
+                    for(int i=0;i<kernelDimens[2];i++){
+                        sum += kernelData[kernelRow+i] * paddedImageData[paddedImageRow+i];
                     }
                 }
-                //Biases
-                Tensor *biases = kernel.getBiases();
-                if(biases!=nullptr && biases->getTotalSize()==1){//for a 3D kernel, there should only 1 bias
-                    sum += *((*biases)[0]); 
-                }
-                else if(biases!=nullptr && biases->getTotalSize()>1){
-                    throw std::invalid_argument("Too many biases for a 3D kernel");
-                }
-                //No biases is valid
+                sum+=bias;
                 resultData[resultRow+newX] += sum; 
                 newX++;
             }
@@ -202,11 +218,11 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
 
     #if DEBUG
         uint64_t convLoopEnd = getCurrTimeMs();
-        std::cout << "Conv loop took "+std::to_string(convLoopEnd-paddingEnd)+"ms" << std::endl;
+        std::cout << "Conv loop took "+std::to_string(convLoopEnd-convLoopStart)+"ms" << std::endl;
     #endif 
     std::vector<int> resultDimens = result.getDimens();
     for(int y=0;y<resultDimens[0];y++){
-        int resultRow = y*result.getChildSizes()[0];
+        int resultRow = y*resultChildSizes[0];
         for(int x=0;x<resultDimens[1];x++){
             resultData[resultRow+x] = leakyRelu(resultData[resultRow+x]); //has to be here as otherwise we would relu before we've done all the channels
         }
@@ -453,17 +469,22 @@ void CnnUtils::resetKernels(){
     std::random_device rd{}; //Non-deterministic seeder
     std::mt19937 gen{rd()}; //Mersenne twister 
     for(int l=0;l<kernels.size();l++){ //layer
+        float *kernelsData = kernels[l].getData().get();
         std::vector<int> kernelsDimens = kernels[l].getDimens();
+        std::vector<int> kernelsChildDimens = kernels[l].getChildSizes();
         for(int i=0;i<kernelsDimens[0];i++){ //current channel
             //num kernels for that layer * h * w
+            int kernelsToChannel = i*kernelsChildDimens[0];
             int numElems = kernelsDimens[1]*kernelsDimens[2]*kernelsDimens[3]; 
             //He initialisation
             float stdDev = (float) sqrt(2.0f/numElems);
             std::normal_distribution<float> dist(0,stdDev);
             for(int j=0;j<kernelsDimens[1];j++){ //previous channel
+                int kernelsFromChannel = kernelsToChannel + j*kernelsChildDimens[1];
                 for(int y=0;y<kernelsDimens[2];y++){
+                    int kernelsRow = kernelsFromChannel + y*kernelsChildDimens[2];
                     for(int x=0;x<kernelsDimens[3];x++){
-                        *kernels[l][{i,j,y,x}] = dist(gen); 
+                        kernelsData[kernelsRow+x] = dist(gen); 
                     }
                 }
             }
@@ -471,9 +492,8 @@ void CnnUtils::resetKernels(){
         //set the biases = 0
         Tensor *biases = kernels[l].getBiases();
         size_t biasesSize = biases->getTotalSize();
-        for(int i=0;i<biasesSize;i++){
-            *(*biases)[i] = 0;
-        }
+        float *biasesData = biases->getData().get();
+        memset(biasesData,0,biasesSize*sizeof(float));
     }
     saveKernels();
     #if DEBUG
@@ -488,21 +508,23 @@ void CnnUtils::resetWeights() {
     std::random_device rd{}; //Non-deterministic seeder
     std::mt19937 gen{rd()}; //Mersenne twister 
     for(int l=0;l<weights.size();l++){ //layer
+        float *weightsData = weights[l].getData().get();
+        std::vector<int> weightsChildSizes = weights[l].getChildSizes();
         std::vector<int> weightsDimens = weights[l].getDimens();
         for (int i=0;i<weightsDimens[0];i++) { //neurone
+            int weightsTo = i*weightsChildSizes[0];
             //He initialisation
             float stdDev = (float) sqrt(2.0f/weightsDimens[1]);
             std::normal_distribution<float> dist(0,stdDev);
             for (int j=0;j<weightsDimens[1];j++) { //previous neurone
-                *weights[l][{i,j}] = dist(gen); 
+                weightsData[weightsTo+j] = dist(gen); 
             }
         }
         //set the biases = 0
         Tensor *biases = weights[l].getBiases();
         size_t biasesSize = biases->getTotalSize();
-        for(int i=0;i<biasesSize;i++){
-            *(*biases)[i] = 0;
-        }
+        float *biasesData = biases->getData().get();
+        memset(biasesData,0,biasesSize*sizeof(float));
     }
     saveWeights();
     #if DEBUG
