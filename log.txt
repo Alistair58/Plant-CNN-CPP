@@ -236,3 +236,5 @@ LR = 4*10^-5
 184,180: 21.3% Training accuracy: 36%
 
 MODEL 6 (C++)
+
+08/08/25 5:50s for 256 training examples

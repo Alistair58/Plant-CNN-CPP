@@ -33,18 +33,16 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads);
 static void test(CNN *n, Dataset *d, int numTest);
 
-//TODO
-//Move away from *Tensor[{i,j,k}] syntax and to raw pointers
-//AVX2
 
+
+//TODO
+//Why is it still slower than the Java implementation
+//See how many threads is optimal
 
 int main(int argc,char **argv){
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = new CNN(LR,d,true);
-    PlantImage pI("/Aloe Vera/67.jpg","Aloe Vera");
-    cnn->forwards(pI.data);
-    //test(cnn,d,1);
-    //train(cnn,d,4,64,1,4); 
+    train(cnn,d,4,64,1,4); 
     //train(cnn,d,500,64,4,4); 
     //test(cnn,d,1000);
     delete d;
@@ -111,7 +109,7 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
     cnns[0] = n;
     for(int cT=0;cT<numCnnThreads;cT++){
         if(cT>0){
-            cnns[cT] = new CNN(n,LR,d);
+            cnns[cT] = new CNN(n,LR,d,false);
         }
         cnnThreads[cT]= std::thread(
             [](int threadId,int batchSize,int numCnnThreads,std::vector<PlantImage*> *plantImages,Dataset *d,std::vector<CNN*> *cnns){
@@ -120,9 +118,7 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
                     while((*plantImages)[i]==nullptr && (getCurrTimeMs()-30000)<startTime){
                         //Give up if we can't get the image in 30 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
-                        //TODO change back to 10ms
-                        usleep(1000000); //1000ms
-                        std::cout << ".";
+                        usleep(10000); //10ms
                     }
                     std::cout << "\n";
                     if((*plantImages)[i]!=nullptr && (*plantImages)[i]->index!=-1 && (*plantImages)[i]->label.length()>0){
@@ -151,7 +147,8 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads, in
             #endif
         }
     }
-    n->applyGradients(cnns);
+    //We did a shallow copy of the gradients and so the accumulation of all the CNN gradients will be in the original CNN's gradient
+    n->applyGradients();
     for(PlantImage *ptr:plantImages){
         delete ptr;
     }

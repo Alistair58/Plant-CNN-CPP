@@ -104,7 +104,7 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){
 
 //variable size output
 Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding){ 
-    #if DEBUG
+    #if DEBUG >=2
         uint64_t convStart = getCurrTimeMs();
     #endif 
     std::vector<int> imgDimens = image.getDimens();
@@ -134,7 +134,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     float *paddedImageData = paddedImage.getData().get();
     std::vector<int> imageChildSizes = image.getChildSizes();
     std::vector<int> paddedImageChildSizes = paddedImage.getChildSizes();
-    #if DEBUG
+    #if DEBUG >=2
         uint64_t paddingLoopStart = getCurrTimeMs();
     #endif
     if(padding){
@@ -159,7 +159,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     else{
         paddedImage = image; //The assignment operator performs a value by value copy of the data
     }
-    #if DEBUG
+    #if DEBUG >=2
         std::cout << "Padding loop took "+std::to_string(getCurrTimeMs()-paddingLoopStart)+"ms padding was set to "+((padding)?"true":"false") << std::endl;
     #endif
     int imHeight = paddedImgDimens[1]; //assumption that all channels have same dimensions
@@ -183,7 +183,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     else if(biases!=nullptr && biases->getTotalSize()>1){
         throw std::invalid_argument("Too many biases for a 3D kernel");
     }
-    #if DEBUG
+    #if DEBUG >=2
         uint64_t convLoopStart = getCurrTimeMs();
     #endif
     //No biases is valid
@@ -216,7 +216,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         }
     }
 
-    #if DEBUG
+    #if DEBUG >=2
         uint64_t convLoopEnd = getCurrTimeMs();
         std::cout << "Conv loop took "+std::to_string(convLoopEnd-convLoopStart)+"ms" << std::endl;
     #endif 
@@ -227,7 +227,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
             resultData[resultRow+x] = leakyRelu(resultData[resultRow+x]); //has to be here as otherwise we would relu before we've done all the channels
         }
     }
-    #if DEBUG
+    #if DEBUG >=2
         std::cout << "Conv function took "+std::to_string(getCurrTimeMs()-convStart)+"ms" << std::endl;
     #endif
     return result;

@@ -141,6 +141,21 @@ Tensor& Tensor::operator=(Tensor&& t){
     return *this;
 }
 
+void Tensor::shallowCopy(Tensor& src){ 
+    if(this->biases!=nullptr){
+        delete this->biases;
+    }
+    //Biases cannot be shallow copied as they would be destroyed when either is tensor is destroyed
+    this->biases = new Tensor(src.getBiases()->getDimens());
+    //Call to copy assignment operator which will deep copy biases
+    (*this->biases) = (*src.getBiases()); 
+    //Shared pointer and so will delete itself if necessary
+    this->data =  src.data;
+    this->dimens = src.dimens;
+    this->offset = src.offset;
+    this->totalSize = src.totalSize;
+    this->childSizes = src.childSizes;
+}
 
 Tensor Tensor::slice(const std::vector<int> indices) const{ 
     if(indices.size()>=dimens.size()){

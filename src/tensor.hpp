@@ -36,6 +36,8 @@ class Tensor{
         //Move assignment operator
         Tensor& operator=(Tensor&& t);
 
+        void shallowCopy(Tensor& src);
+
         //Differs from traditional subscript - returns the address
         inline float *operator[](const std::vector<int> indices) const{
             if(indices.size()!=dimens.size()){
