@@ -5,7 +5,9 @@
 #include <string>
 #include <stdexcept>
 #include <memory>
+#include <cstring>
 #include "globals.hpp"
+
 
 class Tensor{
     std::shared_ptr<float[]> data = nullptr;
@@ -118,9 +120,11 @@ dn Tensor::buildNestedVector(int depth, int vectorOffset) const{
 template<>
 inline d1 Tensor::buildNestedVector<d1>(int depth,int vectorOffset) const{
     d1 leaf(dimens[depth]);
-    for (int i=0;i<dimens[depth];i++) {
-        leaf[i] = data[vectorOffset + i];
-    }
+    std::memcpy(
+        leaf.data(),
+        data.get()+vectorOffset,
+        sizeof(float)*dimens[depth]
+    );
     return leaf;
 }
 
@@ -151,7 +155,7 @@ dn Tensor::toVector() const{
             ") does not match tensor dimensions (" + std::to_string(tensorDepth) + ")."
         );
     }
-    return buildNestedVector<dn>(0,0);
+    return buildNestedVector<dn>(0,this->offset);
 }
 
 #endif

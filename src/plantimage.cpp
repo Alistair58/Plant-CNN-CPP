@@ -15,7 +15,6 @@ PlantImage::PlantImage(std::string fname, std::string plantName){ //fname can be
 
 Tensor PlantImage::fileToImageTensor(std::string fName){
     Tensor result;
-    
     #if DEBUG
         uint64_t startTime = getCurrTimeMs();
     #endif
@@ -24,7 +23,9 @@ Tensor PlantImage::fileToImageTensor(std::string fName){
     unsigned char *img = stbi_load(fName.c_str(),&width,&height,&channels,0);
 
     if(img==nullptr){
-        std::cout << "Could not load \""+fName+"\"" << std::endl;
+        #if DEBUG
+            std::cout << "Could not load \""+fName+"\"" << std::endl;
+        #endif
         return result;
     }
 

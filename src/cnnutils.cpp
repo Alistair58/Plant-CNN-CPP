@@ -79,8 +79,8 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){
     }
     int imHeight = imgDimens[0];
     int imWidth = imgDimens[1];
-    int resHeight = (int)floor((float)(imHeight)/yStride);
-    int resWidth = (int) floor((float)(imWidth)/xStride);
+    int resHeight = imHeight/yStride;
+    int resWidth = imWidth/xStride;
     Tensor result({resHeight,resWidth});
     int newY,newX = newY =0;
     for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
@@ -292,6 +292,9 @@ void CnnUtils::reset(){
 }
 
 std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
+    #if DEBUG
+        uint64_t start = getCurrTimeMs();
+    #endif
     if(loadNew){
         std::vector<Tensor> result(numMaps.size()-1);
         for(int l=0;l<(numMaps.size()-1);l++){
@@ -305,6 +308,9 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
                 result[l].setBiases(biases);
             }
         }
+        #if DEBUG
+            std::cout << "loadKernels (loadNew) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+        #endif
         return result;
     }
     else{
@@ -347,12 +353,18 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
             }
             result[i].setBiases(biases);
         }
+        #if DEBUG
+            std::cout << "loadKernels (loadNew) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+        #endif
         return result;
     }
 }
 
 std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
     //Each layer of weights is a tensor
+    #if DEBUG
+        uint64_t start = getCurrTimeMs();
+    #endif
     if(loadNew){
         std::vector<Tensor> result((int)numNeurons.size()-1);
         for(int l=0;l<numNeurons.size()-1;l++){
@@ -361,6 +373,9 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
             layer.setBiases(biases);
             result[l] = layer;
         }
+        #if DEBUG
+            std::cout << "loadWeights (loadNew) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+        #endif
         return result;
     }
     else{
@@ -394,13 +409,22 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
             }
             result[i].setBiases(biases);
         }
+        #if DEBUG
+            std::cout << "loadWeights (loadOld) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+        #endif
         return result;
     }
 }
        
 void CnnUtils::applyGradients(){ //(and reset gradients)
+    #if DEBUG
+        uint64_t start = getCurrTimeMs();
+    #endif
     applyGradient(kernels,kernelsGrad);
     applyGradient(weights,weightsGrad);
+    #if DEBUG
+        std::cout << "applyGradients took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+    #endif
 }
 
 void CnnUtils::applyGradients(std::vector<CNN*>& cnns){ //(and reset gradients)
@@ -495,10 +519,11 @@ void CnnUtils::resetKernels(){
         float *biasesData = biases->getData().get();
         memset(biasesData,0,biasesSize*sizeof(float));
     }
-    saveKernels();
     #if DEBUG
         std::cout << "resetKernels took "+std::to_string(getCurrTimeMs()-startTime)+"ms" << std::endl;
     #endif
+    saveKernels();
+    
 }
 
 void CnnUtils::resetWeights() {
@@ -526,15 +551,19 @@ void CnnUtils::resetWeights() {
         float *biasesData = biases->getData().get();
         memset(biasesData,0,biasesSize*sizeof(float));
     }
-    saveWeights();
     #if DEBUG
         std::cout << "resetWeights took "+std::to_string(getCurrTimeMs()-startTime)+"ms" << std::endl;
     #endif
+    saveWeights();
+    
 }
 
 
 
 void CnnUtils::CnnUtils::saveWeights() {
+    #if DEBUG
+        uint64_t start = getCurrTimeMs();
+    #endif
     d3 weightsVec(weights.size());
     d2 biasesVec(weights.size());
     for(int l=0;l<weights.size();l++){
@@ -551,9 +580,16 @@ void CnnUtils::CnnUtils::saveWeights() {
     nlohmann::json jsonBiases = biasesVec;
     biasesFile << jsonBiases.dump();
     biasesFile.close();
+
+    #if DEBUG
+        std::cout << "saveWeights took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+    #endif
 }
 
 void CnnUtils::saveKernels() {
+    #if DEBUG
+        uint64_t start = getCurrTimeMs();
+    #endif
     d5 kernelsVec(kernels.size());
     d2 biasesVec(kernels.size());
     for(int l=0;l<kernels.size();l++){
@@ -570,6 +606,10 @@ void CnnUtils::saveKernels() {
     nlohmann::json jsonBiases = biasesVec;
     biasesFile << jsonBiases.dump();
     biasesFile.close();
+
+    #if DEBUG
+        std::cout << "saveKernels took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+    #endif
 }
 
 void CnnUtils::saveActivations(){  //For debugging use

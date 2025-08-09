@@ -89,7 +89,9 @@ PlantImage *Dataset::randomImage(bool test) const{
             for(std::string fileExtension:fileExtensions){ //Try all file extensions
                 PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName);
                 if(plantImage->data.getTotalSize() > 0){ //valid image
-                    std::cout << "Loaded: "+fname+fileExtension << std::endl;
+                    #if DEBUG
+                        std::cout << "Loaded: "+fname+fileExtension << std::endl;
+                    #endif 
                     return plantImage;
                 }
             } 

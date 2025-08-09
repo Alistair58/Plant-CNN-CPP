@@ -1,5 +1,4 @@
 #include "tensor.hpp"
-#include <cstring>
 
 Tensor::Tensor(const std::vector<int> inputDimens){
     dimens = inputDimens;
