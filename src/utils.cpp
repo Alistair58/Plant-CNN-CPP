@@ -38,13 +38,9 @@ uint64_t getCurrTimeUs(){
     return (int64_t) time.count();
 }
 
-// //False if we had to end the thread prematurely, else true
-// bool join(std::thread *thread,int timeoutSeconds){
-//     auto future = std::async(std::launch::async, &std::thread::join, thread);
-//     if (future.wait_for(std::chrono::seconds(timeoutSeconds)) //10s max wait
-//         == std::future_status::timeout) {
-//             //end the offending thread
-//             return false;
-//     }
-//     return true;
-// }
+std::string toLower(std::string s){
+    std::transform(s.begin(), s.end(), s.begin(),
+                    [](unsigned char c){ return std::tolower(c); });
+    return s;
+}
+

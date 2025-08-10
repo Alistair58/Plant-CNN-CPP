@@ -36,22 +36,27 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads);
 static void test(CNN *n, Dataset *d, int numTest);
 
+//DONE
+//Changed it such that gradients are deep copied
+//Used  __restrict__ for activations, maps and derivatives
+//Other performance upgrades: using raw ptrs for max pool, normalise and using memcpy for reset gradients
+//Changed argv parsing so that arguments are labelled (more future proof arguments) and added restart
+
 //TODO
-//Try compression test
-//Change argv parsing so that arguments are labelled (more future proof arguments) and add restart
+//Precompute indices for both forwards and backwards (lookup table)
 //Speed up - see log.txt
 
 int main(int argc,char **argv){
     //("train"|"test") 
-    //"train" ->       {numBatches} {batchSize}? {LR}?
-    //"test"  ->       {numTestImages} {LR}?
+    //"train" ->       {numBatches} (rs=(true|false))? (bs={batchSize})? (lr={LR})?
+    //"test"  ->       {numTestImages} (lr={LR})?
     Dataset *d = new Dataset(datasetDirPath,0.8f);
+    CNN *cnn = nullptr;
     const int numImageThreads = 1;
     const int numCnnThreads = 8;
     int mode = -1;
     int numBatches = -1;
     bool restart = false;
-    CNN *cnn = new CNN(LR,d,restart);
     if(argc<3){
         throw std::invalid_argument("argv must contain at least 2 arguments");
     }
@@ -63,45 +68,62 @@ int main(int argc,char **argv){
     if(mode==TRAIN){
         int numBatches = atoi(argv[2]);
         if(numBatches<=0){
-            throw std::invalid_argument("For train, argument 2 must be the number of batches (an non-zero positive integer)");
+            throw std::invalid_argument("For train, argument 2 must be the number of batches (a positive integer)");
         }
-        if(argc==5){
-            batchSize = atoi(argv[3]);
-            if(batchSize<=0){
-                throw std::invalid_argument("For train, argument 3 (if 4 arguments are provided) must be the batch size (an non-zero positive integer)");
+        for(int i=3;i<argc;i++){
+            std::vector<std::string> splitRes = strSplit(argv[i],{'='});
+            if(splitRes.size()!=2){
+                throw std::invalid_argument("Optional arguments must be in the format {parameter}={value}");
             }
-            LR = atof(argv[4]);
-            if(LR<=0.0f){
-                throw std::invalid_argument("For train, argument 4 (if present) must be the learning rate (a positive float)");
+            if(toLower(splitRes[0])=="rs"){
+                if(toLower(splitRes[1])=="true"){
+                    restart = true;
+                }
+                else if(toLower(splitRes[1])=="false"){
+                    restart = false;
+                }   
+                else{
+                    throw std::invalid_argument("Parameter \"rs\" (restart) can only be set to \"true\" or \"false\"");
+                }
+            }
+            else if(toLower(splitRes[0])=="bs"){
+                batchSize = stoi(splitRes[1]);
+                if(batchSize<=0){
+                    throw std::invalid_argument("Parameter \"bs\" (batch size) must be a positive integer");
+                }
+            }
+            else if(toLower(splitRes[0])=="lr"){
+                LR = stof(splitRes[1]);
+                if(LR<=0.0f){
+                    throw std::invalid_argument("Parameter \"lr\" (learning rate) must be a positive float");
+                }
+            }
+            else{
+                throw std::invalid_argument("Optional argument "+std::to_string(i)+"'s parameter \""+splitRes[0]+"\" is invalid for train");
             }
         }
-        else if(argc==4){
-            float mysteryArg = atof(argv[3]);
-            if(mysteryArg<=0.0f){
-                throw std::invalid_argument("For train, argument 3 (if present and only 3 arguments are provided) must either be the batch size (an non-zero positive integer) or the learning rate (a positive float)");
-            }
-            if(mysteryArg-((int)mysteryArg)==0.0f){ //i.e. an integer
-                //this must be the batch size
-                //if the LR is a integer, that's just silly
-                batchSize = (int) mysteryArg;
-            }
-            else{ //i.e. a float
-                LR = mysteryArg;
-            }
-        }
+        cnn = new CNN(LR,d,restart);
         train(cnn,d,numBatches,batchSize,numImageThreads,numCnnThreads);
     }
     if(mode==TEST){
         int numTestImages = atoi(argv[2]);
         if(numTestImages<=0){
-            throw std::invalid_argument("For test, argument 2 must be the number of test images (an non-zero positive integer)");
+            throw std::invalid_argument("For test, argument 2 must be the number of test images (a positive integer)");
         }
         if(argc==4){
-            LR = atof(argv[3]);
+            std::vector<std::string> splitRes = strSplit(argv[3],{'='});
+            if(splitRes.size()!=2){
+                throw std::invalid_argument("Optional arguments must be in the format {parameter}={value}");
+            }
+            if(toLower(splitRes[0])!="lr"){
+                throw std::invalid_argument("Optional parameter \""+splitRes[0]+"\" is invalid for test");
+            }
+            LR = stof(splitRes[1]);
             if(LR<=0.0f){
-                throw std::invalid_argument("For test, argument 3 (if present) must be the learning rate (a positive float)");
+                throw std::invalid_argument("Parameter \"lr\" (learning rate) must be a positive float");
             }
         }
+        cnn = new CNN(LR,d,false);
         test(cnn,d,numTestImages);
     }
     delete d;
@@ -129,7 +151,7 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
     std::vector<CNN*> cnns(numCnnThreads);
     cnns[0] = n;
     for(int i=1;i<numCnnThreads;i++){
-        cnns[i] = new CNN(n,LR,d,false); //shallow copy
+        cnns[i] = new CNN(n,LR,d,false); //shallow copy of weights and kernels
     }
     for(int i=0;i<numBatches;i++) { // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,cnns);
@@ -213,8 +235,7 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
         #endif
         i++;
     }
-    //We did a shallow copy of the gradients and so the accumulation of all the CNN gradients will be in the original CNN's gradient
-    n->applyGradients();
+    n->applyGradients(cnns);
     for(PlantImage *ptr:plantImages){
         if(ptr!=nullptr) delete ptr;
     }

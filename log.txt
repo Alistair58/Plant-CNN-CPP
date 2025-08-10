@@ -243,3 +243,4 @@ MODEL 6 (C++)
 0:33s with 16 cnn threads
 Forwards roughly 200ms, taken up by convs 
 Backwards roughly 200ms taken up by last conv
+

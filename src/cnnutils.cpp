@@ -46,10 +46,14 @@ void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vecto
     if(imgDimens.size()!=3){
         throw std::invalid_argument("Image must have 3 dimensions for normaliseImg");
     }
+    float*  __restrict__ imgData = img.getData().get();
+    std::vector<int> imgChildSizes = img.getChildSizes();
     for(int c=0;c<imgDimens[0];c++){
+        int imageChannel = c*imgChildSizes[0];
         for(int i=0;i<imgDimens[1];i++){
+            int imageRow = imageChannel + i*imgChildSizes[1];
             for(int j=0;j<imgDimens[2];j++){
-                *img[{c,i,j}] = ((*img[{c,i,j}])-pixelMeans[c])/pixelStdDevs[c];
+                imgData[imageRow+j] = ((imgData[imageRow+j])-pixelMeans[c])/pixelStdDevs[c];
             }
         }
     }
@@ -83,17 +87,22 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){
     int resWidth = imWidth/xStride;
     Tensor result({resHeight,resWidth});
     int newY,newX = newY =0;
+
+    float*  __restrict__ imageData = image.getData().get();
+    float*  __restrict__ resultData = result.getData().get();
     for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
+        int resultRow = newY*resWidth;
         for(int x=xKernelRadius;x<=imWidth-xKernelRadius;x+=xStride){
             float max = -std::numeric_limits<float>::infinity();
             for(int j=0;j<yStride;j++){
+                int imageRow = (y+j-yKernelRadius)*imWidth +x-xKernelRadius;
                 for(int i=0;i<xStride;i++){
-                    if((*image[{(y+j-yKernelRadius),(x+i-xKernelRadius)}])>max){
-                        max = *image[{(y+j-yKernelRadius),(x+i-xKernelRadius)}];
+                    if((imageData[imageRow+i])>max){ //*image[{(y+j-yKernelRadius),(x+i-xKernelRadius)}]
+                        max = imageData[imageRow+i];
                     }
                 }
             }
-            *result[{newY,newX}] = max;
+            resultData[resultRow+newX] = max;
             newX++;
         }
         newX=0;
@@ -130,8 +139,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         paddedImgDimens = imgDimens;
     }
     Tensor paddedImage(paddedImgDimens);
-    float *imageData = image.getData().get();
-    float *paddedImageData = paddedImage.getData().get();
+    float*  __restrict__ imageData = image.getData().get();
+    float*  __restrict__ paddedImageData = paddedImage.getData().get();
     std::vector<int> imageChildSizes = image.getChildSizes();
     std::vector<int> paddedImageChildSizes = paddedImage.getChildSizes();
     #if DEBUG >=2
@@ -172,7 +181,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     
     
     float *kernelData = kernel.getData().get();
-    float *resultData = result.getData().get();
+    float*  __restrict__ resultData = result.getData().get();
     Tensor *biases = kernel.getBiases();
     float bias = 0; //for a 3D kernel, there should only 1 bias
     std::vector<int> kernelChildSizes = kernel.getChildSizes();
@@ -207,7 +216,6 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
                         sum += kernelData[kernelRow+i] * paddedImageData[paddedImageRow+i];
                     }
                 }
-                sum+=bias;
                 resultData[resultRow+newX] += sum; 
                 newX++;
             }
@@ -224,7 +232,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     for(int y=0;y<resultDimens[0];y++){
         int resultRow = y*resultChildSizes[0];
         for(int x=0;x<resultDimens[1];x++){
-            resultData[resultRow+x] = leakyRelu(resultData[resultRow+x]); //has to be here as otherwise we would relu before we've done all the channels
+            resultData[resultRow+x] = leakyRelu(resultData[resultRow+x]+bias); //has to be here as otherwise we would relu before we've done all the channels
         }
     }
     #if DEBUG >=2
@@ -240,8 +248,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     Tensor result({newHeight,newWidth}); //The data is 0 initialised
     Tensor convResult = convolution(image, kernel, xStride, yStride,padding);
     std::vector<int> convResultDimens = convResult.getDimens();
-    float *convResultData = convResult.getData().get();
-    float *resultData = result.getData().get();
+    float*  __restrict__ convResultData = convResult.getData().get();
+    float*  __restrict__ resultData = result.getData().get();
     //Neither result will have any offsets
     for(int y=0;y<convResultDimens[0];y++){
         int resultRow = y*result.getChildSizes()[0];
@@ -278,15 +286,21 @@ std::vector<float> CnnUtils::softmax(std::vector<float> inp){
 void CnnUtils::reset(){
     for(int l=0;l<activations.size();l++){
         size_t activationsLayerSize = activations[l].getTotalSize();
-        for(int i=0;i<activationsLayerSize;i++){
-            *(activations[l][i]) = 0;
-        }
+        float *activationLayerData = activations[l].getData().get();
+        memset(
+            activationLayerData,
+            0.0f,
+            sizeof(float)*activationsLayerSize
+        );
     }
     for(int l=0;l<maps.size();l++){
         size_t mapsLayerSize = maps[l].getTotalSize();
-        for(int i=0;i<mapsLayerSize;i++){   
-            *(maps[l][i]) = 0;
-        }
+        float *mapsLayerData = maps[l].getData().get();
+        memset(
+            mapsLayerData,
+            0.0f,
+            sizeof(float)*mapsLayerSize
+        );
     }
     
 }
@@ -354,7 +368,7 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
             result[i].setBiases(biases);
         }
         #if DEBUG
-            std::cout << "loadKernels (loadNew) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+            std::cout << "loadKernels (loadOld) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
         #endif
         return result;
     }
@@ -428,11 +442,17 @@ void CnnUtils::applyGradients(){ //(and reset gradients)
 }
 
 void CnnUtils::applyGradients(std::vector<CNN*>& cnns){ //(and reset gradients)
+    #if DEBUG
+        uint64_t start = getCurrTimeMs();
+    #endif
     //this cnn must be included in cnns
     for(int n=0;n<cnns.size();n++){
         applyGradient(kernels,(cnns[n]->kernelsGrad));
         applyGradient(weights,(cnns[n]->weightsGrad));
     }
+    #if DEBUG
+        std::cout << "applyGradients (multiple CNNs) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+    #endif
 }
 
 void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient){ //Main values and biases
@@ -450,12 +470,14 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                 throw std::invalid_argument("Tensors must have the dimensions for the gradient to be applied");
             }
         }
+        float*  __restrict__ gradData = gradient[l].getData().get();
+        float*  __restrict__ valuesData = values[l].getData().get();
         for(int i=0;i<values[l].getTotalSize();i++){
-            float gradVal = *(gradient[l][i]);
+            float gradVal = gradData[i];
             if(!(floatCmp(gradVal,0.0f))){
                 if(std::isnan(gradVal)){
                     std::cout << "NaN gradient i: "+std::to_string(i) << std::endl;
-                    *(gradient[l][i]) = 0;
+                    gradData[i] = 0;
                     continue;
                 }
                 float adjustedGrad = gradVal * LR;
@@ -463,8 +485,8 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                     std::cout << "Very large gradient: "+std::to_string(adjustedGrad) << std::endl;
                     adjustedGrad = 0;
                 }
-                *(values[l][i]) -= adjustedGrad; 
-                *(gradient[l][i]) = 0;
+                valuesData[i] -= adjustedGrad; 
+                gradData[i] = 0;
             }   
         }
     }
@@ -637,8 +659,11 @@ void CnnUtils::saveMaps(){  //For debugging use
 void CnnUtils::resetGrad(std::vector<Tensor>& grad){
     for(Tensor t:grad){
         size_t size = t.getTotalSize();
-        for(size_t i=0;i<size;i++){
-            *(t[i]) = 0;
-        }
+        float *tData = t.getData().get();
+        memset(
+            tData,
+            0.0f,
+            sizeof(float)*size
+        );
     }
 }

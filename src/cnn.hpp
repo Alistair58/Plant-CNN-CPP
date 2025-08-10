@@ -12,7 +12,7 @@ class CNN : public CnnUtils{
         //Creating a fresh CNN
         CNN(float LR,Dataset *dataset,bool restart);
         //Creating a copy from an original CNN
-        CNN(CNN *original,float LR,Dataset *dataset,bool deepCopy=true);
+        CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights=true);
     
         //KEY METHODS 
         std::string forwards(Tensor& imageInt);

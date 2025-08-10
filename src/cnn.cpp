@@ -35,7 +35,7 @@ CNN::CNN(float LR,Dataset *dataset,bool restart){
 }
 
 //Creating a copy from a template CNN (I can't call it template)
-CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopy) {
+CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
     numNeurons = original->numNeurons;
     numMaps = original->numMaps;
     mapDimens = original->mapDimens;
@@ -43,15 +43,13 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopy) {
     strides = original->strides;
     padding = original->padding;
     d = dataset; //sharing the same dataset
-    if(deepCopy){
+    if(deepCopyWeights){
         kernels = original->kernels; //copy by value
         weights = original->weights;
         kernelsGrad = kernels;
         weightsGrad = weights;
-        resetGrad(kernelsGrad); //Don't want to apply the weights to themselves on the first iteration
-        resetGrad(weightsGrad);
     }
-    else{
+    else{ //i.e. shallow copy
         if(original->kernels.size()!=original->kernelsGrad.size()){
             throw std::invalid_argument("kernels and kernelsGrad must have the same number of layers");
         }
@@ -63,7 +61,7 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopy) {
             Tensor originalKernelGradLayer = original->kernelsGrad[i];
             Tensor kernelLayer,kernelGradLayer;
             kernelLayer.shallowCopy(originalKernelLayer);
-            kernelGradLayer.shallowCopy(originalKernelGradLayer);
+            kernelGradLayer = originalKernelGradLayer; //deep copy gradients
             this->kernels.push_back(kernelLayer);
             this->kernelsGrad.push_back(kernelGradLayer);
         }
@@ -72,13 +70,13 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopy) {
             Tensor originalWeightGradLayer = original->weightsGrad[i];
             Tensor weightLayer,weightGradLayer;
             weightLayer.shallowCopy(originalWeightLayer);
-            weightGradLayer.shallowCopy(originalWeightGradLayer);
+            weightGradLayer = originalWeightGradLayer;  //deep copy gradients
             this->weights.push_back(weightLayer);
             this->weightsGrad.push_back(weightGradLayer);
         }
     }
-    
-    
+    resetGrad(kernelsGrad); //Don't want to apply the weights to themselves on the first iteration
+    resetGrad(weightsGrad);
     this->LR = LR;
     this->activations = std::vector<Tensor>(numNeurons.size());
     for(int l=0;l<numNeurons.size();l++){
@@ -285,9 +283,9 @@ void CNN::mlpBackwards(std::vector<Tensor>& dcDzs){
     for(int l=weights.size()-1;l>=0;l--){
         float *weightsGradData = weightsGrad[l].getData().get();
         float *biasesGradData = weightsGrad[l].getBiases()->getData().get();
-        float *nextDcDzsData = dcDzs[l+1].getData().get();
-        float *currDcDzsData = dcDzs[l].getData().get();
-        float *activationsData = activations[l].getData().get();
+        float*  __restrict__ nextDcDzsData = dcDzs[l+1].getData().get();
+        float*  __restrict__ currDcDzsData = dcDzs[l].getData().get();
+        float*  __restrict__ activationsData = activations[l].getData().get();
         float *weightsData = weights[l].getData().get();
         for(int i=0;i<numNeurons[l+1];i++){
             int weightsNeuron = i*numNeurons[l];
@@ -312,11 +310,11 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
     int kernelSize = kernelSizes[lSub1];
     int kernelRadius = (int) floor(kernelSize/2);
     int thisStride = strides[lSub1];
-    float *currDcDxsData = dcDxs[lSub1].getData().get(); //yes, l-1 is correct (dcDxs only has numMaps.size()-2 layers)
-    float *prevDcDxsData = nullptr;
+    float*  __restrict__ currDcDxsData = dcDxs[lSub1].getData().get(); //yes, l-1 is correct (dcDxs only has numMaps.size()-2 layers)
+    float*  __restrict__ prevDcDxsData = nullptr;
     if(l!=1) prevDcDxsData = dcDxs[lSub2].getData().get(); //No derivatives need to be stored for the first layer
-    float *currMapData = maps[l].getData().get();
-    float *prevMapData = maps[lSub1].getData().get();
+    float*  __restrict__ currMapData = maps[l].getData().get();
+    float*  __restrict__ prevMapData = maps[lSub1].getData().get();
     float *kernelData = kernels[lSub1].getData().get();
     float *kernelGradData = kernelsGrad[lSub1].getData().get(); 
     float *kernelBiasesGradData = kernelsGrad[lSub1].getBiases()->getData().get(); //only 1 for each channel (1d)
@@ -392,11 +390,11 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     int prevMapsL = maps.size()-2;
     int lastKernelsL = kernels.size()-1;
     Tensor *kernelBiasesGrad = kernelsGrad[lastKernelsL].getBiases(); //only 1 for each channel (1d)
-    float *activations0Data = activations[0].getData().get();
-    float *lastMapData = maps[lastMapsL].getData().get();
-    float *prevMapsData = maps[prevMapsL].getData().get();
-    float *dcDzs0Data = dcDzs[0].getData().get();
-    float *lastDcDxsData = dcDxs[dcDxs.size()-1].getData().get();
+    float*  __restrict__ activations0Data = activations[0].getData().get();
+    float*  __restrict__ lastMapData = maps[lastMapsL].getData().get();
+    float*  __restrict__ prevMapsData = maps[prevMapsL].getData().get();
+    float*  __restrict__ dcDzs0Data = dcDzs[0].getData().get();
+    float*  __restrict__ lastDcDxsData = dcDxs[dcDxs.size()-1].getData().get();
     float *kernelData = kernels[lastKernelsL].getData().get();
     float *kernelGradData = kernelsGrad[lastKernelsL].getData().get();
     float *kernelBiasesGradData = kernelsGrad[lastKernelsL].getBiases()->getData().get(); //only 1 for each channel (1d)
@@ -410,6 +408,9 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     int poolArea = poolWidth*poolWidth;
     std::vector<int> lastMapsChildSizes = maps[lastMapsL].getChildSizes();
     std::vector<int> lastKernelsChildSizes = kernels[lastKernelsL].getChildSizes();
+    //don't count the max pixel more than once
+    //ChatGPT says uint8_t is quicker than bool as bool does bit packing
+    std::vector<uint8_t> doneBuf(poolArea); 
     for(int i=0;i<numMaps[lastMapsL];i++){ //for each final map
         int mlpRegion = i*poolArea; 
         int lastMapChannel = i*lastMapsChildSizes[0];
@@ -425,7 +426,8 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                     float sum = 0;
                     int thisY,thisX;
                     thisY = thisX = 0;
-                    std::vector<bool> done(poolArea); //don't count the max pixel more than once
+                    std::fill(doneBuf.begin(), doneBuf.end(), 0);
+                    uint8_t*  __restrict__ done = doneBuf.data();
                     int yStart, yEnd;
                     int xStart, xEnd;
                     if(padding){
@@ -450,8 +452,8 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                             int mlpIndex = mlpRegion + mlpSubIndex;
                             int lastMapIndex = lastMapRow + thisX;
                             int prevMapIndex = prevMapRow + x;
-                            if(floatCmp(lastMapData[lastMapIndex],activations0Data[mlpIndex]) && !done[mlpSubIndex]){ //only the max element has a derivative
-                                done[mlpSubIndex] = true;
+                            if(floatCmp(lastMapData[lastMapIndex],activations0Data[mlpIndex]) && done[mlpSubIndex]==0){ //only the max element has a derivative
+                                done[mlpSubIndex] = 1;
                                 //In the first MLP layer a=relu(x) where x is the max activation pixel from pooling
                                 lastDcDxsData[prevMapIndex] += dcDzs0Data[mlpIndex] * kernelData[kernelIndex];//*kernel weight
                                 sum+= prevMapsData[prevMapIndex] * dcDzs0Data[mlpIndex]; //The activation of the previous layer * the correct derivative from pooling
@@ -465,8 +467,9 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                 }
             }
         }
+        std::fill(doneBuf.begin(), doneBuf.end(), 0);
+        uint8_t*  __restrict__ done = doneBuf.data();
         float biasSum = 0;
-        std::vector<bool> done(poolArea);
         for(int y=0;y<currDimens;y++){
             int mlpSection = (((y)/poolStride)*poolWidth);
             int lastMapRow = lastMapChannel + y*lastMapsChildSizes[1];
@@ -475,8 +478,8 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                 int mlpIndex = mlpRegion + mlpSubIndex;
                 int lastMapIndex = lastMapRow + x;
                 //Bias has to be here as otherwise it would count the same pixels multiple times
-                if(floatCmp(lastMapData[lastMapIndex],activations0Data[mlpIndex]) && !done[mlpSubIndex]){
-                    done[mlpSubIndex] = true;
+                if(floatCmp(lastMapData[lastMapIndex],activations0Data[mlpIndex]) && done[mlpSubIndex]==0){
+                    done[mlpSubIndex] = 1;
                     biasSum += dcDzs0Data[mlpIndex]; //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression)
                 }
             }
@@ -495,11 +498,11 @@ void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
     int poolStride = strides[l];
     int thisStride = strides[lSub1];
     int poolDimens = mapDimens[lPlus1];
-    float *currMapData = maps[l].getData().get(); //None of these will have any offsets i.e. they aren't sub-tensors
-    float *prevMapData = maps[lSub1].getData().get();
-    float *pooledMapData = maps[lPlus1].getData().get();
-    float *pooledDcDxsData = dcDxs[l].getData().get();
-    float *prevDcDxsData = dcDxs[l-2].getData().get();
+    float*  __restrict__ currMapData = maps[l].getData().get(); //None of these will have any offsets i.e. they aren't sub-tensors
+    float*  __restrict__ prevMapData = maps[lSub1].getData().get();
+    float*  __restrict__ pooledMapData = maps[lPlus1].getData().get();
+    float*  __restrict__ pooledDcDxsData = dcDxs[l].getData().get();
+    float*  __restrict__ prevDcDxsData = dcDxs[l-2].getData().get();
     float *kernelData = kernels[lSub1].getData().get();
     float *kernelGradData = kernelsGrad[lSub1].getData().get();
     float *kernelBiasesGradData = kernelsGrad[lSub1].getBiases()->getData().get();
