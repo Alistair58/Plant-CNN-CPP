@@ -36,13 +36,9 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads);
 static void test(CNN *n, Dataset *d, int numTest);
 
-//DONE
-//Changed it such that gradients are deep copied
-//Used  __restrict__ for activations, maps and derivatives
-//Other performance upgrades: using raw ptrs for max pool, normalise and using memcpy for reset gradients
-//Changed argv parsing so that arguments are labelled (more future proof arguments) and added restart
 
 //TODO
+//Doesn't work - 16,000 training examples and only predicts one class
 //Precompute indices for both forwards and backwards (lookup table)
 //Speed up - see log.txt
 

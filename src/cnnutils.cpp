@@ -176,10 +176,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     Tensor result({
         (int)ceil((float)(imHeight-2*yKernelRadius)/yStride),
         (int)ceil((float)(imWidth-2*xKernelRadius)/xStride)
-    });
-
-    
-    
+    }); //0 initialised
     float *kernelData = kernel.getData().get();
     float*  __restrict__ resultData = result.getData().get();
     Tensor *biases = kernel.getBiases();
@@ -492,20 +489,47 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
     }
     std::vector<Tensor> valuesBiases;
     std::vector<Tensor> gradientBiases;
-    for(int i=0;i<values.size();i++){
-        Tensor *valLayerBiases = values[i].getBiases();
-        Tensor *gradLayerBiases = gradient[i].getBiases();
+    for(int l=0;l<values.size();l++){
+        Tensor *valLayerBiases = values[l].getBiases();
+        Tensor *gradLayerBiases = gradient[l].getBiases();
         if((valLayerBiases==nullptr) != (gradLayerBiases==nullptr)){
             throw std::invalid_argument("Biases must have the same dimensions for the gradient to be applied");
         }
         if(valLayerBiases!=nullptr && gradLayerBiases!=nullptr){
-            //Dereferencing but still has the same shared_ptr and so the original bias values will still be updated
-            valuesBiases.push_back(*valLayerBiases);
-            gradientBiases.push_back(*gradLayerBiases);
-            applyGradient(valuesBiases,gradientBiases);
+            size_t valBiasesSize = valLayerBiases->getTotalSize();
+            size_t gradBiasesSize = gradLayerBiases->getTotalSize();
+            std::vector<int> valBiasesDimens = valLayerBiases->getDimens();
+            std::vector<int> gradBiasesDimens = gradLayerBiases->getDimens();
+            if(valBiasesSize!=gradBiasesSize || valBiasesDimens.size()!=gradBiasesDimens.size()){
+                throw std::invalid_argument("Biases must have the dimensions for the gradient to be applied");
+            }
+            for(int i=0;i<valBiasesDimens.size();i++){
+                if(valBiasesDimens[i]!=gradBiasesDimens[i]){
+                    throw std::invalid_argument("Biases must have the dimensions for the gradient to be applied");
+                }
+            }
+            //I don't think that there ever is an offset but you could provide an input with an offset (i.e. biases is a sub-tensor)
+            float* __restrict__ gradBiasesData = gradLayerBiases->getData().get() + gradLayerBiases->getOffset();
+            float* __restrict__ valBiasesData = valLayerBiases->getData().get() + valLayerBiases->getOffset();
+            for(int i=0;i<valBiasesSize;i++){
+                float gradVal = gradBiasesData[i];
+                if(!(floatCmp(gradVal,0.0f))){
+                    if(std::isnan(gradVal)){
+                        std::cout << "NaN bias gradient i: "+std::to_string(i) << std::endl;
+                        gradBiasesData[i] = 0;
+                        continue;
+                    }
+                    float adjustedGrad = gradVal * LR;
+                    if(adjustedGrad>10){
+                        std::cout << "Very large bias gradient: "+std::to_string(adjustedGrad) << std::endl;
+                        adjustedGrad = 0;
+                    }
+                    valBiasesData[i] -= adjustedGrad; 
+                    gradBiasesData[i] = 0;
+                }   
+            }
         }
     }
-    
 }
 
 void CnnUtils::resetKernels(){
@@ -665,5 +689,15 @@ void CnnUtils::resetGrad(std::vector<Tensor>& grad){
             0.0f,
             sizeof(float)*size
         );
+        Tensor *biases = t.getBiases();
+        if(biases!=nullptr){
+            float *biasesData = biases->getData().get();
+            size_t biasesSize = biases->getTotalSize();
+            memset(
+                biasesData,
+                0.0f,
+                sizeof(float)*biasesSize
+            );
+        }
     }
 }

@@ -158,7 +158,7 @@ std::string CNN::forwards(Tensor& imageInt){
         float *currActivations = activations[l+1].getData().get();
         float *currWeights = weights[l].getData().get();
         for(int i=0;i<numNeurons[l+1];i++){
-            int weightsTo = i*numNeurons[l+1];
+            int weightsTo = i*numNeurons[l];
             for(int j=0;j<numNeurons[l];j++){
                 //TODO likely quicker with axv2
                 currActivations[i] += prevActivations[j] * currWeights[weightsTo+j]; 
@@ -407,7 +407,9 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     int poolWidth = mapDimens[lastMapsL]/strides[strides.size()-1];
     int poolArea = poolWidth*poolWidth;
     std::vector<int> lastMapsChildSizes = maps[lastMapsL].getChildSizes();
+    std::vector<int> prevMapsChildSizes = maps[prevMapsL].getChildSizes();
     std::vector<int> lastKernelsChildSizes = kernels[lastKernelsL].getChildSizes();
+    
     //don't count the max pixel more than once
     //ChatGPT says uint8_t is quicker than bool as bool does bit packing
     std::vector<uint8_t> doneBuf(poolArea); 
@@ -445,7 +447,7 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                     }
                     for(int y=yStart;y<yEnd;y+=thisStride){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (thisX,thisY)
                         int lastMapRow = lastMapChannel + thisY*lastMapsChildSizes[1];
-                        int prevMapRow = prevMapChannel + y*lastMapsChildSizes[1];
+                        int prevMapRow = prevMapChannel + y*prevMapsChildSizes[1];
                         int mlpSection = (((thisY)/poolStride)*poolWidth);
                         for(int x=xStart;x<xEnd;x+=thisStride){ //Derivatve of the corresponding pixel in the next (backwards) layer
                             int mlpSubIndex = mlpSection + ((thisX)/poolStride);
