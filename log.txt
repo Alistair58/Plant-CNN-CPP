@@ -266,3 +266,33 @@ Index error in MLP forwards and finalPoolingConvBackwards
 Took: 0 hr(s) 30 min(s) 38 sec(s) for 16,000
 Now only says prayer plant?
 Gives a very similar output vector for different images
+There was an issue with offsets not being added and no biases being present
+
+0 4% Snake plant,Peace lily and Birds Nest Fern with a few other
+12,000 said very large gradient and only outputs Anthurium and Areca Palm but this is the weights that were saved before very large gradient
+Restarting
+0  Says a range of things with the most common being Jade plant
+64 Says a range of things with the most common being Poinsettia
+128 Says a range of things with no clear mode
+
+Same test on the Java version:
+0 Says a small range of things with the most common being Sago Palm
+64 Says a wide range of things with no clear mode
+128 Says a wide range of things with no clear mode
+
+I think it might have done the v large gradient thing before and so I'll have another punt
+16,000 only says Anthurium, African Violet, Begonia, Areca Palm, Boston Fern 
+These are the low index classes (A,B) and so I suspect that only the top section of the network is being used 
+No not really: 
+[0.000000,0.000000,0.076756,0.076756,0.000000,0.000000,0.000000,0.000000,0.076756,0.000000,0.000000,0.000000,0.000000,0.000000,0.002160,0.076756,0.076756,0.000000,0.000000,0.076756,0.000000,0.000000,0.000000,0.076756,0.000000,0.076756,0.000000,0.000000,0.000000,0.000000,0.076756,0.076756,0.076756,0.000012,0.076756,0.000000,0.000000,0.000000,0.076756,0.000000,0.000000,0.000000,0.000000,0.000001,0.000000,0.000000,0.000000]
+Values are pretty big however
+{-28.5583267, -4.0140624, 22.5354786, 72.0327682, -16.2396221, -8.40388107, -21.2709446, -18.1731663, 19.1541519, -63.8824615, 
+  -15.7719955, -42.8161201, -3.16467977, -31.7826385, -3.09618592, 57.9556999, 155.888077, -21.4545269, -8.59567165, 144.289963, 
+  -17.3006573, -15.2665777, -13.3939781, 34.1205521, 24.8665485, 63.0063858, -73.5250778, -64.3423691, -62.3776932, -9.31860447, 
+  8.20953751, 13.3306046, 2.3166337, 20.2167549, 64.7790909, -3.27565002, -55.9083023, -30.5076256, 17.9811211, -10.7876148, -48.7682457, 
+  -27.0873661, -30.4592381, -9.3761816, -31.6270638, -24.1872387, 7.38993025}
+
+Fixed slicing vector tail issue 
+30,000 only says African Violet 
+Fixed float but should be int issue 
+10,240 only says African Violet

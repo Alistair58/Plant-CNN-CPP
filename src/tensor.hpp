@@ -12,9 +12,9 @@
 class Tensor{
     std::shared_ptr<float[]> data = nullptr;
     //A class can't have an object of itself and so it must be a pointer
-    Tensor *biases = nullptr;
+    //Biases aren't shared very often but could be
+    std::shared_ptr<Tensor> biases = nullptr;
     int offset = 0; //how far this tensor's data is into the shared_ptr
-    //OFFSET MUST BE USED FOR EVERY RAW INDEX ACCESS
     std::vector<int> dimens; //e.g. 5x4x6 {5,4,6}
     std::vector<int> childSizes; //e.g. {24,6,1}
     size_t totalSize = 0;
@@ -25,9 +25,7 @@ class Tensor{
         //Fresh Tensor constructor
         Tensor(const std::vector<int> inputDimens);
 
-        //Rule of 5
-        //Biases must only be used for a single tensor
-        ~Tensor(){ delete biases; }
+        //not a Rule of 5 as we don't have any raw ptrs and hence don't need a destructor
         //Copy constructor - needed for deep copy (for biases)
         Tensor(const Tensor& t);
         //Copy assignment operator
@@ -57,6 +55,8 @@ class Tensor{
         }
         //Return a subsection of the tensor
         Tensor slice(const std::vector<int> indices) const;
+        //Return a subsection of the tensor with some biases included
+        Tensor slice(const std::vector<int> indices,const std::vector<int> biasesIndices) const;
         //Data value assignment by a flat vector
         Tensor& operator=(const std::vector<float> vals);
         
@@ -65,11 +65,15 @@ class Tensor{
 
         std::vector<int> getDimens() const { return dimens; }
         size_t getTotalSize() const { return totalSize; }
-        Tensor *getBiases() const { return biases; }
+        Tensor *getBiases() const { return biases==nullptr ? nullptr : biases.get(); }
         std::vector<int> getChildSizes() const { return childSizes; }
         int getOffset() const { return offset; }
-        void setBiases(Tensor *pBiases) { biases = pBiases; }
-        std::shared_ptr<float[]> getData() const { return data; }
+        void setBiases(Tensor& pBiases) { 
+            //Deep copy ctor
+            //Old biases ptr is automatically deleted
+            biases = std::make_shared<Tensor>(pBiases);
+        }
+        float *getData() const { return data.get()+offset; }
 
     private:
         //Sub-Tensor constructor
@@ -90,11 +94,7 @@ class Tensor{
             }
             return index;
         }
-        
-
-        
         //Part of toVector
-        
         template <typename dn>
         dn buildNestedVector(int depth = 0, int offset = 0) const;
         template<typename dn>

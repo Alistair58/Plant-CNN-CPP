@@ -106,6 +106,7 @@ std::string CNN::forwards(Tensor& imageInt){
     //Convolutional and pooling layers
     for(int l=1;l<numMaps.size();l++){
         for(int i=0;i<numMaps[l];i++){
+            //Does copy-elision and so no ctor is called and memory is shared
             Tensor currChannel = maps[l].slice({i}); 
             if(kernelSizes[l-1]==0){
                 //1:1 mapping for a max pool layer
@@ -113,7 +114,8 @@ std::string CNN::forwards(Tensor& imageInt){
                 currChannel = maxPool(prevChannel,strides[l-1],strides[l-1]); //maxPool requires 1:1 channels between layers
             }
             else{   
-                Tensor kernel = kernels[l-1].slice({i});
+                //Slice with biases
+                Tensor kernel = kernels[l-1].slice({i},{i});
                 #if DEBUG >= 2
                     uint64_t convStart = getCurrTimeMs();
                 #endif
@@ -132,8 +134,8 @@ std::string CNN::forwards(Tensor& imageInt){
     int poolingDimen = mapDimens[mapDimens.size()-1]/strides[strides.size()-1];
     int poolingArea = poolingDimen*poolingDimen;
     Tensor pooled({numMaps[numMaps.size()-1],poolingDimen,poolingDimen});
-    float *pooledData = pooled.getData().get();
-    float *activations0Data = activations[0].getData().get();
+    float *pooledData = pooled.getData();
+    float *activations0Data = activations[0].getData();
     std::vector<int> pooledChildSizes = pooled.getChildSizes();
     for(int i=0;i<numMaps[numMaps.size()-1];i++){
         Tensor pooledChannel = pooled.slice({i});
@@ -153,10 +155,10 @@ std::string CNN::forwards(Tensor& imageInt){
     }
     //MLP
     for(int l=0;l<weights.size();l++){
-        float *biasesData = weights[l].getBiases()->getData().get();
-        float *prevActivations = activations[l].getData().get();
-        float *currActivations = activations[l+1].getData().get();
-        float *currWeights = weights[l].getData().get();
+        float *biasesData = weights[l].getBiases()->getData();
+        float *prevActivations = activations[l].getData();
+        float *currActivations = activations[l+1].getData();
+        float *currWeights = weights[l].getData();
         for(int i=0;i<numNeurons[l+1];i++){
             int weightsTo = i*numNeurons[l];
             for(int j=0;j<numNeurons[l];j++){
@@ -189,7 +191,7 @@ std::string CNN::forwards(Tensor& imageInt){
         std::cout << std::to_string(outputVec[outputVec.size()-1])+"]" << std::endl;
         std::cout << "Forwards took "+std::to_string(getCurrTimeMs()-startTime)+"ms" <<std::endl;
     #endif
-    #if DEBUG >=2
+    #if DEBUG 
         saveMaps();
         saveActivations();
     #endif
@@ -281,12 +283,12 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
 
 void CNN::mlpBackwards(std::vector<Tensor>& dcDzs){
     for(int l=weights.size()-1;l>=0;l--){
-        float *weightsGradData = weightsGrad[l].getData().get();
-        float *biasesGradData = weightsGrad[l].getBiases()->getData().get();
-        float*  __restrict__ nextDcDzsData = dcDzs[l+1].getData().get();
-        float*  __restrict__ currDcDzsData = dcDzs[l].getData().get();
-        float*  __restrict__ activationsData = activations[l].getData().get();
-        float *weightsData = weights[l].getData().get();
+        float *weightsGradData = weightsGrad[l].getData();
+        float *biasesGradData = weightsGrad[l].getBiases()->getData();
+        float*  __restrict__ nextDcDzsData = dcDzs[l+1].getData();
+        float*  __restrict__ currDcDzsData = dcDzs[l].getData();
+        float*  __restrict__ activationsData = activations[l].getData();
+        float *weightsData = weights[l].getData();
         for(int i=0;i<numNeurons[l+1];i++){
             int weightsNeuron = i*numNeurons[l];
             for(int j=0;j<numNeurons[l];j++){//NOTE: Weights gradient != negative gradient
@@ -310,14 +312,14 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
     int kernelSize = kernelSizes[lSub1];
     int kernelRadius = (int) floor(kernelSize/2);
     int thisStride = strides[lSub1];
-    float*  __restrict__ currDcDxsData = dcDxs[lSub1].getData().get(); //yes, l-1 is correct (dcDxs only has numMaps.size()-2 layers)
+    float*  __restrict__ currDcDxsData = dcDxs[lSub1].getData(); //yes, l-1 is correct (dcDxs only has numMaps.size()-2 layers)
     float*  __restrict__ prevDcDxsData = nullptr;
-    if(l!=1) prevDcDxsData = dcDxs[lSub2].getData().get(); //No derivatives need to be stored for the first layer
-    float*  __restrict__ currMapData = maps[l].getData().get();
-    float*  __restrict__ prevMapData = maps[lSub1].getData().get();
-    float *kernelData = kernels[lSub1].getData().get();
-    float *kernelGradData = kernelsGrad[lSub1].getData().get(); 
-    float *kernelBiasesGradData = kernelsGrad[lSub1].getBiases()->getData().get(); //only 1 for each channel (1d)
+    if(l!=1) prevDcDxsData = dcDxs[lSub2].getData(); //No derivatives need to be stored for the first layer
+    float*  __restrict__ currMapData = maps[l].getData();
+    float*  __restrict__ prevMapData = maps[lSub1].getData();
+    float *kernelData = kernels[lSub1].getData();
+    float *kernelGradData = kernelsGrad[lSub1].getData(); 
+    float *kernelBiasesGradData = kernelsGrad[lSub1].getBiases()->getData(); //only 1 for each channel (1d)
     std::vector<int> currMapsChildSizes = maps[l].getChildSizes();
     std::vector<int> prevMapsChildSizes = maps[lSub1].getChildSizes();
     std::vector<int> kernelsChildSizes = kernels[lSub1].getChildSizes();
@@ -390,14 +392,14 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     int prevMapsL = maps.size()-2;
     int lastKernelsL = kernels.size()-1;
     Tensor *kernelBiasesGrad = kernelsGrad[lastKernelsL].getBiases(); //only 1 for each channel (1d)
-    float*  __restrict__ activations0Data = activations[0].getData().get();
-    float*  __restrict__ lastMapData = maps[lastMapsL].getData().get();
-    float*  __restrict__ prevMapsData = maps[prevMapsL].getData().get();
-    float*  __restrict__ dcDzs0Data = dcDzs[0].getData().get();
-    float*  __restrict__ lastDcDxsData = dcDxs[dcDxs.size()-1].getData().get();
-    float *kernelData = kernels[lastKernelsL].getData().get();
-    float *kernelGradData = kernelsGrad[lastKernelsL].getData().get();
-    float *kernelBiasesGradData = kernelsGrad[lastKernelsL].getBiases()->getData().get(); //only 1 for each channel (1d)
+    float*  __restrict__ activations0Data = activations[0].getData();
+    float*  __restrict__ lastMapData = maps[lastMapsL].getData();
+    float*  __restrict__ prevMapsData = maps[prevMapsL].getData();
+    float*  __restrict__ dcDzs0Data = dcDzs[0].getData();
+    float*  __restrict__ lastDcDxsData = dcDxs[dcDxs.size()-1].getData();
+    float *kernelData = kernels[lastKernelsL].getData();
+    float *kernelGradData = kernelsGrad[lastKernelsL].getData();
+    float *kernelBiasesGradData = kernelsGrad[lastKernelsL].getBiases()->getData(); //only 1 for each channel (1d)
     int prevDimens = mapDimens[prevMapsL];
     int currDimens = mapDimens[lastMapsL];
     int kernelSize = kernelSizes[lastKernelsL];
@@ -500,14 +502,14 @@ void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
     int poolStride = strides[l];
     int thisStride = strides[lSub1];
     int poolDimens = mapDimens[lPlus1];
-    float*  __restrict__ currMapData = maps[l].getData().get(); //None of these will have any offsets i.e. they aren't sub-tensors
-    float*  __restrict__ prevMapData = maps[lSub1].getData().get();
-    float*  __restrict__ pooledMapData = maps[lPlus1].getData().get();
-    float*  __restrict__ pooledDcDxsData = dcDxs[l].getData().get();
-    float*  __restrict__ prevDcDxsData = dcDxs[l-2].getData().get();
-    float *kernelData = kernels[lSub1].getData().get();
-    float *kernelGradData = kernelsGrad[lSub1].getData().get();
-    float *kernelBiasesGradData = kernelsGrad[lSub1].getBiases()->getData().get();
+    float*  __restrict__ currMapData = maps[l].getData(); 
+    float*  __restrict__ prevMapData = maps[lSub1].getData();
+    float*  __restrict__ pooledMapData = maps[lPlus1].getData();
+    float*  __restrict__ pooledDcDxsData = dcDxs[l].getData();
+    float*  __restrict__ prevDcDxsData = dcDxs[l-2].getData();
+    float *kernelData = kernels[lSub1].getData();
+    float *kernelGradData = kernelsGrad[lSub1].getData();
+    float *kernelBiasesGradData = kernelsGrad[lSub1].getBiases()->getData();
     std::vector<int> currMapsChildSizes = maps[l].getChildSizes();
     std::vector<int> prevMapsChildSizes = maps[lSub1].getChildSizes();
     std::vector<int> pooledMapsChildSizes = maps[lPlus1].getChildSizes();

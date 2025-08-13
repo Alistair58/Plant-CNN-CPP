@@ -34,8 +34,11 @@ Tensor CnnUtils::parseImg(Tensor& img){
     Tensor img4d = Tensor({channels,1,imHeight,imWidth}); //convolution requires a 3d array (image with multiple channels) 
     //but we only want to process one channel at a time and so we have to store each channel in a separate 3d array
     for(int l=0;l<channels;l++){
+        //Deep copy
         img4d.slice({l,0}) = img.slice({l});
+        //Copy-elision
         Tensor sliced = img4d.slice({l});
+        //Deep copy
         result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0],mapDimens[0],false);
     }
     return result;
@@ -46,7 +49,7 @@ void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vecto
     if(imgDimens.size()!=3){
         throw std::invalid_argument("Image must have 3 dimensions for normaliseImg");
     }
-    float*  __restrict__ imgData = img.getData().get();
+    float*  __restrict__ imgData = img.getData();
     std::vector<int> imgChildSizes = img.getChildSizes();
     for(int c=0;c<imgDimens[0];c++){
         int imageChannel = c*imgChildSizes[0];
@@ -88,8 +91,8 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){
     Tensor result({resHeight,resWidth});
     int newY,newX = newY =0;
 
-    float*  __restrict__ imageData = image.getData().get();
-    float*  __restrict__ resultData = result.getData().get();
+    float*  __restrict__ imageData = image.getData();
+    float*  __restrict__ resultData = result.getData();
     for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
         int resultRow = newY*resWidth;
         for(int x=xKernelRadius;x<=imWidth-xKernelRadius;x+=xStride){
@@ -139,8 +142,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         paddedImgDimens = imgDimens;
     }
     Tensor paddedImage(paddedImgDimens);
-    float*  __restrict__ imageData = image.getData().get();
-    float*  __restrict__ paddedImageData = paddedImage.getData().get();
+    float*  __restrict__ imageData = image.getData();
+    float*  __restrict__ paddedImageData = paddedImage.getData();
     std::vector<int> imageChildSizes = image.getChildSizes();
     std::vector<int> paddedImageChildSizes = paddedImage.getChildSizes();
     #if DEBUG >=2
@@ -148,7 +151,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     #endif
     if(padding){
         for(int l=0;l<imgDimens[0];l++){ //for each image channel
-            int imageChannel = l*imageChildSizes[0] + image.getOffset(); 
+            int imageChannel = l*imageChildSizes[0];
             int paddedImageChannel = l*paddedImageChildSizes[0]+xKernelRadius; //saving additions
             int yLoopBound = imgDimens[1]+yKernelRadius;
             for(int y=yKernelRadius;y<yLoopBound;y++){
@@ -177,8 +180,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         (int)ceil((float)(imHeight-2*yKernelRadius)/yStride),
         (int)ceil((float)(imWidth-2*xKernelRadius)/xStride)
     }); //0 initialised
-    float *kernelData = kernel.getData().get();
-    float*  __restrict__ resultData = result.getData().get();
+    float *kernelData = kernel.getData();
+    float*  __restrict__ resultData = result.getData();
     Tensor *biases = kernel.getBiases();
     float bias = 0; //for a 3D kernel, there should only 1 bias
     std::vector<int> kernelChildSizes = kernel.getChildSizes();
@@ -196,7 +199,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     for(int l=0;l<paddedImgDimens[0];l++){
         int newY,newX = newY =0;
         //Precomputing multiplications
-        int kernelChannel = l*kernelChildSizes[0] + kernel.getOffset();
+        int kernelChannel = l*kernelChildSizes[0];
         int paddedImageChannel = l*paddedImageChildSizes[0]; //No offset (we made it)
         for(int y=yKernelRadius;y<imHeight-yKernelRadius;y+=yStride){
             int resultRow = newY*resultChildSizes[0];
@@ -245,8 +248,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     Tensor result({newHeight,newWidth}); //The data is 0 initialised
     Tensor convResult = convolution(image, kernel, xStride, yStride,padding);
     std::vector<int> convResultDimens = convResult.getDimens();
-    float*  __restrict__ convResultData = convResult.getData().get();
-    float*  __restrict__ resultData = result.getData().get();
+    float*  __restrict__ convResultData = convResult.getData();
+    float*  __restrict__ resultData = result.getData();
     //Neither result will have any offsets
     for(int y=0;y<convResultDimens[0];y++){
         int resultRow = y*result.getChildSizes()[0];
@@ -283,7 +286,7 @@ std::vector<float> CnnUtils::softmax(std::vector<float> inp){
 void CnnUtils::reset(){
     for(int l=0;l<activations.size();l++){
         size_t activationsLayerSize = activations[l].getTotalSize();
-        float *activationLayerData = activations[l].getData().get();
+        float *activationLayerData = activations[l].getData();
         memset(
             activationLayerData,
             0.0f,
@@ -292,7 +295,7 @@ void CnnUtils::reset(){
     }
     for(int l=0;l<maps.size();l++){
         size_t mapsLayerSize = maps[l].getTotalSize();
-        float *mapsLayerData = maps[l].getData().get();
+        float *mapsLayerData = maps[l].getData();
         memset(
             mapsLayerData,
             0.0f,
@@ -314,7 +317,7 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
             }
             else{
                 result[l] = Tensor({numMaps[l+1],numMaps[l],kernelSizes[l],kernelSizes[l]});
-                Tensor *biases = new Tensor({numMaps[l+1]});
+                Tensor biases = Tensor({numMaps[l+1]});
                 //only 1 bias for each new map
                 result[l].setBiases(biases);
             }
@@ -358,9 +361,9 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
             throw std::invalid_argument("Number of kernel weights does not match number of kernel biases");
         }
         for(int i=0;i<biasesVec.size();i++){
-            Tensor *biases = new Tensor({(int)biasesVec[i].size()});
+            Tensor biases = Tensor({(int)biasesVec[i].size()});
             for(int j=0;j<biasesVec[i].size();j++){
-                *(*biases)[{j}] = biasesVec[i][j];
+                *(biases)[{j}] = biasesVec[i][j];
             }
             result[i].setBiases(biases);
         }
@@ -380,7 +383,7 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
         std::vector<Tensor> result((int)numNeurons.size()-1);
         for(int l=0;l<numNeurons.size()-1;l++){
             Tensor layer({numNeurons[l+1],numNeurons[l]});
-            Tensor *biases = new Tensor({numNeurons[l+1]});
+            Tensor biases = Tensor({numNeurons[l+1]});
             layer.setBiases(biases);
             result[l] = layer;
         }
@@ -414,9 +417,9 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
             throw std::invalid_argument("Number of MLP weights does not match number of MLP biases");
         }
         for(int i=0;i<biasesVec.size();i++){
-            Tensor *biases = new Tensor({(int)biasesVec[i].size()});
+            Tensor biases = Tensor({(int)biasesVec[i].size()});
             for(int j=0;j<biasesVec[i].size();j++){
-                *(*biases)[{j}] = biasesVec[i][j];
+                *biases[{j}] = biasesVec[i][j];
             }
             result[i].setBiases(biases);
         }
@@ -467,8 +470,8 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                 throw std::invalid_argument("Tensors must have the dimensions for the gradient to be applied");
             }
         }
-        float*  __restrict__ gradData = gradient[l].getData().get();
-        float*  __restrict__ valuesData = values[l].getData().get();
+        float*  __restrict__ gradData = gradient[l].getData();
+        float*  __restrict__ valuesData = values[l].getData();
         for(int i=0;i<values[l].getTotalSize();i++){
             float gradVal = gradData[i];
             if(!(floatCmp(gradVal,0.0f))){
@@ -478,7 +481,7 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                     continue;
                 }
                 float adjustedGrad = gradVal * LR;
-                if(adjustedGrad>10){
+                if(adjustedGrad>1){
                     std::cout << "Very large gradient: "+std::to_string(adjustedGrad) << std::endl;
                     adjustedGrad = 0;
                 }
@@ -509,8 +512,8 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                 }
             }
             //I don't think that there ever is an offset but you could provide an input with an offset (i.e. biases is a sub-tensor)
-            float* __restrict__ gradBiasesData = gradLayerBiases->getData().get() + gradLayerBiases->getOffset();
-            float* __restrict__ valBiasesData = valLayerBiases->getData().get() + valLayerBiases->getOffset();
+            float* __restrict__ gradBiasesData = gradLayerBiases->getData();
+            float* __restrict__ valBiasesData = valLayerBiases->getData();
             for(int i=0;i<valBiasesSize;i++){
                 float gradVal = gradBiasesData[i];
                 if(!(floatCmp(gradVal,0.0f))){
@@ -539,7 +542,7 @@ void CnnUtils::resetKernels(){
     std::random_device rd{}; //Non-deterministic seeder
     std::mt19937 gen{rd()}; //Mersenne twister 
     for(int l=0;l<kernels.size();l++){ //layer
-        float *kernelsData = kernels[l].getData().get();
+        float *kernelsData = kernels[l].getData();
         std::vector<int> kernelsDimens = kernels[l].getDimens();
         std::vector<int> kernelsChildDimens = kernels[l].getChildSizes();
         for(int i=0;i<kernelsDimens[0];i++){ //current channel
@@ -562,7 +565,7 @@ void CnnUtils::resetKernels(){
         //set the biases = 0
         Tensor *biases = kernels[l].getBiases();
         size_t biasesSize = biases->getTotalSize();
-        float *biasesData = biases->getData().get();
+        float *biasesData = biases->getData();
         memset(biasesData,0,biasesSize*sizeof(float));
     }
     #if DEBUG
@@ -579,7 +582,7 @@ void CnnUtils::resetWeights() {
     std::random_device rd{}; //Non-deterministic seeder
     std::mt19937 gen{rd()}; //Mersenne twister 
     for(int l=0;l<weights.size();l++){ //layer
-        float *weightsData = weights[l].getData().get();
+        float *weightsData = weights[l].getData();
         std::vector<int> weightsChildSizes = weights[l].getChildSizes();
         std::vector<int> weightsDimens = weights[l].getDimens();
         for (int i=0;i<weightsDimens[0];i++) { //neurone
@@ -594,7 +597,7 @@ void CnnUtils::resetWeights() {
         //set the biases = 0
         Tensor *biases = weights[l].getBiases();
         size_t biasesSize = biases->getTotalSize();
-        float *biasesData = biases->getData().get();
+        float *biasesData = biases->getData();
         memset(biasesData,0,biasesSize*sizeof(float));
     }
     #if DEBUG
@@ -681,21 +684,21 @@ void CnnUtils::saveMaps(){  //For debugging use
 }
 
 void CnnUtils::resetGrad(std::vector<Tensor>& grad){
-    for(Tensor t:grad){
+    for(Tensor& t:grad){
         size_t size = t.getTotalSize();
-        float *tData = t.getData().get();
+        float *tData = t.getData();
         memset(
             tData,
-            0.0f,
+            0,
             sizeof(float)*size
         );
         Tensor *biases = t.getBiases();
         if(biases!=nullptr){
-            float *biasesData = biases->getData().get();
+            float *biasesData = biases->getData();
             size_t biasesSize = biases->getTotalSize();
             memset(
                 biasesData,
-                0.0f,
+                0,
                 sizeof(float)*biasesSize
             );
         }

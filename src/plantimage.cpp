@@ -39,7 +39,7 @@ Tensor PlantImage::fileToImageTensor(std::string fName){
     #if DEBUG
         uint64_t parsingStart = getCurrTimeMs();
     #endif
-    float *resultData = result.getData().get();
+    float *resultData = result.getData();
     int gChannel = result.getChildSizes()[0];
     int bChannel = 2*result.getChildSizes()[0];
     for (int y=0;y<height;y++) {
