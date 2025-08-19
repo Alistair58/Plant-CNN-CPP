@@ -1,6 +1,6 @@
 #include "tensor.hpp"
 
-Tensor::Tensor(const std::vector<int> inputDimens){
+Tensor::Tensor(const std::vector<int>& inputDimens){
     dimens = inputDimens;
     int numElems = 1;
     childSizes.resize(dimens.size());
@@ -15,7 +15,7 @@ Tensor::Tensor(const std::vector<int> inputDimens){
     offset = 0;
 }
 
-Tensor::Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]> ptr,int pOffset){
+Tensor::Tensor(const std::vector<int>& inputDimens,const std::shared_ptr<float[]> ptr,int pOffset){
     dimens = inputDimens;
     int numElems = 1;
     childSizes.resize(dimens.size());
@@ -70,8 +70,9 @@ Tensor& Tensor::operator=(const Tensor &t){
     Tensor *tBiases = t.getBiases();
     if(tBiases!=nullptr){
         //Deep copy
-        this->biases = std::make_unique<Tensor>(*tBiases);
+        this->biases = std::make_shared<Tensor>(*tBiases);
     }
+    else this->biases.reset();
     //More efficient than a loop
     std::memcpy(
         this->getData(),
@@ -135,7 +136,7 @@ void Tensor::shallowCopy(Tensor& src){
 }
 
 //Does not include the biases
-Tensor Tensor::slice(const std::vector<int> indices) const{ 
+Tensor Tensor::slice(const std::vector<int>& indices) const{ 
     if(indices.size()>dimens.size()){
         throw std::invalid_argument("Too many indices provided for slice");
     }
@@ -157,7 +158,7 @@ Tensor Tensor::slice(const std::vector<int> indices) const{
     return subTensor;
 }
 
-Tensor Tensor::slice(const std::vector<int> indices,const std::vector<int> biasesIndices) const{ 
+Tensor Tensor::slice(const std::vector<int>& indices,const std::vector<int>& biasesIndices) const{ 
     if(indices.size()>=dimens.size()){
         throw std::invalid_argument("Too many indices provided for slice");
     }
@@ -176,7 +177,7 @@ Tensor Tensor::slice(const std::vector<int> indices,const std::vector<int> biase
     return subTensor;
 }
 
-Tensor& Tensor::operator=(const std::vector<float> vals){
+Tensor& Tensor::operator=(const std::vector<float>& vals){
     if(vals.size()!=totalSize){
         throw std::invalid_argument("Length of \"vals\" mismatches size of tensor");
     }

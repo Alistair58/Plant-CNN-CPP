@@ -23,7 +23,7 @@ class Tensor{
         //All the attributes are initialised and so nothing needs to happen
         Tensor(){};
         //Fresh Tensor constructor
-        Tensor(const std::vector<int> inputDimens);
+        Tensor(const std::vector<int>& inputDimens);
 
         //not a Rule of 5 as we don't have any raw ptrs and hence don't need a destructor
         //Copy constructor - needed for deep copy (for biases)
@@ -46,19 +46,19 @@ class Tensor{
             return (*this)[flattenIndex(indices)];
         }
         //Get an address from a flattened index
-        inline float *operator[](int flatIndex) const{
+        inline float *operator[](size_t flatIndex) const{
             if(flatIndex>=totalSize){ //totalSize is just for this sub-tensor and so offset does not need to be taken into account for bounds (assuming sub-tensor is valid)
                 throw std::out_of_range("Index "+std::to_string(flatIndex)+" out of bounds for size "+std::to_string(totalSize));
             }
-            int realIndex = flatIndex+offset;
+            size_t realIndex = flatIndex+ (size_t)offset;
             return (data.get()+realIndex);
         }
         //Return a subsection of the tensor
-        Tensor slice(const std::vector<int> indices) const;
+        Tensor slice(const std::vector<int>& indices) const;
         //Return a subsection of the tensor with some biases included
-        Tensor slice(const std::vector<int> indices,const std::vector<int> biasesIndices) const;
+        Tensor slice(const std::vector<int>& indices,const std::vector<int>& biasesIndices) const;
         //Data value assignment by a flat vector
-        Tensor& operator=(const std::vector<float> vals);
+        Tensor& operator=(const std::vector<float>& vals);
         
         template <typename dn>
         dn toVector() const;
@@ -77,8 +77,8 @@ class Tensor{
 
     private:
         //Sub-Tensor constructor
-        Tensor(const std::vector<int> inputDimens,const std::shared_ptr<float[]> ptr,int pOffset);
-        inline size_t flattenIndex(const std::vector<int> indices) const{
+        Tensor(const std::vector<int>& inputDimens,const std::shared_ptr<float[]> ptr,int pOffset);
+        inline size_t flattenIndex(const std::vector<int>& indices) const{
             if (indices.size() != dimens.size()) {
                 throw std::invalid_argument("Tensor indices provided do not match tensor dimensions");
             }

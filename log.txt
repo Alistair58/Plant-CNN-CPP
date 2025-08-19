@@ -296,3 +296,17 @@ Fixed slicing vector tail issue
 30,000 only says African Violet 
 Fixed float but should be int issue 
 10,240 only says African Violet
+Neither ChatGPT or Claude can find any real issues 
+Time for small case debugging
+3x3x3 -Conv-> 3x2x2 -MP-> 3x1x1 -FC-> 2
+Only 1 thread for now
+Didn't really find anything up until the backpropagation mess
+I then gave ChatGPT a smaller chunk and it found an error (multiplying the index by the wrong layer size)
+8,960 only says African Violet
+
+Do a side by side debug with Java
+Make a little CNN 
+Give it a predefined input and weights
+start at high level and then work down to the bug 
+
+3x3x3 -Conv-> 3x3x3 -Conv,s=2-> 3x2x2 -Max Pool-> 3x1x1 -> 3 -FC-> 2

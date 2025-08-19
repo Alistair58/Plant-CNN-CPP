@@ -197,7 +197,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     #endif
     //No biases is valid
     for(int l=0;l<paddedImgDimens[0];l++){
-        int newY,newX = newY =0;
+        int newY = 0;
+        int newX = 0;
         //Precomputing multiplications
         int kernelChannel = l*kernelChildSizes[0];
         int paddedImageChannel = l*paddedImageChildSizes[0]; //No offset (we made it)
@@ -289,7 +290,7 @@ void CnnUtils::reset(){
         float *activationLayerData = activations[l].getData();
         memset(
             activationLayerData,
-            0.0f,
+            0,
             sizeof(float)*activationsLayerSize
         );
     }
@@ -298,11 +299,10 @@ void CnnUtils::reset(){
         float *mapsLayerData = maps[l].getData();
         memset(
             mapsLayerData,
-            0.0f,
+            0,
             sizeof(float)*mapsLayerSize
         );
     }
-    
 }
 
 std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
@@ -363,7 +363,7 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
         for(int i=0;i<biasesVec.size();i++){
             Tensor biases = Tensor({(int)biasesVec[i].size()});
             for(int j=0;j<biasesVec[i].size();j++){
-                *(biases)[{j}] = biasesVec[i][j];
+                *(biases)[j] = biasesVec[i][j];
             }
             result[i].setBiases(biases);
         }
@@ -419,7 +419,7 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
         for(int i=0;i<biasesVec.size();i++){
             Tensor biases = Tensor({(int)biasesVec[i].size()});
             for(int j=0;j<biasesVec[i].size();j++){
-                *biases[{j}] = biasesVec[i][j];
+                *biases[j] = biasesVec[i][j];
             }
             result[i].setBiases(biases);
         }
@@ -456,6 +456,7 @@ void CnnUtils::applyGradients(std::vector<CNN*>& cnns){ //(and reset gradients)
 }
 
 void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient){ //Main values and biases
+    const float maxGrad = 1;
     if(values.size()!=gradient.size()){
         throw std::invalid_argument("Values and gradient must have the same number of layers for the gradient to be applied");
     }
@@ -481,9 +482,9 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                     continue;
                 }
                 float adjustedGrad = gradVal * LR;
-                if(adjustedGrad>1){
+                if(abs(adjustedGrad)>maxGrad){
                     std::cout << "Very large gradient: "+std::to_string(adjustedGrad) << std::endl;
-                    adjustedGrad = 0;
+                    adjustedGrad = (adjustedGrad>0)?maxGrad:-maxGrad;
                 }
                 valuesData[i] -= adjustedGrad; 
                 gradData[i] = 0;
@@ -523,9 +524,9 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                         continue;
                     }
                     float adjustedGrad = gradVal * LR;
-                    if(adjustedGrad>10){
+                    if(abs(adjustedGrad)>maxGrad){
                         std::cout << "Very large bias gradient: "+std::to_string(adjustedGrad) << std::endl;
-                        adjustedGrad = 0;
+                        adjustedGrad = (adjustedGrad>0)?maxGrad:-maxGrad;
                     }
                     valBiasesData[i] -= adjustedGrad; 
                     gradBiasesData[i] = 0;

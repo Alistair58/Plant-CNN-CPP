@@ -37,7 +37,6 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
 static void test(CNN *n, Dataset *d, int numTest);
 
 
-
 //TODO
 //Doesn't work - 16,000 training examples and only predicts one class and activations are massive
 //Precompute indices for both forwards and backwards (lookup table)

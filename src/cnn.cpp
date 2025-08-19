@@ -325,7 +325,7 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
     std::vector<int> kernelsChildSizes = kernels[lSub1].getChildSizes();
     for(int i=0;i<numMaps[l];i++){ //For each convolution output
         int currMapChannel = i*currMapsChildSizes[0];
-        int kernelToChannel = i*kernels[lSub1].getChildSizes()[0]; //kernels are [layer][nextLayerChannel][prevLayerChannel]
+        int kernelToChannel = i*kernelsChildSizes[0]; //kernels are [layer][nextLayerChannel][prevLayerChannel]
         for(int prevMapI=0;prevMapI<numMaps[lSub1];prevMapI++){ //For each previous channel
             int prevMapChannel = prevMapI*prevMapsChildSizes[0];
             int kernelFromChannel = kernelToChannel + prevMapI*kernelsChildSizes[1];
@@ -396,7 +396,11 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     float*  __restrict__ lastMapData = maps[lastMapsL].getData();
     float*  __restrict__ prevMapsData = maps[prevMapsL].getData();
     float*  __restrict__ dcDzs0Data = dcDzs[0].getData();
-    float*  __restrict__ lastDcDxsData = dcDxs[dcDxs.size()-1].getData();
+    float*  __restrict__ lastDcDxsData = nullptr;
+    //I reckon the compiler can optimise the inner loop with this as a constant
+    const int dcDxsSize = dcDxs.size();
+    //Scenario where there's only 1 conv and then final pooling (doesn't occur in my model - only debugging ones)
+    if(dcDxsSize>0) lastDcDxsData = dcDxs[dcDxs.size()-1].getData();
     float *kernelData = kernels[lastKernelsL].getData();
     float *kernelGradData = kernelsGrad[lastKernelsL].getData();
     float *kernelBiasesGradData = kernelsGrad[lastKernelsL].getBiases()->getData(); //only 1 for each channel (1d)
@@ -411,7 +415,6 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     std::vector<int> lastMapsChildSizes = maps[lastMapsL].getChildSizes();
     std::vector<int> prevMapsChildSizes = maps[prevMapsL].getChildSizes();
     std::vector<int> lastKernelsChildSizes = kernels[lastKernelsL].getChildSizes();
-    
     //don't count the max pixel more than once
     //ChatGPT says uint8_t is quicker than bool as bool does bit packing
     std::vector<uint8_t> doneBuf(poolArea); 
@@ -420,7 +423,7 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
         int lastMapChannel = i*lastMapsChildSizes[0];
         int kernelToChannel = i*lastKernelsChildSizes[0];
         for(int prevMapI=0;prevMapI<numMaps[prevMapsL];prevMapI++){
-            int prevMapChannel = prevMapI*lastMapsChildSizes[0];
+            int prevMapChannel = prevMapI*prevMapsChildSizes[0];
             int kernelFromChannel = kernelToChannel + prevMapI*lastKernelsChildSizes[1];
             for(int j=0;j<kernelSize;j++){
                 int kernelRow = kernelFromChannel + j*lastKernelsChildSizes[2];
@@ -459,7 +462,7 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                             if(floatCmp(lastMapData[lastMapIndex],activations0Data[mlpIndex]) && done[mlpSubIndex]==0){ //only the max element has a derivative
                                 done[mlpSubIndex] = 1;
                                 //In the first MLP layer a=relu(x) where x is the max activation pixel from pooling
-                                lastDcDxsData[prevMapIndex] += dcDzs0Data[mlpIndex] * kernelData[kernelIndex];//*kernel weight
+                                if(dcDxsSize>0) lastDcDxsData[prevMapIndex] += dcDzs0Data[mlpIndex] * kernelData[kernelIndex];//*kernel weight
                                 sum+= prevMapsData[prevMapIndex] * dcDzs0Data[mlpIndex]; //The activation of the previous layer * the correct derivative from pooling
                             }
                             thisX++;
