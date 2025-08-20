@@ -186,8 +186,3 @@ Tensor& Tensor::operator=(const std::vector<float>& vals){
     }
     return *this;
 }
-
-
-
-
-

@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <cstdlib>
 #include <regex>
+#include <random>
 #include "plantimage.hpp"
 #include "json.hpp"
 #include "globals.hpp"

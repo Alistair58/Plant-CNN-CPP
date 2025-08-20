@@ -5,11 +5,12 @@
 
 //Creating a fresh CNN
 CNN::CNN(float LR,Dataset *dataset,bool restart){
-    numNeurons = {1920,960,47};
-    numMaps =     {3,  30,60,120};//includes the result of pooling (except final pooling)
-    mapDimens =   {128,64,32,16};
-    kernelSizes = {   5, 3, 3  };  //0 represents a pooling layer, the last one is excluded
-    strides =     {   2, 2, 2,4}; //pooling strides are included
+    //TODO undo
+    numNeurons = {1920,960,47};//{2,2};
+    numMaps =     {3,  30,60,120};//{3,2,2};//includes the result of pooling (except final pooling)
+    mapDimens =   {128,64,32,16};//{3,2,2};
+    kernelSizes = {   5, 3, 3  };//{3,3};  //0 represents a pooling layer, the last one is excluded
+    strides =     {   2, 2, 2,4};//{2,1,2}; //pooling strides are included
     padding = true;
 
     this->d = dataset;
@@ -162,7 +163,7 @@ std::string CNN::forwards(Tensor& imageInt){
         for(int i=0;i<numNeurons[l+1];i++){
             int weightsTo = i*numNeurons[l];
             for(int j=0;j<numNeurons[l];j++){
-                //TODO likely quicker with axv2
+                //likely quicker with axv2
                 currActivations[i] += prevActivations[j] * currWeights[weightsTo+j]; 
             }
             currActivations[i] += biasesData[i]; //add bias

@@ -1,44 +1,44 @@
 [
 {
-  "directory": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build",
-  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\main.cpp.obj -c \"C:\\Users\\Alistair\\VS Code Projects\\Plant-CNN-CPP\\src\\main.cpp\"",
-  "file": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/src/main.cpp",
+  "directory": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\main.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\main.cpp",
+  "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/main.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj"
 },
 {
-  "directory": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build",
-  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\cnn.cpp.obj -c \"C:\\Users\\Alistair\\VS Code Projects\\Plant-CNN-CPP\\src\\cnn.cpp\"",
-  "file": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/src/cnn.cpp",
+  "directory": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\cnn.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\cnn.cpp",
+  "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/cnn.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj"
 },
 {
-  "directory": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build",
-  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\cnnutils.cpp.obj -c \"C:\\Users\\Alistair\\VS Code Projects\\Plant-CNN-CPP\\src\\cnnutils.cpp\"",
-  "file": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/src/cnnutils.cpp",
+  "directory": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\cnnutils.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\cnnutils.cpp",
+  "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/cnnutils.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj"
 },
 {
-  "directory": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build",
-  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\dataset.cpp.obj -c \"C:\\Users\\Alistair\\VS Code Projects\\Plant-CNN-CPP\\src\\dataset.cpp\"",
-  "file": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/src/dataset.cpp",
+  "directory": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\dataset.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\dataset.cpp",
+  "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/dataset.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj"
 },
 {
-  "directory": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build",
-  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\plantimage.cpp.obj -c \"C:\\Users\\Alistair\\VS Code Projects\\Plant-CNN-CPP\\src\\plantimage.cpp\"",
-  "file": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/src/plantimage.cpp",
+  "directory": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\plantimage.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\plantimage.cpp",
+  "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/plantimage.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj"
 },
 {
-  "directory": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build",
-  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\utils.cpp.obj -c \"C:\\Users\\Alistair\\VS Code Projects\\Plant-CNN-CPP\\src\\utils.cpp\"",
-  "file": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/src/utils.cpp",
+  "directory": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\utils.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\utils.cpp",
+  "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/utils.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj"
 },
 {
-  "directory": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/build",
-  "command": "C:\\msys64\\ucrt64\\bin\\c++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\tensor.cpp.obj -c \"C:\\Users\\Alistair\\VS Code Projects\\Plant-CNN-CPP\\src\\tensor.cpp\"",
-  "file": "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/src/tensor.cpp",
+  "directory": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\tensor.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\tensor.cpp",
+  "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/tensor.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj"
 }
 ]

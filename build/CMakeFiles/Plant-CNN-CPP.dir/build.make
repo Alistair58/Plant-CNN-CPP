@@ -52,10 +52,10 @@ RM = "C:\Program Files\CMake\bin\cmake.exe" -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP"
+CMAKE_SOURCE_DIR = C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build"
+CMAKE_BINARY_DIR = C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/Plant-CNN-CPP.dir/depend.make
@@ -73,108 +73,108 @@ CMakeFiles/Plant-CNN-CPP.dir/codegen:
 
 CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/flags.make
 CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp
-CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj: C:/Users/Alistair/VS\ Code\ Projects/Plant-CNN-CPP/src/main.cpp
+CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj: C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/main.cpp
 CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\main.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\main.cpp.obj -c "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\main.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj"
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\main.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\main.cpp.obj -c C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\main.cpp
 
 CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.i"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\main.cpp" > CMakeFiles\Plant-CNN-CPP.dir\src\main.cpp.i
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\main.cpp > CMakeFiles\Plant-CNN-CPP.dir\src\main.cpp.i
 
 CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Plant-CNN-CPP.dir/src/main.cpp.s"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\main.cpp" -o CMakeFiles\Plant-CNN-CPP.dir\src\main.cpp.s
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\main.cpp -o CMakeFiles\Plant-CNN-CPP.dir\src\main.cpp.s
 
 CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/flags.make
 CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp
-CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj: C:/Users/Alistair/VS\ Code\ Projects/Plant-CNN-CPP/src/cnn.cpp
+CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj: C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/cnn.cpp
 CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\cnn.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\cnn.cpp.obj -c "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\cnn.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj"
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\cnn.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\cnn.cpp.obj -c C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\cnn.cpp
 
 CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.i"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\cnn.cpp" > CMakeFiles\Plant-CNN-CPP.dir\src\cnn.cpp.i
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\cnn.cpp > CMakeFiles\Plant-CNN-CPP.dir\src\cnn.cpp.i
 
 CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.s"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\cnn.cpp" -o CMakeFiles\Plant-CNN-CPP.dir\src\cnn.cpp.s
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\cnn.cpp -o CMakeFiles\Plant-CNN-CPP.dir\src\cnn.cpp.s
 
 CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/flags.make
 CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp
-CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj: C:/Users/Alistair/VS\ Code\ Projects/Plant-CNN-CPP/src/cnnutils.cpp
+CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj: C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/cnnutils.cpp
 CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\cnnutils.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\cnnutils.cpp.obj -c "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\cnnutils.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj"
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\cnnutils.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\cnnutils.cpp.obj -c C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\cnnutils.cpp
 
 CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.i"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\cnnutils.cpp" > CMakeFiles\Plant-CNN-CPP.dir\src\cnnutils.cpp.i
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\cnnutils.cpp > CMakeFiles\Plant-CNN-CPP.dir\src\cnnutils.cpp.i
 
 CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Plant-CNN-CPP.dir/src/cnnutils.cpp.s"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\cnnutils.cpp" -o CMakeFiles\Plant-CNN-CPP.dir\src\cnnutils.cpp.s
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\cnnutils.cpp -o CMakeFiles\Plant-CNN-CPP.dir\src\cnnutils.cpp.s
 
 CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/flags.make
 CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp
-CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj: C:/Users/Alistair/VS\ Code\ Projects/Plant-CNN-CPP/src/dataset.cpp
+CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj: C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/dataset.cpp
 CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\dataset.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\dataset.cpp.obj -c "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\dataset.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj"
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\dataset.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\dataset.cpp.obj -c C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\dataset.cpp
 
 CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.i"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\dataset.cpp" > CMakeFiles\Plant-CNN-CPP.dir\src\dataset.cpp.i
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\dataset.cpp > CMakeFiles\Plant-CNN-CPP.dir\src\dataset.cpp.i
 
 CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.s"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\dataset.cpp" -o CMakeFiles\Plant-CNN-CPP.dir\src\dataset.cpp.s
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\dataset.cpp -o CMakeFiles\Plant-CNN-CPP.dir\src\dataset.cpp.s
 
 CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/flags.make
 CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp
-CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj: C:/Users/Alistair/VS\ Code\ Projects/Plant-CNN-CPP/src/plantimage.cpp
+CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj: C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/plantimage.cpp
 CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\plantimage.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\plantimage.cpp.obj -c "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\plantimage.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj"
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\plantimage.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\plantimage.cpp.obj -c C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\plantimage.cpp
 
 CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.i"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\plantimage.cpp" > CMakeFiles\Plant-CNN-CPP.dir\src\plantimage.cpp.i
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\plantimage.cpp > CMakeFiles\Plant-CNN-CPP.dir\src\plantimage.cpp.i
 
 CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Plant-CNN-CPP.dir/src/plantimage.cpp.s"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\plantimage.cpp" -o CMakeFiles\Plant-CNN-CPP.dir\src\plantimage.cpp.s
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\plantimage.cpp -o CMakeFiles\Plant-CNN-CPP.dir\src\plantimage.cpp.s
 
 CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/flags.make
 CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp
-CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj: C:/Users/Alistair/VS\ Code\ Projects/Plant-CNN-CPP/src/utils.cpp
+CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj: C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/utils.cpp
 CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\utils.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\utils.cpp.obj -c "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\utils.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj"
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\utils.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\utils.cpp.obj -c C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\utils.cpp
 
 CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.i"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\utils.cpp" > CMakeFiles\Plant-CNN-CPP.dir\src\utils.cpp.i
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\utils.cpp > CMakeFiles\Plant-CNN-CPP.dir\src\utils.cpp.i
 
 CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Plant-CNN-CPP.dir/src/utils.cpp.s"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\utils.cpp" -o CMakeFiles\Plant-CNN-CPP.dir\src\utils.cpp.s
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\utils.cpp -o CMakeFiles\Plant-CNN-CPP.dir\src\utils.cpp.s
 
 CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/flags.make
 CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp
-CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj: C:/Users/Alistair/VS\ Code\ Projects/Plant-CNN-CPP/src/tensor.cpp
+CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj: C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/tensor.cpp
 CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj: CMakeFiles/Plant-CNN-CPP.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\tensor.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\tensor.cpp.obj -c "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\tensor.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj"
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj -MF CMakeFiles\Plant-CNN-CPP.dir\src\tensor.cpp.obj.d -o CMakeFiles\Plant-CNN-CPP.dir\src\tensor.cpp.obj -c C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\tensor.cpp
 
 CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.i"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\tensor.cpp" > CMakeFiles\Plant-CNN-CPP.dir\src\tensor.cpp.i
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\tensor.cpp > CMakeFiles\Plant-CNN-CPP.dir\src\tensor.cpp.i
 
 CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.s"
-	C:\msys64\ucrt64\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\src\tensor.cpp" -o CMakeFiles\Plant-CNN-CPP.dir\src\tensor.cpp.s
+	C:\msys64\ucrt64\bin\x86_64-w64-mingw32-g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\tensor.cpp -o CMakeFiles\Plant-CNN-CPP.dir\src\tensor.cpp.s
 
 # Object files for target Plant-CNN-CPP
 Plant__CNN__CPP_OBJECTS = \
@@ -200,7 +200,7 @@ Plant-CNN-CPP.exe: CMakeFiles/Plant-CNN-CPP.dir/build.make
 Plant-CNN-CPP.exe: CMakeFiles/Plant-CNN-CPP.dir/linkLibs.rsp
 Plant-CNN-CPP.exe: CMakeFiles/Plant-CNN-CPP.dir/objects1.rsp
 Plant-CNN-CPP.exe: CMakeFiles/Plant-CNN-CPP.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir="C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable Plant-CNN-CPP.exe"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable Plant-CNN-CPP.exe"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles\Plant-CNN-CPP.dir\link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -212,6 +212,6 @@ CMakeFiles/Plant-CNN-CPP.dir/clean:
 .PHONY : CMakeFiles/Plant-CNN-CPP.dir/clean
 
 CMakeFiles/Plant-CNN-CPP.dir/depend:
-	$(CMAKE_COMMAND) -E cmake_depends "MinGW Makefiles" "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP" "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP" "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build" "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build" "C:\Users\Alistair\VS Code Projects\Plant-CNN-CPP\build\CMakeFiles\Plant-CNN-CPP.dir\DependInfo.cmake" "--color=$(COLOR)"
+	$(CMAKE_COMMAND) -E cmake_depends "MinGW Makefiles" C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\build\CMakeFiles\Plant-CNN-CPP.dir\DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/Plant-CNN-CPP.dir/depend
 

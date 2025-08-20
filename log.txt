@@ -309,4 +309,98 @@ Make a little CNN
 Give it a predefined input and weights
 start at high level and then work down to the bug 
 
-3x3x3 -Conv-> 3x3x3 -Conv,s=2-> 3x2x2 -Max Pool-> 3x1x1 -> 3 -FC-> 2
+3x3x3 -3x3 Conv,s=2-> 2x2x2 -3x3 Conv,s=2-> 2x2x2 -Max Pool-> 2x1x1 -> 2 -FC-> 2
+kernelWeights:
+[
+[
+  [
+    [[1,2,3],[4,5,6],[7,8,9]],
+    [[1,2,3],[4,5,6],[7,8,9]],
+    [[1,2,3],[4,5,6],[7,8,9]]
+  ],
+  [
+    [[1,1,1],[1,1,1],[1,1,1]],
+    [[1,1,1],[1,1,1],[1,1,1]],
+    [[1,1,1],[1,1,1],[1,1,1]]
+  ]
+],
+[
+  [
+    [[1,2,3],[4,5,6],[7,8,9]],
+    [[1,2,3],[4,5,6],[7,8,9]]
+  ],
+  [
+    [[2,2,2],[2,2,2],[2,2,2]],
+    [[-1,-1,-1],[-1,-1,-1],[-1,-1,-1]]
+  ]
+]
+]
+
+kernelBiases:
+[
+  [1,2],
+  [3,4]
+]
+
+mlpWeights:
+[
+  [
+    [1,2],
+    [3,4]
+  ]
+]
+
+mlpBiases:
+[
+  [5,1]
+]
+
+input:
+"African Violet (Saintpaulia ionantha)"
+{
+  {{120,121,122},{50,51,52},{190,189,188}},
+  {{1,2,3},{4,5,6},{7,8,9}},
+  {{212,211,210},{42,41,42},{10,20,30}}
+}
+
+C++ forwards activations:
+[[845.0878295898438,183.76719665527344],[0.5,0.5]]
+Java forwards activations:
+[[845.0878,183.7672],[0.5,0.5]]
+
+C++ weightsGrad:
+{-422.543915, -91.8835983, 422.543915, 91.8835983}
+weightsBiasesGrad:
+{-0.5, 0.5}
+Java weightsGrad:
+{-422.543900,-91.883600,-0.500000}
+{422.543900,91.883600,0.500000}
+
+C++ kernelsGrad layer 1:
+{38.5590515, 38.5590515, 30.8915405, 38.5590515, 38.5590515, 30.8915405, 
+  15.2976065, 15.2976065, 19.122467, 11.3597775, 11.3597775, 11.6157112, 11.3597775, 
+  11.3597775, 11.6157112, 2.02068043, 2.02068043, 2.97796488, 38.5590515,
+  38.5590515, 30.8915405, 38.5590515, 38.5590515, 30.8915405, 15.2976065,
+  15.2976065, 19.122467, 11.3597775, 11.3597775, 11.6157112, 11.3597775, 11.3597775, 
+  11.6157112, 2.02068043, 2.02068043, 2.97796488}
+Java kernelsGrad layer 1:
+38.559050,38.559050,30.891540,38.559050,38.559050 .. 
+(It's the same and so are the biases) 
+
+Layer 0 gradient values and biases are also the same 
+And they update to the same values after the gradients are applied
+(Checked every value for weights and biases, kernels 0 and 1 and biases)
+
+With 1 thread and no sharing of weights and 10,880 training examples,
+it predicts multiple classes and gets 9.1%
+
+With 8 threads and no sharing of weights and 10,880 training exmaples,
+it predicts multiple classes and gets 2.8%
+Activations are large
+{9.52171516, -40.1567078, 8.28015232, 8.66102123, -0.458888441, 9.93610191, 6.89729071, 7.46941233, 9.24370861, 8.7864027, 7.94878387, 8.84818745, 8.32969475, 8.16819096, 8.21183395, 7.89964771, 8.80831528, 
+  8.28320408, 8.89385128, -12.3722534, -47.7813797, 6.64466476, 7.82463789, 9.29623318, 4.90948296, 7.9115634, 7.03853559, -128.329269, 9.31005573, -47.791748, 8.04968643, 7.9564867, 8.64347553, 7.19745731, 6.98667908, 
+  5.76776743, 7.81631613, -26.0173988, 8.28213024, 4.44857264, 9.32877159, 8.34967422, 8.8225832, 7.18084526, 7.32378483, -3.26597977, 8.58827591}
+Multiple threads is breaking it
+
+With atomic plant images it still occurs
+Added atomic missedCount and stopped doing srand and it still occurs 

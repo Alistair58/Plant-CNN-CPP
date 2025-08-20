@@ -4,6 +4,7 @@
 #include <chrono>
 #include <unistd.h>
 #include <thread>
+#include <atomic>
 #include "cnn.hpp"
 #include "cnnutils.hpp"
 #include "dataset.hpp"
@@ -29,7 +30,7 @@ std::string datasetDirPath = "C:/Users/Alistair/Pictures/house_plant_species";
 const std::string ANSI_RED = "\u001B[31m";
 const std::string ANSI_RESET = "\u001B[0m";
 const std::string ANSI_GREEN = "\u001B[32m";
-int missedCount = 0;
+std::atomic<int> missedCount{0};
 
 static void compressionTest(Dataset *d,CNN *cnn,std::string fname);
 static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std::vector<CNN*>& cnns);
@@ -38,6 +39,7 @@ static void test(CNN *n, Dataset *d, int numTest);
 
 
 //TODO
+//Use Dr Memory
 //Doesn't work - 16,000 training examples and only predicts one class and activations are massive
 //Precompute indices for both forwards and backwards (lookup table)
 //Speed up - see log.txt
@@ -46,10 +48,18 @@ int main(int argc,char **argv){
     //("train"|"test") 
     //"train" ->       {numBatches} (rs=(true|false))? (bs={batchSize})? (lr={LR})?
     //"test"  ->       {numTestImages} (lr={LR})?
+    /*TEST SECTION*/
+    // Dataset *d = new Dataset(datasetDirPath,0.8f);
+    // CNN *cnn = new CNN(LR,d,false);
+    // train(cnn,d,1,1,1,1);
+    // delete d;
+    // delete cnn;
+    //TODO uncomment
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = nullptr;
     const int numImageThreads = 1;
-    const int numCnnThreads = 8;
+    //TODO should be 8
+    const int numCnnThreads = 2;
     int mode = -1;
     int numBatches = -1;
     bool restart = false;
@@ -147,7 +157,8 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
     std::vector<CNN*> cnns(numCnnThreads);
     cnns[0] = n;
     for(int i=1;i<numCnnThreads;i++){
-        cnns[i] = new CNN(n,LR,d,false); //shallow copy of weights and kernels
+        //TODO should be shallow copy
+        cnns[i] = new CNN(n,LR,d,true); //shallow copy of weights and kernels
     }
     for(int i=0;i<numBatches;i++) { // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,cnns);
@@ -158,6 +169,7 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
         }
         std::cout << i << std::endl;
     }
+    //TODO undo
     n->saveWeights();
     n->saveKernels();
     std::cout << "Done" << std::endl;
@@ -170,7 +182,7 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
         std::to_string(mins%60)+" min(s) "+
         std::to_string(secs%60)+" sec(s)"
     << std::endl;
-    std::cout << "Missed: "+std::to_string(missedCount) << std::endl;
+    std::cout << "Missed: "+std::to_string(missedCount.load(std::memory_order_acquire)) << std::endl;
     //start at 1 as we don't want to delete the original CNN (at index 0)
     for(int i=1;i<cnns.size();i++){
         delete cnns[i];
@@ -182,32 +194,50 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
     int numCnnThreads = cnns.size();
     std::vector<std::thread> cnnThreads(numCnnThreads);
     std::vector<std::thread> imageThreads(numImageThreads);
-    std::vector<PlantImage*> plantImages(batchSize);
+    std::vector<std::atomic<PlantImage*>> plantImages(batchSize);
+    for(int i=0;i<batchSize;i++) plantImages[i].store(nullptr,std::memory_order_relaxed);
     for(int iT=0;iT<numImageThreads;iT++){
         imageThreads[iT] = std::thread(
-            [](int threadId,int batchSize,int numImageThreads,std::vector<PlantImage*> *plantImages,Dataset *d){
+            [](int threadId,int batchSize,int numImageThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d){
                 for(int i=threadId;i<batchSize;i+=numImageThreads){
-                    (*plantImages)[i] = d->randomImage(false);
+                    //TODO undo
+                    PlantImage *p = d->randomImage(false);
+                    (*plantImages)[i].store(p,std::memory_order_release); 
+                    // (*plantImages)[i] = new PlantImage();
+                    // (*plantImages)[i]->data = Tensor({3,3,3});
+                    // (*plantImages)[i]->data = {
+                    //     120,121,122, 50,51,52, 190,189,188,
+                    //     1,2,3, 4,5,6, 7,8,9,
+                    //     212,211,210, 42,41,42, 10,20,30
+                    // };
+                    // (*plantImages)[i]->label = "African Violet (Saintpaulia ionantha)";
+                    // (*plantImages)[i]->index = 0;
                 }
             },iT,batchSize,numImageThreads,&plantImages,d
         );
     }
     for(int cT=0;cT<numCnnThreads;cT++){ 
         cnnThreads[cT]= std::thread(
-            [](int threadId,int batchSize,int numCnnThreads,std::vector<PlantImage*> *plantImages,Dataset *d,std::vector<CNN*> *cnns){
+            [](int threadId,int batchSize,int numCnnThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d,std::vector<CNN*> *cnns){
                 for (int i=threadId;i<batchSize;i+=numCnnThreads) {
+                    //TODO remove
+                    //usleep(1000000); //1s, allow image to be done first
                     uint64_t startTime = getCurrTimeMs();
-                    while((*plantImages)[i]==nullptr && (getCurrTimeMs()-5000)<startTime){
+                    PlantImage* p = (*plantImages)[i].load(std::memory_order_acquire);
+                    while (p == nullptr && (getCurrTimeMs() - startTime) < 5000){
                         //Give up if we can't get the image in 5 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
+                        p = (*plantImages)[i].load(std::memory_order_acquire);
                         usleep(10000); //10ms
                     }
-                    if((*plantImages)[i]!=nullptr && (*plantImages)[i]->index!=-1 && (*plantImages)[i]->label.length()>0){
-                        (*cnns)[threadId]->backwards((*plantImages)[i]->data,(*plantImages)[i]->label);
-                        delete (*plantImages)[i];
-                        (*plantImages)[i] = nullptr;
+                    if(p!=nullptr && p->index!=-1 && p->label.length()>0){
+                        (*cnns)[threadId]->backwards(p->data,p->label);
                     }
-                    else missedCount++;
+                    else missedCount.fetch_add(1, std::memory_order_relaxed);
+                    if(p!=nullptr){
+                        (*plantImages)[i].store(nullptr, std::memory_order_release);
+                        delete p;
+                    }
                     //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
                 }
             },cT,batchSize,numCnnThreads,&plantImages,d,&cnns
@@ -232,8 +262,12 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
         i++;
     }
     n->applyGradients(cnns);
-    for(PlantImage *ptr:plantImages){
-        if(ptr!=nullptr) delete ptr;
+    for(i=0;i<batchSize;i++){
+        PlantImage *p = plantImages[i].load(std::memory_order_acquire);
+        if(p!=nullptr){
+            plantImages[i].store(nullptr, std::memory_order_release);
+            delete p;
+        }
     }
 }
 

@@ -32,7 +32,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "C:/Program Files/CMake/share/cmake-4.1/Modules/Platform/Windows-windres.cmake"
   "C:/Program Files/CMake/share/cmake-4.1/Modules/Platform/Windows.cmake"
   "C:/Program Files/CMake/share/cmake-4.1/Modules/Platform/WindowsPaths.cmake"
-  "C:/Users/Alistair/VS Code Projects/Plant-CNN-CPP/CMakeLists.txt"
+  "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/CMakeLists.txt"
   "CMakeFiles/4.1.0-rc2/CMakeCXXCompiler.cmake"
   "CMakeFiles/4.1.0-rc2/CMakeRCCompiler.cmake"
   "CMakeFiles/4.1.0-rc2/CMakeSystem.cmake"

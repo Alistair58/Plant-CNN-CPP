@@ -21,6 +21,7 @@ void Dataset::loadPixelStats(){
 }   
 
 Dataset::Dataset(std::string dirPathInp,float trainTestSplitRatio){
+    srand(getCurrTimeUs());
     if(trainTestSplit>0 && trainTestSplit<=1){
         trainTestSplit = trainTestSplitRatio;
     }
@@ -67,9 +68,17 @@ std::vector<float> Dataset::getPixelStdDevs() const{
     return this->pixelStats[1];
 }
 
+static thread_local std::mt19937 localRng([]{
+    std::random_device rd;
+    uint64_t time_seed = (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count();
+    uint64_t thread_hash = (uint64_t)std::hash<std::thread::id>()(std::this_thread::get_id());
+    uint64_t seed = rd() ^ time_seed ^ (thread_hash << 1);
+    return std::mt19937((uint32_t)seed);
+}());
+
 PlantImage *Dataset::randomImage(bool test) const{
-    srand(getCurrTimeUs());
-    int index = rand() % this->size;
+    std::uniform_int_distribution<int> distIndex(0, this->size - 1);
+    int index = distIndex(localRng);
     int prevIndex = this->size;
     for(int i=indices.size()-1;i>=0;i--){ //iterate through plant classes
         int startIndex = indices[i];
