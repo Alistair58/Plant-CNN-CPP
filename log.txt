@@ -404,3 +404,119 @@ Multiple threads is breaking it
 
 With atomic plant images it still occurs
 Added atomic missedCount and stopped doing srand and it still occurs 
+Still occurs with 2 threads:
+{16.4198666, 16.0234489, 18.0993862, 15.4736547, 16.4040108, 19.3528118, 16.012207, 18.0564442, 18.1161251, 19.6746254, 16.7667599, 21.5374699, 17.0509605, 18.4469357, 14.5579348, 17.9768906, 19.0169907, 17.0598316, 
+  20.2746944, 17.7493515, 18.879427, 18.8458996, 16.6811409, 18.2030811, 17.7739658, 16.5759048, 19.0271225, 21.5033913, 19.3551064, 17.4600811, 16.2856541, 15.8312798, 14.7728605, 17.0919132, 19.5311699, 17.9462147,       
+  19.7439289, 18.9701748, 19.3921661, 16.5553246, 16.157692, 18.2624874, 17.9802895, 17.5588951, 17.8536415, -815.386414, 17.3839951}
+
+(In debug mode (no optimisation))
+When checking for large values in activations,maps,kernels,weights,biases,grads,
+the first error that occurs is this:
+Large weight grad value of 102.503 at layer 1 flat index 12070
+Large weight grad value of 103.491 at layer 1 flat index 12254
+Large weight grad value of 104.828 at layer 1 flat index 12257
+
+and then in later iterations it compounds to this:
+Large weight grad value of 140.747 at layer 1 flat index 11527
+Large weight grad value of 108.489 at layer 1 flat index 11562
+Large weight grad value of 123.733 at layer 1 flat index 11616
+Large weight grad value of 107.218 at layer 1 flat index 11692
+Large weight grad value of 104.258 at layer 1 flat index 11768
+Large weight grad value of 106.328 at layer 1 flat index 11833
+Large weight grad value of 112.689 at layer 1 flat index 11862
+Large weight grad value of 123.077 at layer 1 flat index 11903
+Large weight grad value of 124.428 at layer 1 flat index 11915
+Large weight grad value of 124.528 at layer 1 flat index 11964
+Large weight grad value of 111.993 at layer 1 flat index 11992
+Large weight grad value of 140.662 at layer 1 flat index 12011
+Large weight grad value of 115.001 at layer 1 flat index 12059
+Large weight grad value of 148.201 at layer 1 flat index 12065
+Large weight grad value of 161.449 at layer 1 flat index 12070
+Large weight grad value of 135.727 at layer 1 flat index 12090
+Large weight grad value of 121.83 at layer 1 flat index 12132
+
+2nd attempt:
+Thread 6 hit Breakpoint 1, CNN::forwards[abi:cxx11](Tensor&) (this=0x672b80, imageInt=...) at C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\cnn.cpp:256
+256                     std::cout << "Large weight grad value of " << gradData[i] << " at layer " << l << " flat index " << i << std::endl;
+(gdb) p l
+$1 = 1
+(gdb) p i
+$2 = 44907
+(gdb) p weightsGrad[l]
+$3 = (__gnu_cxx::__alloc_traits<std::allocator<Tensor>, Tensor>::value_type &) @0x677800: {data = std::shared_ptr<float []> (use count 1, weak count 0) = {get() = 0x6a9ec0}, 
+  biases = std::shared_ptr<Tensor> (use count 1, weak count 0) = {get() = 0x677bb0}, offset = 0, dimens = std::vector of length 2, capacity 2 = {47, 960}, childSizes = std::vector of length 2, capacity 2 = {960, 1},        
+  totalSize = 45120}
+(gdb) p *(float[50]*)(weightsGrad[l].getData()+44900)
+$4 = {1.79109991, 1.16593754, 2.89700222, 27.4244404, 0.253519922, 19.0143585, -0.320863664, 105.611282, 11.8430424, 1.35429156, 24.4544697, 6.96354818, 3.31078744, 37.915081, -0.50585407, -0.601735294, -0.396453917, 
+  39.266922, 26.5787811, -0.242265865, 7.38034391, 42.5989914, -0.381493092, 18.3094635, 0.0327438898, 19.0387478, 12.768137, 27.3200169, 1.03149199, -0.288701802, 11.7764912, 7.63996172, 11.1631908, 40.530159, 5.0627284, 
+  -0.276052892, -0.171619758, 5.75633812, 13.3641748, 9.59098339, 5.27795267, -0.532275856, 2.34461689, 69.4735641, 61.9673882, -0.31826359, 31.3097382, 5.21517086, 2.51162791, 18.0534019}
+
+3rd attempt:
+didn't happen
+
+Multi-threaded non-debug version (optimised):
+1st (2 batches): didn't happen
+2nd (2 batches): only 1 weights grad 103.852 at layer 1 39620
+3rd (10 batches): changed to 10 iterations and started to get lots of "Large activation in final layer (>15) at index 17" on 6th and 7th iterations. Aborted
+4th (10): only got one "Large activation in final layer (>15) at index 1" on 9th iteration
+5th (10): "Large activation in final layer (>15) at index 37" on 3rd iteration and lots of "Large weight grad value of 100.022 at layer 1 flat index 35840" on 0th onwards
+
+Single-threaded non-debug (optimised):
+1st (10): "Large kernel grad value of 16.3831 at layer 1 flat index 4724" on 0th,2nd,3rd,5th. Problem went away.
+2nd (10): Crazy amounts of large weight and kernel grads on 0th,1st,2nd iterations "Large weight grad value of 234.709 at layer 1 flat index 29753" "Large kernel grad value of 15.2281 at layer 2 flat index 61024". Problem went away.
+3rd (10): Crazy amounts of large weight and kernel grads on 0th,1st,2nd iterations "Large kernel grad value of 15.2643 at layer 2 flat index 59296" "Large weight grad value of 113.96 at layer 1 flat index 32988". Problem went away.
+
+Onto debugging side-by-side Java and C++ over 1 batch seeing if they accumulate the same weights at the end given same inputs
+1 thread 64 images:
+All the weights,kernels and biases were the same except 2
+This was because the C++ max gradients is lower than the Java version
+After changing this, they are all the same 
+
+2 threaded 64 images:
+All the weights,kernels and biases were the same
+next iteration:
+Still the same 
+
+
+2 threaded 64 images in -o3 (non-debug):
+All the weights,kernels and biases were the same
+
+2 threaded 10 batches back to back in -o3 (non-debug):
+All the weights,kernels and biases are differenet 
+
+2 threaded 2 batches back to back in debug mode:
+All different 
+Initial weights:
+[[[1,2],[3,4]]]
+C++ weights:
+[[[2.955050230026245,2.4332408905029297],[1.0449497699737549,3.5667591094970703]]]
+Java weights: 
+[[[2.746676,2.396038],[1.253324,3.603962]]]
+
+1 threaded 2 batches back to back in debug mode:
+The same
+
+ChatGPT and Claude gave complete waffle
+Gemini Pro, however, told me that the vector push_back was calling the copy constructor of Tensor 
+and so my supposed weight shallow copies were actually deep copies and so only the original CNNs weights were updating
+I then asked the same question (same words and files) to Gemini Pro (I had my history turned off) and it told me something different
+
+2 threaded 2 batches back to back in debug mode:
+It works
+32:08 for 16,000
+16,000: 12.6% 
+48,000: 21.4% train dataset: 21.7%
+
+Speeding up:
+Times are recorded from -o3
+Forwards = 730ms
+ - Convoltional layers = 690ms
+ - Single 3x3 convolution = 2ms (120+60+30)*2 = 420ms
+  Big ones don't seem to take any longer
+Backwards = 250ms 
+ - finalPoolingConvBackwards = 110ms
+ - convBackwards = 65ms
+
+After "optimisation", forwards takes 970ms
+Current time for 256 images: 0:23s,0:22s,0:21s
+Previous time: 0:29s

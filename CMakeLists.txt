@@ -22,7 +22,7 @@ add_executable(Plant-CNN-CPP
 
 if(${DEBUG})
     set(CMAKE_BUILD_TYPE Debug)
-    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=1)
+    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=${DEBUG})
     target_compile_options(Plant-CNN-CPP PRIVATE 
     -mavx2
     ) 
@@ -31,11 +31,13 @@ if(${DEBUG})
 else()    
     target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0)
     target_compile_options(Plant-CNN-CPP PRIVATE
-        -mavx2
         -O3
+        -march=native
+        -mavx2
         -ffast-math
         -funroll-loops
-        -march=native
+        -mfma
+        -ffp-contract=fast
         
     )
 endif()

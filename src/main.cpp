@@ -20,7 +20,7 @@
 #include "stb_image.h"
 
 //Default values
-static float LR = 0.00004f;
+static float LR = 0.00002f;
 static int batchSize = 64;
 #define TRAIN 1
 #define TEST 2
@@ -39,8 +39,6 @@ static void test(CNN *n, Dataset *d, int numTest);
 
 
 //TODO
-//Use Dr Memory
-//Doesn't work - 16,000 training examples and only predicts one class and activations are massive
 //Precompute indices for both forwards and backwards (lookup table)
 //Speed up - see log.txt
 
@@ -48,18 +46,10 @@ int main(int argc,char **argv){
     //("train"|"test") 
     //"train" ->       {numBatches} (rs=(true|false))? (bs={batchSize})? (lr={LR})?
     //"test"  ->       {numTestImages} (lr={LR})?
-    /*TEST SECTION*/
-    // Dataset *d = new Dataset(datasetDirPath,0.8f);
-    // CNN *cnn = new CNN(LR,d,false);
-    // train(cnn,d,1,1,1,1);
-    // delete d;
-    // delete cnn;
-    //TODO uncomment
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = nullptr;
     const int numImageThreads = 1;
-    //TODO should be 8
-    const int numCnnThreads = 2;
+    const int numCnnThreads = 8;
     int mode = -1;
     int numBatches = -1;
     bool restart = false;
@@ -157,10 +147,11 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
     std::vector<CNN*> cnns(numCnnThreads);
     cnns[0] = n;
     for(int i=1;i<numCnnThreads;i++){
-        //TODO should be shallow copy
-        cnns[i] = new CNN(n,LR,d,true); //shallow copy of weights and kernels
+        //shallow copy of weights and kernels
+        //Must be shallow as apply gradients only updates cnn[0]'s weights and kernels
+        cnns[i] = new CNN(n,LR,d,false); 
     }
-    for(int i=0;i<numBatches;i++) { // numBatches of batchSize
+    for(int i=0;i<numBatches;i++){ // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,cnns);
         if(i%10 == 0 && i>0){ //save every 10 batches
             n->saveKernels();
@@ -169,7 +160,6 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
         }
         std::cout << i << std::endl;
     }
-    //TODO undo
     n->saveWeights();
     n->saveKernels();
     std::cout << "Done" << std::endl;
@@ -200,18 +190,8 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
         imageThreads[iT] = std::thread(
             [](int threadId,int batchSize,int numImageThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d){
                 for(int i=threadId;i<batchSize;i+=numImageThreads){
-                    //TODO undo
                     PlantImage *p = d->randomImage(false);
                     (*plantImages)[i].store(p,std::memory_order_release); 
-                    // (*plantImages)[i] = new PlantImage();
-                    // (*plantImages)[i]->data = Tensor({3,3,3});
-                    // (*plantImages)[i]->data = {
-                    //     120,121,122, 50,51,52, 190,189,188,
-                    //     1,2,3, 4,5,6, 7,8,9,
-                    //     212,211,210, 42,41,42, 10,20,30
-                    // };
-                    // (*plantImages)[i]->label = "African Violet (Saintpaulia ionantha)";
-                    // (*plantImages)[i]->index = 0;
                 }
             },iT,batchSize,numImageThreads,&plantImages,d
         );
@@ -220,8 +200,6 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
         cnnThreads[cT]= std::thread(
             [](int threadId,int batchSize,int numCnnThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d,std::vector<CNN*> *cnns){
                 for (int i=threadId;i<batchSize;i+=numCnnThreads) {
-                    //TODO remove
-                    //usleep(1000000); //1s, allow image to be done first
                     uint64_t startTime = getCurrTimeMs();
                     PlantImage* p = (*plantImages)[i].load(std::memory_order_acquire);
                     while (p == nullptr && (getCurrTimeMs() - startTime) < 5000){

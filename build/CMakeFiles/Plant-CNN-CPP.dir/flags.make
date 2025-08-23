@@ -6,5 +6,5 @@ CXX_DEFINES = -DDEBUG=0
 
 CXX_INCLUDES = @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp
 
-CXX_FLAGS = -std=gnu++20 -mavx2 -O3 -ffast-math -funroll-loops -march=native
+CXX_FLAGS = -std=gnu++20 -O3 -march=native -mavx2 -ffast-math -funroll-loops -mfma -ffp-contract=fast
 

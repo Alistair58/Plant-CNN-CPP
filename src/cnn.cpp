@@ -5,21 +5,28 @@
 
 //Creating a fresh CNN
 CNN::CNN(float LR,Dataset *dataset,bool restart){
-    //TODO undo
-    numNeurons = {1920,960,47};//{2,2};
-    numMaps =     {3,  30,60,120};//{3,2,2};//includes the result of pooling (except final pooling)
-    mapDimens =   {128,64,32,16};//{3,2,2};
-    kernelSizes = {   5, 3, 3  };//{3,3};  //0 represents a pooling layer, the last one is excluded
-    strides =     {   2, 2, 2,4};//{2,1,2}; //pooling strides are included
+    numNeurons = {1920,960,47};
+    numMaps =     {3,  30,60,120};//includes the result of pooling (except final pooling)
+    mapDimens =   {128,64,32,16};
+    kernelSizes = {   5, 3, 3  };  //0 represents a pooling layer, the last one is excluded
+    strides =     {   2, 2, 2,4}; //pooling strides are included
     padding = true;
 
     this->d = dataset;
     this->kernels = loadKernels(restart);
     this->weights = loadWeights(restart);
-    kernelsGrad = kernels; //Copies the Tensor objects by value
-    weightsGrad = weights;
-    resetGrad(kernelsGrad); //Don't want to apply the weights to themselves on the first iteration
-    resetGrad(weightsGrad);
+    kernelsGrad = std::vector<Tensor>(kernels.size());
+    for(int i=0;i<kernels.size();i++){
+        kernelsGrad[i] = Tensor(kernels[i].getDimens()); 
+        Tensor biasesGrad(kernels[i].getBiases()->getDimens());
+        kernelsGrad[i].setBiases(biasesGrad);
+    }
+    weightsGrad = std::vector<Tensor>(weights.size());
+    for(int i=0;i<weights.size();i++){
+        weightsGrad[i] = Tensor(weights[i].getDimens());
+        Tensor biasesGrad(weights[i].getBiases()->getDimens());
+        weightsGrad[i].setBiases(biasesGrad);
+    }
     this->LR = LR;
     this->activations = std::vector<Tensor>(numNeurons.size());
     for(int l=0;l<numNeurons.size();l++){
@@ -47,8 +54,6 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
     if(deepCopyWeights){
         kernels = original->kernels; //copy by value
         weights = original->weights;
-        kernelsGrad = kernels;
-        weightsGrad = weights;
     }
     else{ //i.e. shallow copy
         if(original->kernels.size()!=original->kernelsGrad.size()){
@@ -57,27 +62,27 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
         if(original->weights.size()!=original->weightsGrad.size()){
             throw std::invalid_argument("weights and weightsGrad must have the same number of layers");
         }
+        this->kernels = std::vector<Tensor>(original->kernels.size());
         for(int i=0;i<original->kernels.size();i++){
-            Tensor originalKernelLayer = original->kernels[i];
-            Tensor originalKernelGradLayer = original->kernelsGrad[i];
-            Tensor kernelLayer,kernelGradLayer;
-            kernelLayer.shallowCopy(originalKernelLayer);
-            kernelGradLayer = originalKernelGradLayer; //deep copy gradients
-            this->kernels.push_back(kernelLayer);
-            this->kernelsGrad.push_back(kernelGradLayer);
+            this->kernels[i].shallowCopy(original->kernels[i]);
         }
+        this->weights = std::vector<Tensor>(original->weights.size());
         for(int i=0;i<original->weights.size();i++){
-            Tensor originalWeightLayer = original->weights[i];
-            Tensor originalWeightGradLayer = original->weightsGrad[i];
-            Tensor weightLayer,weightGradLayer;
-            weightLayer.shallowCopy(originalWeightLayer);
-            weightGradLayer = originalWeightGradLayer;  //deep copy gradients
-            this->weights.push_back(weightLayer);
-            this->weightsGrad.push_back(weightGradLayer);
+            this->weights[i].shallowCopy(original->weights[i]);
         }
     }
-    resetGrad(kernelsGrad); //Don't want to apply the weights to themselves on the first iteration
-    resetGrad(weightsGrad);
+    kernelsGrad = std::vector<Tensor>(original->kernelsGrad.size());
+    for(int i=0;i<original->kernels.size();i++){
+        kernelsGrad[i] = Tensor(original->kernelsGrad[i].getDimens()); 
+        Tensor biasesGrad(original->kernelsGrad[i].getBiases()->getDimens());
+        kernelsGrad[i].setBiases(biasesGrad);
+    }
+    weightsGrad = std::vector<Tensor>(original->weightsGrad.size());
+    for(int i=0;i<original->weights.size();i++){
+        weightsGrad[i] = Tensor(original->weightsGrad[i].getDimens());
+        Tensor biasesGrad(original->weightsGrad[i].getBiases()->getDimens());
+        weightsGrad[i].setBiases(biasesGrad);
+    }
     this->LR = LR;
     this->activations = std::vector<Tensor>(numNeurons.size());
     for(int l=0;l<numNeurons.size();l++){
@@ -192,7 +197,7 @@ std::string CNN::forwards(Tensor& imageInt){
         std::cout << std::to_string(outputVec[outputVec.size()-1])+"]" << std::endl;
         std::cout << "Forwards took "+std::to_string(getCurrTimeMs()-startTime)+"ms" <<std::endl;
     #endif
-    #if DEBUG 
+    #if DEBUG >= 2
         saveMaps();
         saveActivations();
     #endif

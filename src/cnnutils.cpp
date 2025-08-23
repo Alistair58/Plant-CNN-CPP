@@ -115,7 +115,7 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){
 }
 
 //variable size output
-Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding){ 
+Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,const int yStride,bool padding){ 
     #if DEBUG >=2
         uint64_t convStart = getCurrTimeMs();
     #endif 
@@ -130,8 +130,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     if(kernelDimens[0]!=imgDimens[0]){
         throw std::invalid_argument("The image and kernel must have the same number of channels for convolution");
     }
-    int xKernelRadius = (int) floor(kernelDimens[2]/2); //Not actually a radius, actually half the width
-    int yKernelRadius = (int) floor(kernelDimens[1]/2);
+    const int xKernelRadius = (int) floor(kernelDimens[2]/2); //Not actually a radius, actually half the width
+    const int yKernelRadius = (int) floor(kernelDimens[1]/2);
     std::vector<int> paddedImgDimens;
     if(padding){
         int paddedHeight = imgDimens[1]+yKernelRadius*2;
@@ -174,8 +174,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     #if DEBUG >=2
         std::cout << "Padding loop took "+std::to_string(getCurrTimeMs()-paddingLoopStart)+"ms padding was set to "+((padding)?"true":"false") << std::endl;
     #endif
-    int imHeight = paddedImgDimens[1]; //assumption that all channels have same dimensions
-    int imWidth = paddedImgDimens[2];
+    const int imHeight = paddedImgDimens[1]; //assumption that all channels have same dimensions
+    const int imWidth = paddedImgDimens[2];
     Tensor result({
         (int)ceil((float)(imHeight-2*yKernelRadius)/yStride),
         (int)ceil((float)(imWidth-2*xKernelRadius)/xStride)
@@ -192,38 +192,95 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
     else if(biases!=nullptr && biases->getTotalSize()>1){
         throw std::invalid_argument("Too many biases for a 3D kernel");
     }
+    //No biases is valid
     #if DEBUG >=2
         uint64_t convLoopStart = getCurrTimeMs();
     #endif
-    //No biases is valid
-    for(int l=0;l<paddedImgDimens[0];l++){
-        int newY = 0;
-        int newX = 0;
-        //Precomputing multiplications
-        int kernelChannel = l*kernelChildSizes[0];
-        int paddedImageChannel = l*paddedImageChildSizes[0]; //No offset (we made it)
-        for(int y=yKernelRadius;y<imHeight-yKernelRadius;y+=yStride){
-            int resultRow = newY*resultChildSizes[0];
-            for(int x=xKernelRadius;x<imWidth-xKernelRadius;x+=xStride){
-                float sum = 0;
-                int paddedImageChannelShortct = paddedImageChannel + x-xKernelRadius; //saving the subtractions
-                for(int j=0;j<kernelDimens[1];j++){
-                    int kernelRow = kernelChannel + j*kernelChildSizes[1];
-                    int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImageChildSizes[1];
-                    //AVX2 dot product is efficient for kernels with a width >=8
-                    //We can't do it for the j loop as the paddedImage next row is not contiguous 
-                    //and so the conditional logic would probably be slower than doing multiple avx2 loops
-                    for(int i=0;i<kernelDimens[2];i++){
-                        sum += kernelData[kernelRow+i] * paddedImageData[paddedImageRow+i];
-                    }
+    if(kernelDimens[1]==3 &&  kernelDimens[2]==3){
+        //unrolled 3x3 version 
+        const int originalImgYBound = imHeight-1;
+        const int originalImgXBound = imWidth-1;
+        const int paddedImgDimens0 = paddedImgDimens[0];
+        const int paddedImageChildSizes0 = paddedImageChildSizes[0];
+        const int paddedImageChildSizes1 = paddedImageChildSizes[1];
+        const int resultChildSizes0 = resultChildSizes[0];
+        for(int l=0;l<paddedImgDimens0;l++){
+            int newY = 0;
+            int newX = 0;
+            const int kernelChannel = l*9; //3x3 = 9
+            const int paddedImageChannel = l*paddedImageChildSizes0-1;
+            const float k00 = kernelData[kernelChannel];
+            const float k01 = kernelData[kernelChannel+1];
+            const float k02 = kernelData[kernelChannel+2];
+            const float k10 = kernelData[kernelChannel+3];
+            const float k11 = kernelData[kernelChannel+4];
+            const float k12 = kernelData[kernelChannel+5];
+            const float k20 = kernelData[kernelChannel+6];
+            const float k21 = kernelData[kernelChannel+7];
+            const float k22 = kernelData[kernelChannel+8];
+            for(int y=1;y<originalImgYBound;y+=yStride){
+                const int resultRow = newY*resultChildSizes0;
+                for(int x=1;x<originalImgXBound;x+=xStride){
+                    const int row0 = paddedImageChannel + x; 
+                    const int row1 = row0+paddedImageChildSizes1;
+                    const int row2 = row1+paddedImageChildSizes1;
+                    resultData[resultRow+newX] += 
+                    k00 * paddedImageData[row0] +  k01 * paddedImageData[row0+1] + 
+                    k02 * paddedImageData[row0+2] + k10 * paddedImageData[row1] + 
+                    k11 * paddedImageData[row1+1] + k12 * paddedImageData[row1+2] + 
+                    k20 * paddedImageData[row2] + k21 * paddedImageData[row2+1] + 
+                    k22 * paddedImageData[row2+2];
+                    newX++;
                 }
-                resultData[resultRow+newX] += sum; 
-                newX++;
+                newX=0;
+                newY++;
             }
-            newX=0;
-            newY++;
         }
     }
+    else{
+        const int originalImgYBound = imHeight-yKernelRadius;
+        const int originalImgXBound = imWidth-xKernelRadius;
+        const int kernelChildSizes0 = kernelChildSizes[0];
+        const int kernelChildSizes1 = kernelChildSizes[1];
+        const int paddedImgDimens0 = paddedImgDimens[0];
+        const int paddedImageChildSizes0 = paddedImageChildSizes[0];
+        const int paddedImageChildSizes1 = paddedImageChildSizes[1];
+        const int resultChildSizes0 = resultChildSizes[0];
+        const int kernelDimens1 = kernelDimens[1];
+        const int kernelDimens2 = kernelDimens[2];
+        for(int l=0;l<paddedImgDimens0;l++){
+            int newY = 0;
+            int newX = 0;
+            //Precomputing multiplications
+            int kernelChannel = l*kernelChildSizes0;
+            int paddedImageChannel = l*paddedImageChildSizes0-xKernelRadius; //saving the subtractions
+            for(int y=yKernelRadius;y<originalImgYBound;y+=yStride){
+                int resultRow = newY*resultChildSizes0;
+                for(int x=xKernelRadius;x<originalImgXBound;x+=xStride){
+                    float sum = 0;
+                    int paddedImageChannelShortct = paddedImageChannel + x; 
+                    for(int j=0;j<kernelDimens1;j++){
+                        int kernelRow = kernelChannel + j*kernelChildSizes1;
+                        int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImageChildSizes1;
+                        //AVX2 dot product is efficient for kernels with a width >=8
+                        //We can't do it for the j loop as the paddedImage next row is not contiguous 
+                        //and so the conditional logic would probably be slower than doing multiple avx2 loops
+                        float *kernelEndPtr = &kernelData[kernelRow+kernelDimens2];
+                        for(float *kernelDataPtr = &kernelData[kernelRow],
+                            * __restrict__ paddedImageDataPtr = &paddedImageData[paddedImageRow]
+                            ;kernelDataPtr<kernelEndPtr;kernelDataPtr++,paddedImageDataPtr++){
+                            sum += (*kernelDataPtr) * (*paddedImageDataPtr);
+                        }
+                    }
+                    resultData[resultRow+newX] += sum; 
+                    newX++;
+                }
+                newX=0;
+                newY++;
+            }
+        }
+    }
+    
 
     #if DEBUG >=2
         uint64_t convLoopEnd = getCurrTimeMs();
@@ -246,9 +303,12 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
 //fixed size output
 Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding){ 
     //by padding a normal convolution with 0s
-    Tensor result({newHeight,newWidth}); //The data is 0 initialised
     Tensor convResult = convolution(image, kernel, xStride, yStride,padding);
     std::vector<int> convResultDimens = convResult.getDimens();
+    if(convResultDimens[0]==newHeight && convResultDimens[1]==newWidth){
+        return convResult;
+    }
+    Tensor result({newHeight,newWidth}); //The data is 0 initialised
     float*  __restrict__ convResultData = convResult.getData();
     float*  __restrict__ resultData = result.getData();
     //Neither result will have any offsets
