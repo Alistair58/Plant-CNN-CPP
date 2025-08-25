@@ -200,6 +200,30 @@ src/dataset.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/dataset.cpp.s
 .PHONY : src/dataset.cpp.s
 
+src/imageutils.obj: src/imageutils.cpp.obj
+.PHONY : src/imageutils.obj
+
+# target to build an object file
+src/imageutils.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/imageutils.cpp.obj
+.PHONY : src/imageutils.cpp.obj
+
+src/imageutils.i: src/imageutils.cpp.i
+.PHONY : src/imageutils.i
+
+# target to preprocess a source file
+src/imageutils.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/imageutils.cpp.i
+.PHONY : src/imageutils.cpp.i
+
+src/imageutils.s: src/imageutils.cpp.s
+.PHONY : src/imageutils.s
+
+# target to generate assembly for a file
+src/imageutils.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Plant-CNN-CPP.dir\build.make CMakeFiles/Plant-CNN-CPP.dir/src/imageutils.cpp.s
+.PHONY : src/imageutils.cpp.s
+
 src/main.obj: src/main.cpp.obj
 .PHONY : src/main.obj
 
@@ -314,6 +338,9 @@ help:
 	@echo ... src/dataset.obj
 	@echo ... src/dataset.i
 	@echo ... src/dataset.s
+	@echo ... src/imageutils.obj
+	@echo ... src/imageutils.i
+	@echo ... src/imageutils.s
 	@echo ... src/main.obj
 	@echo ... src/main.i
 	@echo ... src/main.s

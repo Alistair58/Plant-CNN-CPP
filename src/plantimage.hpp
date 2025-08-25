@@ -3,20 +3,20 @@
 
 #include "tensor.hpp"
 #include "globals.hpp"
+#include "imageutils.hpp"
 #include <string>
 #include <iostream>
 #include "stb_image.h"
 #include "utils.hpp"
 
-class PlantImage {
+class PlantImage:public ImageUtils{
     public:
-        Tensor data;
         std::string label = "";
         int index = -1;
 
         PlantImage() {};
         PlantImage(std::string fname, std::string plantName);
-        Tensor fileToImageTensor(std::string fName);
+        
 };
 
 #endif

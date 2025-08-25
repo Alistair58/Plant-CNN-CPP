@@ -297,11 +297,13 @@ CMakeFiles/Plant-CNN-CPP.dir/src/cnn.cpp.obj: \
  C:/msys64/ucrt64/include/c++/15.2.0/bits/stl_numeric.h \
  C:/msys64/ucrt64/include/c++/15.2.0/pstl/glue_numeric_defs.h \
  C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\plantimage.hpp \
+ C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\imageutils.hpp \
  C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/lib/stb_image.h \
  C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP\src\utils.hpp \
  C:/msys64/ucrt64/include/c++/15.2.0/algorithm \
  C:/msys64/ucrt64/include/c++/15.2.0/bits/ranges_algo.h \
  C:/msys64/ucrt64/include/c++/15.2.0/pstl/glue_algorithm_defs.h \
+ C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/lib/stb_image_write.h \
  C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/lib/json.hpp \
  C:/msys64/ucrt64/include/c++/15.2.0/functional \
  C:/msys64/ucrt64/include/c++/15.2.0/iterator \

@@ -13,6 +13,8 @@
 #include "plantimage.hpp"
 #include "json.hpp"
 #include "globals.hpp"
+#include "utils.hpp"
+
 namespace fs = std::filesystem;
 
 class Dataset {

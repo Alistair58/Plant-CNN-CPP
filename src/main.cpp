@@ -12,6 +12,7 @@
 #include "globals.hpp"
 #include "utils.hpp"
 #include "tensor.hpp"
+#include <numbers>
 
 //The only include with the macro defined
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -48,7 +49,7 @@ int main(int argc,char **argv){
     //"test"  ->       {numTestImages} (lr={LR})?
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = nullptr;
-    const int numImageThreads = 1;
+    const int numImageThreads = 2;
     const int numCnnThreads = 8;
     int mode = -1;
     int numBatches = -1;
@@ -247,32 +248,5 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
             delete p;
         }
     }
-}
-
-static void compressionTest(Dataset *d,CNN *cnn,std::string fname){
-    PlantImage testing = 
-    (fname.length()==0)? d->randomImageObj(false) : PlantImage(fname, "");
-    Tensor img = cnn->parseImg(testing.data);
-    std::vector<int> mapDimens = cnn->getMapDimens();
-    unsigned char *data = new unsigned char[mapDimens[0]*mapDimens[0]*3];
-    std::vector<int> imgDimens = img.getDimens();
-    int height = imgDimens[1];
-    int width = imgDimens[2];
-    for(int y=0;y<height;y++){
-        for(int x=0;x<width;x++){
-            int i = (y*width + x)*3;
-            data[i] = (int)*img[{0,y,x}];
-            data[i+1] = (int)*img[{1,y,x}];
-            data[i+2] = (int)*img[{2,y,x}];
-        }
-    }
-    if(!stbi_write_jpg((currDir+"/testing.jpg").c_str(),width,height,3,data,width*height*3)){
-        std::cerr << "Could not save image\n";
-    }
-    else {
-        std::cout << "Saved testing.jpg\n";
-    }
-    std::cout << testing.label+" "+std::to_string(testing.index) << std::endl;
-    delete[] data;
 }
 

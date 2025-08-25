@@ -68,13 +68,6 @@ std::vector<float> Dataset::getPixelStdDevs() const{
     return this->pixelStats[1];
 }
 
-static thread_local std::mt19937 localRng([]{
-    std::random_device rd;
-    uint64_t time_seed = (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count();
-    uint64_t thread_hash = (uint64_t)std::hash<std::thread::id>()(std::this_thread::get_id());
-    uint64_t seed = rd() ^ time_seed ^ (thread_hash << 1);
-    return std::mt19937((uint32_t)seed);
-}());
 
 PlantImage *Dataset::randomImage(bool test) const{
     std::uniform_int_distribution<int> distIndex(0, this->size - 1);
@@ -101,6 +94,7 @@ PlantImage *Dataset::randomImage(bool test) const{
                     #if DEBUG
                         std::cout << "Loaded: "+fname+fileExtension << std::endl;
                     #endif 
+                    if(!test) ImageUtils::augment(plantImage->data);
                     return plantImage;
                 }
             } 

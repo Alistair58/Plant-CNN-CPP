@@ -517,6 +517,16 @@ Backwards = 250ms
  - finalPoolingConvBackwards = 110ms
  - convBackwards = 65ms
 
-After "optimisation", forwards takes 970ms
+After optimisation, forwards takes 600ms with other threads and 300ms by itself (-o3)
 Current time for 256 images: 0:23s,0:22s,0:21s
 Previous time: 0:29s
+0:30s,0:29s with augmentation with 1 image thread 
+0:22s,0:22s,0:21s with 2 image threads, 8 cnn threads
+0:26s,0:28s 4 image threads, 4 cnn threads
+0:24s 4 image threads, 8 cnn threads
+
+0: 1.8%
+16,000: 9.1%
+32,000: 9.7%
+48,000: 13.0%
+64,000: 

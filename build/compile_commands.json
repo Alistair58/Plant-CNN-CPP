@@ -40,5 +40,11 @@
   "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -O3 -march=native -mavx2 -ffast-math -funroll-loops -mfma -ffp-contract=fast -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\tensor.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\tensor.cpp",
   "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/tensor.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/src/tensor.cpp.obj"
+},
+{
+  "directory": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "C:\\msys64\\ucrt64\\bin\\x86_64-w64-mingw32-g++.exe -DDEBUG=0 @CMakeFiles/Plant-CNN-CPP.dir/includes_CXX.rsp -std=gnu++20 -O3 -march=native -mavx2 -ffast-math -funroll-loops -mfma -ffp-contract=fast -o CMakeFiles\\Plant-CNN-CPP.dir\\src\\imageutils.cpp.obj -c C:\\Users\\Alistair\\VS-Code-Projects\\Plant-CNN-CPP\\src\\imageutils.cpp",
+  "file": "C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/src/imageutils.cpp",
+  "output": "CMakeFiles/Plant-CNN-CPP.dir/src/imageutils.cpp.obj"
 }
 ]

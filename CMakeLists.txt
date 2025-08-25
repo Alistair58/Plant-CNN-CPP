@@ -12,19 +12,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(Plant-CNN-CPP CXX)
 add_executable(Plant-CNN-CPP
     src/main.cpp
-    src/cnn.cpp 
+    src/cnn.cpp
     src/cnnutils.cpp
-    src/dataset.cpp 
+    src/dataset.cpp
     src/plantimage.cpp
     src/utils.cpp
     src/tensor.cpp
+    src/imageutils.cpp
 )
 
 if(${DEBUG})
     set(CMAKE_BUILD_TYPE Debug)
     target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=${DEBUG})
-    target_compile_options(Plant-CNN-CPP PRIVATE 
+    target_compile_options(Plant-CNN-CPP PRIVATE
     -mavx2
+    -march=native
     ) 
     target_link_options(Plant-CNN-CPP PRIVATE 
     )
