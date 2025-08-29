@@ -114,6 +114,43 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){
     return result;
 }
 
+Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride,int *maxPoolIndices){
+    //maxPoolIndices should be just for this input map
+    int xKernelRadius = (int) floor(xStride/2); //Not actually a radius, actually half the width of the kernel
+    int yKernelRadius = (int) floor(yStride/2); 
+    std::vector<int> imgDimens = image.getDimens();
+    if(imgDimens.size()!=2){
+        throw std::invalid_argument("Image must have 2 dimensions for maxPool");
+    }
+    int imHeight = imgDimens[0];
+    int imWidth = imgDimens[1];
+    int resHeight = imHeight/yStride;
+    int resWidth = imWidth/xStride;
+    Tensor result({resHeight,resWidth});
+    int newY,newX = newY =0;
+    float* __restrict__ imageData = image.getData();
+    float* __restrict__ resultData = result.getData();
+    for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
+        int resultRow = newY*resWidth;
+        for(int x=xKernelRadius;x<=imWidth-xKernelRadius;x+=xStride){
+            float max = -std::numeric_limits<float>::infinity();
+            for(int j=0;j<yStride;j++){
+                int imageRow = (y+j-yKernelRadius)*imWidth +x-xKernelRadius;
+                for(int i=0;i<xStride;i++){
+                    if((imageData[imageRow+i])>max){ //*image[{(y+j-yKernelRadius),(x+i-xKernelRadius)}]
+                        max = imageData[imageRow+i];
+                        maxPoolIndices[newY*resWidth+newX] = imageRow+i;
+                    }
+                }
+            }
+            resultData[resultRow+newX] = max;
+            newX++;
+        }
+        newX=0;
+        newY++;
+    }
+    return result;
+}
 //variable size output
 Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,const int yStride,bool padding){ 
     #if DEBUG >=2

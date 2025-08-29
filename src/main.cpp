@@ -21,7 +21,7 @@
 #include "stb_image.h"
 
 //Default values
-static float LR = 0.00002f;
+static float LR = 1.5625e-4f;
 static int batchSize = 64;
 #define TRAIN 1
 #define TEST 2
@@ -40,7 +40,6 @@ static void test(CNN *n, Dataset *d, int numTest);
 
 
 //TODO
-//Precompute indices for both forwards and backwards (lookup table)
 //Speed up - see log.txt
 
 int main(int argc,char **argv){

@@ -507,10 +507,10 @@ It works
 16,000: 12.6% 
 48,000: 21.4% train dataset: 21.7%
 
-Speeding up:
+Pre Speeding up:
 Times are recorded from -o3
 Forwards = 730ms
- - Convoltional layers = 690ms
+ - Convolutional layers = 690ms
  - Single 3x3 convolution = 2ms (120+60+30)*2 = 420ms
   Big ones don't seem to take any longer
 Backwards = 250ms 
@@ -525,8 +525,48 @@ Previous time: 0:29s
 0:26s,0:28s 4 image threads, 4 cnn threads
 0:24s 4 image threads, 8 cnn threads
 
+LR = 0.00002f;
 0: 1.8%
 16,000: 9.1%
 32,000: 9.7%
 48,000: 13.0%
-64,000: 
+64,000: 13.3%
+96,000: 16.1%
+128,000: 20.1%
+160,000: 21.6%
+172,160: 22.1%
+204,160: 20.3%
+220,160: 23.9%
+252,160: 24.1% Train accuracy: 23.6%
+284,160: 24.5%
+316,160: 23.9% Train accuracy: 23.5%
+LR = 0.000002f;
+348,160: 26.9%
+380,160: 30.3%
+412,160: 31%
+444,160: 27.4% Train accuracy
+460,160: 28.4% Train accuracy: 26.6%
+
+
+Post Speeding up:
+Times are recorded from -o3 with 8 threads
+Forwards = 200ms
+ - Convolutional layers = 60ms
+Backwards = 100ms
+ - finalPoolingConvBackwards = 10ms
+ - Backwards Convolution = 90ms
+
+Time for 256 images (with augmentation):
+0:17s,0:18s with 2 image threads, 8 cnn threads
+0:21s,0:21s 4 image threads, 4 cnn threads
+
+LR = 1.5625*10^-4
+16,000: 12.4%
+32,000: 18.6%
+48,000: 26.9%
+60,000: 30%
+76,000: 27.9%
+92,000: 32.5%
+108,000: 36.2%
+124,000: 36.7%
+163,040: 42.7%

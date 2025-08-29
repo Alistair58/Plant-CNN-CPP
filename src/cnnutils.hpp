@@ -33,6 +33,7 @@ class CnnUtils {
         std::vector<int> mapDimens;
         std::vector<int> kernelSizes; //0 represents a pooling layer, the last one is excluded
         std::vector<int> strides; //pooling strides are included
+        std::vector<std::unique_ptr<int[]>> maxPoolIndices;
         bool padding;
         float LR;
 
@@ -50,6 +51,7 @@ class CnnUtils {
         static void normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs);
         static Tensor gaussianBlurKernel(int width,int height);
         static Tensor maxPool(Tensor& image,int xStride,int yStride);
+        Tensor maxPool(Tensor& image,int xStride,int yStride,int *maxPoolIndices);
         //variable size output
         static Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding);
         //fixed size output
@@ -85,6 +87,7 @@ class CnnUtils {
             return x;
         }
         static inline float dotProduct8f(float *X,float *Y);
+        static inline float dotProduct8f(__m256 a,__m256 b);
 
         //UTILS
         void applyGradients();
@@ -106,6 +109,10 @@ class CnnUtils {
 inline float CnnUtils::dotProduct8f(float *X,float *Y){
     __m256 a = _mm256_loadu_ps(X);       // Load 8 floats
     __m256 b = _mm256_loadu_ps(Y);       // Load 8 floats
+    return dotProduct8f(a,b);
+}
+
+inline float CnnUtils::dotProduct8f(__m256 a,__m256 b){
     __m256 prod = _mm256_mul_ps(a, b);   // Multiply X[i] * Y[i]
     //Now horizontally sum all 8 floats in prod
     //lower 4 floats

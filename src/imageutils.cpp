@@ -194,23 +194,20 @@ void ImageUtils::saveData(std::string fName){
 }
 
 void ImageUtils::augment(Tensor &inp){
-    //0,1,2,3 -> no augmentation (50% of time)
-    //3 -> greyscale
-    //4 -> just rotate
-    //5 -> just zoom
-    //6 -> rotate and zoom
-    
-    std::uniform_int_distribution<int> augmentOrNot(0, 6);
-    int augmentationType = augmentOrNot(localRng);
-    if(augmentationType>5){
-        std::uniform_real_distribution<double> scaleFactorDist(1,2);
+    std::uniform_real_distribution<double> augmentOrNot(0, 1);
+    double prob = augmentOrNot(localRng);
+    if(prob<0.2){ //zoom in on 1 in 5
+        //If you zoom in somewhere, other than the centre, you might miss the plant
+        std::uniform_real_distribution<double> scaleFactorDist(1,1.75);
         ImageUtils::zoom(inp,scaleFactorDist(localRng));
     }
-    if(augmentationType==4 || augmentationType==6){
-        std::uniform_real_distribution<double> angleDist(-std::numbers::pi/4,std::numbers::pi/4);
+    prob = augmentOrNot(localRng);
+    if(prob<0.2){ //rotate 1 in 5
+        std::uniform_real_distribution<double> angleDist(-std::numbers::pi/6,std::numbers::pi/6);
         ImageUtils::rotate(inp,angleDist(localRng));
     }
-    if(augmentationType==3){
+    prob = augmentOrNot(localRng);
+    if(prob<0.05){ //greyscale 1 in 20
         ImageUtils::toGreyscale(inp);
     }
 }
