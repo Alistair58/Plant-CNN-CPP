@@ -182,6 +182,10 @@ std::string CNN::forwards(Tensor& imageInt){
             );
         }
     }
+    #if DEBUG
+        uint64_t endPooling = getCurrTimeMs();
+        std::cout << "Pooling took "+std::to_string(endPooling-endConvLayers)+"ms" << std::endl;
+    #endif
     //MLP
     for(int l=0;l<weights.size();l++){
         float *biasesData = weights[l].getBiases()->getData();
@@ -210,7 +214,7 @@ std::string CNN::forwards(Tensor& imageInt){
         }
     }
     #if DEBUG
-        std::cout << "MLP took "+std::to_string(getCurrTimeMs()-endConvLayers)+"ms" << std::endl;
+        std::cout << "MLP took "+std::to_string(getCurrTimeMs()-endPooling)+"ms" << std::endl;
 
         d1 outputVec = activations[activations.size()-1].toVector<d1>();
         std::cout << "[";
@@ -301,7 +305,7 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
         
     }
     #if DEBUG
-        std::cout << "Backwards Convolution took "+std::to_string(getCurrTimeMs()-convolutionStart)+"ms" << std::endl;
+        std::cout << "Backwards Convolution (all layers) took "+std::to_string(getCurrTimeMs()-convolutionStart)+"ms" << std::endl;
         std::cout << "Backwards took "+std::to_string(getCurrTimeMs()-mlpStart)+"ms" << std::endl;
     #endif
 }

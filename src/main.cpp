@@ -21,7 +21,7 @@
 #include "stb_image.h"
 
 //Default values
-static float LR = 1.5625e-4f;
+static float LR = 0.01;
 static int batchSize = 64;
 #define TRAIN 1
 #define TEST 2
@@ -36,16 +36,18 @@ std::atomic<int> missedCount{0};
 static void compressionTest(Dataset *d,CNN *cnn,std::string fname);
 static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std::vector<CNN*>& cnns);
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads);
-static void test(CNN *n, Dataset *d, int numTest);
+static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData);
+
 
 
 //TODO
+//Fix overfitting
 //Speed up - see log.txt
 
 int main(int argc,char **argv){
     //("train"|"test") 
     //"train" ->       {numBatches} (rs=(true|false))? (bs={batchSize})? (lr={LR})?
-    //"test"  ->       {numTestImages} (lr={LR})?
+    //"test"  ->       {numTestImages} (lr={LR})? (ds=(test|train))?
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = nullptr;
     const int numImageThreads = 2;
@@ -73,7 +75,24 @@ int main(int argc,char **argv){
             }
             if(toLower(splitRes[0])=="rs"){
                 if(toLower(splitRes[1])=="true"){
-                    restart = true;
+                    std::cout << ANSI_RED << "Are you sure you want to reset the model to random weights? (Y/N) " << ANSI_RESET << std::endl;
+                    while(true){
+                        std::string userRes;
+                        std::cin >> userRes;
+                        if(toLower(userRes)=="y"){
+                            restart = true;
+                            std::cout << "Model reset" << std::endl;
+                            break;
+                        }
+                        else if(toLower(userRes)=="n"){
+                            restart = false;
+                            std::cout << "Model reset aborted" << std::endl;
+                            break;
+                        }
+                        else{
+                            std::cout << "Enter Y or N" << std::endl;
+                        }
+                    }
                 }
                 else if(toLower(splitRes[1])=="false"){
                     restart = false;
@@ -103,33 +122,48 @@ int main(int argc,char **argv){
     }
     if(mode==TEST){
         int numTestImages = atoi(argv[2]);
+        int testOnTrainingData = false;
         if(numTestImages<=0){
             throw std::invalid_argument("For test, argument 2 must be the number of test images (a positive integer)");
         }
-        if(argc==4){
-            std::vector<std::string> splitRes = strSplit(argv[3],{'='});
+        for(int i=3;i<argc;i++){
+            std::vector<std::string> splitRes = strSplit(argv[i],{'='});
             if(splitRes.size()!=2){
                 throw std::invalid_argument("Optional arguments must be in the format {parameter}={value}");
             }
-            if(toLower(splitRes[0])!="lr"){
-                throw std::invalid_argument("Optional parameter \""+splitRes[0]+"\" is invalid for test");
+            if(toLower(splitRes[0])=="lr"){
+                LR = stof(splitRes[1]);
+                if(LR<=0.0f){
+                    throw std::invalid_argument("Parameter \"lr\" (learning rate) must be a positive float");
+                }
             }
-            LR = stof(splitRes[1]);
-            if(LR<=0.0f){
-                throw std::invalid_argument("Parameter \"lr\" (learning rate) must be a positive float");
+            else if(toLower(splitRes[0])=="ds"){
+                if(toLower(splitRes[1])=="train"){
+                    testOnTrainingData = true;
+                }
+                else if(toLower(splitRes[1])=="test"){
+                    testOnTrainingData = false;
+                }   
+                else{
+                    throw std::invalid_argument("Parameter \"ds\" (dataset) can only be set to \"train\" or \"test\"");
+                }
+            }
+            else{
+                throw std::invalid_argument("Optional parameter \""+splitRes[0]+"\" is invalid for test");
             }
         }
         cnn = new CNN(LR,d,false);
-        test(cnn,d,numTestImages);
+        test(cnn,d,numTestImages,testOnTrainingData);
     }
     delete d;
     delete cnn;
 }
     
-static void test(CNN *n, Dataset *d, int numTest){
+static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData){
     int correctCount = 0;
     for (int i=0;i<numTest;i++) {
-        PlantImage pI = d->randomImageObj(true);
+        //true for test data and false for training data
+        PlantImage pI = d->randomImageObj(!testOnTrainingData);
         if(pI.label.length()!=0){
             std::string response = n->forwards(pI.data);
             bool correct = response==pI.label;
@@ -153,7 +187,7 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
     }
     for(int i=0;i<numBatches;i++){ // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,cnns);
-        if(i%10 == 0 && i>0){ //save every 10 batches
+        if(i%25 == 0 && i>0){ //save every 25 batches
             n->saveKernels();
             n->saveWeights();
             std::cout << "Saved" << std::endl;
@@ -239,7 +273,7 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
         #endif
         i++;
     }
-    n->applyGradients(cnns);
+    n->applyGradients(cnns,batchSize);
     for(i=0;i<batchSize;i++){
         PlantImage *p = plantImages[i].load(std::memory_order_acquire);
         if(p!=nullptr){

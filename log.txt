@@ -550,7 +550,8 @@ LR = 0.000002f;
 
 Post Speeding up:
 Times are recorded from -o3 with 8 threads
-Forwards = 200ms
+Forwards = 100ms
+ - ParseImg = 30ms
  - Convolutional layers = 60ms
 Backwards = 100ms
  - finalPoolingConvBackwards = 10ms
@@ -569,4 +570,39 @@ LR = 1.5625*10^-4
 92,000: 32.5%
 108,000: 36.2%
 124,000: 36.7%
-163,040: 42.7%
+163,040: 42.7% train accuracy: 43.2%
+195,040: 46.2%
+227,040: 47.7%
+259,040: 52.1%
+291,040: 50.3% train accuracy: 56.0%
+323,040: 43% train accuracy: 44.1%
+355,040: 44.8%
+387,040: 43.3% train accuracy: 45.0% train without augmentation: 45.6%
+
+Trying PyTorch again but with image augmentation
+PyTorch was underfitting
+Had a look at my code and my test was actually testing on both the training and testing data 
+After fixing that, I sped up my code a bit:
+
+Forwards = 70ms
+ - ParseImg = 20ms
+ - Convolutional layers = 40ms
+Backwards = 100ms
+ - finalPoolingConvBackwards = 10ms
+ - Backwards Convolution = 90ms
+
+Time for 256 images (with augmentation):
+0:17s,0:16s,0:20s 
+
+Note: Saving has now moved to every 25 batches 
+Time for 1 epoch:
+
+11,840: 12.3% Train: 16.8% (Yes I did restart it)
+27,840: 19.3% Train: 20.4%
+43,840: 19.5% Train: 27.2%
+59,840: 23.1%
+91,840: 29.7% Train: 36.8%
+123,840: 28.8% Train: 37.8%
+Forgot to divide biases grads by 64 and so it trained a bit too fast
+I think it would still overfit anyway
+155,840: 29.4% Train: 43.3%

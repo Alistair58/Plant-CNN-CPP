@@ -61,10 +61,12 @@ void ImageUtils::rotate(Tensor& inp,float theta){ //clockwise is positive
     const int height = dimens[1];
     const int width = dimens[2];
     Tensor res = Tensor(dimens);
-    int c_y = height/2;
-    int c_x = width/2;
-    float *resData = res.getData();
+    const int c_y = height/2;
+    const int c_x = width/2;
+    float* __restrict__ resData = res.getData();
     float *origData = inp.getData();
+    const float cosTheta = cos(theta);
+    const float sinTheta = sin(theta);
     for(int c=0;c<dimens[0];c++){
         int channel = c*childSizes[0];
         for(int y_p=0;y_p<height;y_p++){
@@ -73,8 +75,8 @@ void ImageUtils::rotate(Tensor& inp,float theta){ //clockwise is positive
                 int x_pc = x_p - c_x;
                 int y_pc = y_p - c_y;
                 //rotation matrix
-                int x = x_pc*cos(theta) + y_pc*sin(theta) + c_x;
-                int y = y_pc*cos(theta) - x_pc*sin(theta) + c_y;
+                int x = x_pc*cosTheta + y_pc*sinTheta + c_x;
+                int y = y_pc*cosTheta - x_pc*sinTheta + c_y;
                 if(x>=0 && x<width && y>=0 && y<height){
                     resData[row+x_p] = origData[channel+y*width+x];
                 }
@@ -98,9 +100,9 @@ void ImageUtils::zoom(Tensor &inp,float scaleFactor){
     const int height = dimens[1];
     const int width = dimens[2];
     Tensor res = Tensor(dimens);
-    int c_y = height/2;
-    int c_x = width/2;
-    float *resData = res.getData();
+    const int c_y = height/2;
+    const int c_x = width/2;
+    float* __restrict__ resData = res.getData();
     float *origData = inp.getData();
     for(int c=0;c<dimens[0];c++){
         int channel = c*childSizes[0];

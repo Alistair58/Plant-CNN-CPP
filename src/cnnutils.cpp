@@ -12,6 +12,9 @@
 //So the raw pointer is used
 
 Tensor CnnUtils::parseImg(Tensor& img){
+    #if DEBUG
+        uint64_t startTime = getCurrTimeMs();
+    #endif 
     //The produced images may have a slight black border around them
     //Keeping a constant stride doesn't stretch the image 
     //but as it is an integer means that it will create a border
@@ -41,10 +44,16 @@ Tensor CnnUtils::parseImg(Tensor& img){
         //Deep copy
         result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0],mapDimens[0],false);
     }
+    #if DEBUG
+        std::cout << "parseImg took " << (getCurrTimeMs()-startTime) << "ms" << std::endl;
+    #endif
     return result;
 }
 
 void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
+    #if DEBUG
+        uint64_t startTime = getCurrTimeMs();
+    #endif 
     std::vector<int> imgDimens = img.getDimens();
     if(imgDimens.size()!=3){
         throw std::invalid_argument("Image must have 3 dimensions for normaliseImg");
@@ -60,6 +69,9 @@ void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vecto
             }
         }
     }
+    #if DEBUG
+        std::cout << "normaliseImg took " << (getCurrTimeMs()-startTime) << "ms" << std::endl;
+    #endif
 }
 
 Tensor CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd sized
@@ -271,6 +283,16 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
             const __m256 K21 = _mm256_set1_ps(k21);
             const __m256 K22 = _mm256_set1_ps(k22);
 
+            const __m256i paddedImageOffsets = _mm256_setr_epi32(
+                0,
+                xStride,
+                2 * xStride,
+                3 * xStride,
+                4 * xStride,
+                5 * xStride,
+                6 * xStride,
+                7 * xStride
+            );
             for(int y=1;y<originalImgYBound;y+=yStride){
                 const int resultRow = newY*resultChildSizes0;
                 //y is centre of kernel and so we start at y-1
@@ -281,20 +303,13 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
                 int x=1;
                 //Process different inputs at once
                 //Stop short and we can scalar the rest
-                for(;x+xStride*7<=originalImgXBound;x+=xStride*8){
+                //originalImgXBound is the last valid padded pixel and so as x is the centre,
+                //when we go to x+1, this will be the last valid padded pixel hence the <
+                for(;x+xStride*7<originalImgXBound;x+=xStride*8){
                     //x is the centre of the kernel and so we start at x-1
                     const int xSub1 = x-1; 
                     //indices where the pixels are located
-                    const __m256i col0Indices = _mm256_setr_epi32(
-                        xSub1,
-                        xSub1 + xStride,
-                        xSub1 + 2 * xStride,
-                        xSub1 + 3 * xStride,
-                        xSub1 + 4 * xStride,
-                        xSub1 + 5 * xStride,
-                        xSub1 + 6 * xStride,
-                        xSub1 + 7 * xStride
-                    );
+                    const __m256i col0Indices = _mm256_add_epi32(paddedImageOffsets,_mm256_set1_epi32(xSub1));
                     const __m256i col1Indices = _mm256_add_epi32(col0Indices,_mm256_set1_epi32(1));
                     const __m256i col2Indices = _mm256_add_epi32(col0Indices,_mm256_set1_epi32(2));
                     
@@ -364,6 +379,16 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
         const int resultChildSizes0 = resultChildSizes[0];
         const int kernelDimens1 = kernelDimens[1];
         const int kernelDimens2 = kernelDimens[2];
+        const __m256i paddedImageOffsets = _mm256_setr_epi32(
+            0,
+            xStride,
+            2 * xStride,
+            3 * xStride,
+            4 * xStride,
+            5 * xStride,
+            6 * xStride,
+            7 * xStride
+        );
         for(int l=0;l<paddedImgDimens0;l++){
             int newY = 0;
             int newX = 0;
@@ -372,7 +397,35 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
             int paddedImageChannel = l*paddedImageChildSizes0-xKernelRadius; //saving the subtractions
             for(int y=yKernelRadius;y<originalImgYBound;y+=yStride){
                 int resultRow = newY*resultChildSizes0;
-                for(int x=xKernelRadius;x<originalImgXBound;x+=xStride){
+                //vectorised
+                int x=xKernelRadius;
+                for(;x+7*xStride<originalImgXBound;x+=8*xStride){
+                    int paddedImageChannelShortct = paddedImageChannel + x; 
+                    float* __restrict__ resultPtr = resultData+resultRow+newX;
+                    //May already has result from another input channel
+                    __m256 acc = _mm256_loadu_ps(resultPtr);
+                    //do each individual kernel element across 8 convolutions at once
+                    //e.g. do kernel (0,0) multiplied by image (0,0),(0,3),(0,6) ...
+                    for(int j=0;j<kernelDimens1;j++){
+                        int kernelRow = kernelChannel + j*kernelChildSizes1;
+                        int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImageChildSizes1;
+                        float* __restrict__ paddedImageRowBase = &paddedImageData[paddedImageRow];
+                        float *kernelRowBase = kernelData+kernelRow;
+                        for(int k=0;k<kernelDimens2;k++){
+                            const float kernelVal = *(kernelRowBase+k);
+                            const __m256i paddedImageIndices = _mm256_add_epi32(paddedImageOffsets,_mm256_set1_epi32(k));
+                            const __m256 R = _mm256_i32gather_ps(paddedImageRowBase,paddedImageIndices,4); 
+                            const __m256 K = _mm256_set1_ps(kernelVal);  
+                            //Add our result
+                            acc = _mm256_fmadd_ps(K,R,acc);
+                        }
+                    }
+                    //Save our result
+                    _mm256_storeu_ps(resultPtr,acc);
+                    newX+=8;
+                }
+                //scalar tail
+                for(;x<originalImgXBound;x+=xStride){
                     float sum = 0;
                     int paddedImageChannelShortct = paddedImageChannel + x; 
                     for(int j=0;j<kernelDimens1;j++){
@@ -603,33 +656,36 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
     }
 }
        
-void CnnUtils::applyGradients(){ //(and reset gradients)
+void CnnUtils::applyGradients(int batchSize){ //(and reset gradients)
     #if DEBUG
         uint64_t start = getCurrTimeMs();
     #endif
-    applyGradient(kernels,kernelsGrad);
-    applyGradient(weights,weightsGrad);
+    applyGradient(kernels,kernelsGrad,batchSize);
+    applyGradient(weights,weightsGrad,batchSize);
     #if DEBUG
         std::cout << "applyGradients took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
     #endif
 }
 
-void CnnUtils::applyGradients(std::vector<CNN*>& cnns){ //(and reset gradients)
+void CnnUtils::applyGradients(std::vector<CNN*>& cnns,int batchSize){ //(and reset gradients)
     #if DEBUG
         uint64_t start = getCurrTimeMs();
     #endif
     //this cnn must be included in cnns
     for(int n=0;n<cnns.size();n++){
-        applyGradient(kernels,(cnns[n]->kernelsGrad));
-        applyGradient(weights,(cnns[n]->weightsGrad));
+        applyGradient(kernels,(cnns[n]->kernelsGrad),batchSize);
+        applyGradient(weights,(cnns[n]->weightsGrad),batchSize);
     }
     #if DEBUG
         std::cout << "applyGradients (multiple CNNs) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
     #endif
 }
 
-void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient){ //Main values and biases
+void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient,int batchSize){ //Main values and biases
     const float maxGrad = 1;
+    //we could do weights -= sum(gradients[i]/batchSize) * LR
+    // or just weights -= sum(gradients[i]) * averagedLR
+    const float averagedLR = this->LR / batchSize;
     if(values.size()!=gradient.size()){
         throw std::invalid_argument("Values and gradient must have the same number of layers for the gradient to be applied");
     }
@@ -654,7 +710,7 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                     gradData[i] = 0;
                     continue;
                 }
-                float adjustedGrad = gradVal * LR;
+                float adjustedGrad = gradVal * averagedLR;
                 if(abs(adjustedGrad)>maxGrad){
                     std::cout << "Very large gradient: "+std::to_string(adjustedGrad) << std::endl;
                     adjustedGrad = (adjustedGrad>0)?maxGrad:-maxGrad;
@@ -696,7 +752,7 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                         gradBiasesData[i] = 0;
                         continue;
                     }
-                    float adjustedGrad = gradVal * LR;
+                    float adjustedGrad = gradVal * averagedLR;
                     if(abs(adjustedGrad)>maxGrad){
                         std::cout << "Very large bias gradient: "+std::to_string(adjustedGrad) << std::endl;
                         adjustedGrad = (adjustedGrad>0)?maxGrad:-maxGrad;

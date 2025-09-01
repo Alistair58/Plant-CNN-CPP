@@ -90,8 +90,8 @@ class CnnUtils {
         static inline float dotProduct8f(__m256 a,__m256 b);
 
         //UTILS
-        void applyGradients();
-        void applyGradients(std::vector<CNN*>& cnns);
+        void applyGradients(int batchSize);
+        void applyGradients(std::vector<CNN*>& cnns,int batchSize);
         void resetKernels();
         void resetWeights();
         void saveWeights();
@@ -103,7 +103,7 @@ class CnnUtils {
         std::vector<int> getMapDimens(){ return mapDimens; }
     private:
         //INTERNAL UTILS
-        void applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient);
+        void applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient,int batchSize);
 };
 
 inline float CnnUtils::dotProduct8f(float *X,float *Y){

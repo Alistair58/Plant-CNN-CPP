@@ -21,8 +21,7 @@ void Dataset::loadPixelStats(){
 }   
 
 Dataset::Dataset(std::string dirPathInp,float trainTestSplitRatio){
-    srand(getCurrTimeUs());
-    if(trainTestSplit>0 && trainTestSplit<=1){
+    if(trainTestSplitRatio>=0 && trainTestSplitRatio<=1){
         trainTestSplit = trainTestSplitRatio;
     }
     else{
@@ -76,15 +75,26 @@ PlantImage *Dataset::randomImage(bool test) const{
     for(int i=indices.size()-1;i>=0;i--){ //iterate through plant classes
         int startIndex = indices[i];
         if(index >= startIndex){ //until the random number is in this category
-            int subIndex = index - startIndex;
+            int subIndex = index - startIndex + 1; //images start at 1.jpg
             int categorySize = prevIndex - startIndex;
+            int splitIndex = (int)(trainTestSplit*categorySize);
             //If we're testing but the random index isn't in the testing section, put it in the testing section
-            if(test && subIndex<trainTestSplit*categorySize){ //e.g. trainTestSplit = 0.8
-                subIndex = ((int)(trainTestSplit*categorySize)) +(rand()%(categorySize+1)-(int)(trainTestSplit*categorySize)); //indices start at 1 so we have an extra at the end
+            if(test && subIndex<=splitIndex){ //e.g. trainTestSplit = 0.8
+                if(splitIndex>=categorySize){
+                    std::cerr << "Invalid dataset index for class "<< plantNames[i] << std::endl;
+                    return new PlantImage("","");
+                }
+                std::uniform_int_distribution<int> testIndex(splitIndex+1,categorySize);
+                subIndex = testIndex(localRng); //indices start at 1 so we have an extra at the end
             }
             //Same goes for training
-            else if(!test && subIndex>trainTestSplit*categorySize){ //training
-                subIndex = 1 + (rand()%((int)(trainTestSplit*categorySize))); //image names start at 1.jpg
+            else if(!test && subIndex>splitIndex){ //training
+                if(splitIndex<=0){
+                    std::cerr << "Invalid dataset index for class "<< plantNames[i] << std::endl;
+                    return new PlantImage("","");
+                }
+                std::uniform_int_distribution<int> trainIndex(1,splitIndex);
+                subIndex = trainIndex(localRng); //image names start at 1.jpg
             }
             std::string plantName = plantNames[i];
             std::string fname = dirPath+"/"+plantName+"/"+std::to_string(subIndex);
@@ -97,6 +107,7 @@ PlantImage *Dataset::randomImage(bool test) const{
                     if(!test) ImageUtils::augment(plantImage->data);
                     return plantImage;
                 }
+                delete plantImage;
             } 
             break;
         }
