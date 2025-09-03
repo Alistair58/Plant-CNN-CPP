@@ -21,7 +21,7 @@
 #include "stb_image.h"
 
 //Default values
-static float LR = 0.01;
+static float LR = 0.002;
 static int batchSize = 64;
 #define TRAIN 1
 #define TEST 2
@@ -55,6 +55,7 @@ int main(int argc,char **argv){
     int mode = -1;
     int numBatches = -1;
     bool restart = false;
+    float dropoutProbability = 0.2;
     if(argc<3){
         throw std::invalid_argument("argv must contain at least 2 arguments");
     }
@@ -117,7 +118,7 @@ int main(int argc,char **argv){
                 throw std::invalid_argument("Optional argument "+std::to_string(i)+"'s parameter \""+splitRes[0]+"\" is invalid for train");
             }
         }
-        cnn = new CNN(LR,d,restart);
+        cnn = new CNN(LR,d,restart,dropoutProbability);
         train(cnn,d,numBatches,batchSize,numImageThreads,numCnnThreads);
     }
     if(mode==TEST){
@@ -152,7 +153,7 @@ int main(int argc,char **argv){
                 throw std::invalid_argument("Optional parameter \""+splitRes[0]+"\" is invalid for test");
             }
         }
-        cnn = new CNN(LR,d,false);
+        cnn = new CNN(LR,d,false,0.0);
         test(cnn,d,numTestImages,testOnTrainingData);
     }
     delete d;
@@ -165,7 +166,7 @@ static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData){
         //true for test data and false for training data
         PlantImage pI = d->randomImageObj(!testOnTrainingData);
         if(pI.label.length()!=0){
-            std::string response = n->forwards(pI.data);
+            std::string response = n->forwards(pI.data,false);
             bool correct = response==pI.label;
             std::cout << (((correct)?ANSI_GREEN:ANSI_RED) +
             pI.label +" ("+std::to_string(pI.index)+ ") Computer said: " + response+ANSI_RESET) << std::endl;

@@ -198,14 +198,14 @@ void ImageUtils::saveData(std::string fName){
 void ImageUtils::augment(Tensor &inp){
     std::uniform_real_distribution<double> augmentOrNot(0, 1);
     double prob = augmentOrNot(localRng);
-    if(prob<0.2){ //zoom in on 1 in 5
+    if(prob<0.25){ //zoom in on 1 in 4
         //If you zoom in somewhere, other than the centre, you might miss the plant
-        std::uniform_real_distribution<double> scaleFactorDist(1,1.75);
+        std::uniform_real_distribution<double> scaleFactorDist(1.25,2);
         ImageUtils::zoom(inp,scaleFactorDist(localRng));
     }
     prob = augmentOrNot(localRng);
-    if(prob<0.2){ //rotate 1 in 5
-        std::uniform_real_distribution<double> angleDist(-std::numbers::pi/6,std::numbers::pi/6);
+    if(prob<0.25){ //rotate 1 in 4
+        std::uniform_real_distribution<double> angleDist(-std::numbers::pi/4,std::numbers::pi/4);
         ImageUtils::rotate(inp,angleDist(localRng));
     }
     prob = augmentOrNot(localRng);

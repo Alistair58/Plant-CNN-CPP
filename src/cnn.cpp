@@ -4,13 +4,14 @@
 //CONSTRUCTORS 
 
 //Creating a fresh CNN
-CNN::CNN(float LR,Dataset *dataset,bool restart){
-    numNeurons = {1920,960,47};
+CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
+    numNeurons = {1920,64,47};
     numMaps =     {3,  30,60,120};//includes the result of pooling (except final pooling)
     mapDimens =   {128,64,32,16};
     kernelSizes = {   5, 3, 3  };  //0 represents a pooling layer, the last one is excluded
     strides =     {   2, 2, 2,4}; //pooling strides are included
     padding = true;
+    this->dropoutProb = dropoutProbability;
 
     this->d = dataset;
     this->kernels = loadKernels(restart);
@@ -61,6 +62,7 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
     kernelSizes = original->kernelSizes;
     strides = original->strides;
     padding = original->padding;
+    dropoutProb = original->dropoutProb;
     d = dataset; //sharing the same dataset
     if(deepCopyWeights){
         kernels = original->kernels; //copy by value
@@ -121,7 +123,7 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
 //KEY METHODS 
 
 
-std::string CNN::forwards(Tensor& imageInt){
+std::string CNN::forwards(Tensor& imageInt,bool training){
     #if DEBUG
         uint64_t startTime = getCurrTimeMs();
     #endif
@@ -187,15 +189,27 @@ std::string CNN::forwards(Tensor& imageInt){
         std::cout << "Pooling took "+std::to_string(endPooling-endConvLayers)+"ms" << std::endl;
     #endif
     //MLP
+    std::uniform_real_distribution dropoutDist(0,1);
+    //Dropout the first layer (the result of pooling)
+    if(training && numNeurons.size()!=1){
+        float* __restrict__ firstLayerActivations = activations[0].getData();
+        for(int i=0;i<numNeurons[0];i++){
+            if(dropoutDist(localRng)<=dropoutProb){
+                firstLayerActivations[i] = 0;
+            }
+        }
+    }
+    
     for(int l=0;l<weights.size();l++){
         float *biasesData = weights[l].getBiases()->getData();
-        float *prevActivations = activations[l].getData();
-        float *currActivations = activations[l+1].getData();
+        float* __restrict__ prevActivations = activations[l].getData();
+        float* __restrict__ currActivations = activations[l+1].getData();
         float *currWeights = weights[l].getData();
         for(int i=0;i<numNeurons[l+1];i++){
+            if(training && l!=weights.size()-1 && dropoutDist(localRng)<=dropoutProb) continue; //drop it out
             int weightsTo = i*numNeurons[l];
             for(int j=0;j<numNeurons[l];j++){
-                //likely quicker with axv2
+                //likely quicker with axv2 but not the bottleneck at the moment (03/09/25)
                 currActivations[i] += prevActivations[j] * currWeights[weightsTo+j]; 
             }
             currActivations[i] += biasesData[i]; //add bias
@@ -232,7 +246,7 @@ std::string CNN::forwards(Tensor& imageInt){
 } 
 
 void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to its internal gradient arrays
-    forwards(imageInt); //set all the activations
+    forwards(imageInt,true); //set all the activations
     //Gradients are not reset each time to enable batches
     #if DEBUG
         uint64_t mlpStart = getCurrTimeMs();

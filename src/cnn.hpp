@@ -10,12 +10,12 @@ class CNN : public CnnUtils{
     public:
         //CONSTRUCTORS 
         //Creating a fresh CNN
-        CNN(float LR,Dataset *dataset,bool restart);
+        CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability);
         //Creating a copy from an original CNN
         CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights=true);
     
         //KEY METHODS 
-        std::string forwards(Tensor& imageInt);
+        std::string forwards(Tensor& imageInt,bool training);
         void backwards(Tensor& imageInt,std::string answer);
     private:
         //BACKPROPAGATION-RELATED

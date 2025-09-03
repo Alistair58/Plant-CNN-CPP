@@ -36,6 +36,7 @@ class CnnUtils {
         std::vector<std::unique_ptr<int[]>> maxPoolIndices;
         bool padding;
         float LR;
+        float dropoutProb = 0;
 
         //UTILS
         void reset();

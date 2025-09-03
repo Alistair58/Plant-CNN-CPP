@@ -606,3 +606,11 @@ Time for 1 epoch:
 Forgot to divide biases grads by 64 and so it trained a bit too fast
 I think it would still overfit anyway
 155,840: 29.4% Train: 43.3%
+
+Fixed the biases issue
+11,840: 13.3% Train: 15.1%
+27,840: 18.6% Train: 23.2%
+
+Single threaded:
+11,840: 11.6% Train: 13.1%
+27,840: 18.6% Train: 19.9%

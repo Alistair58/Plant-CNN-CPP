@@ -81,8 +81,8 @@ Tensor CnnUtils::gaussianBlurKernel(int width,int height){ //This will be odd si
     int yCentre = (int)height/2;
     for(int y=0;y<height;y++){
         for(int x=0;x<width;x++){
-            (*kernel[{y,x}]) = std::min((float) ((float) (1/(2*std::numbers::pi*pow(stdDev,2)))
-            *exp(-(pow(x-xCentre,2)+pow(y-yCentre,2))/(2*pow(stdDev,2)))),255.0f);
+            (*kernel[{y,x}]) = (float) (1/(2*std::numbers::pi*pow(stdDev,2)))
+            *exp(-(pow(x-xCentre,2)+pow(y-yCentre,2))/(2*pow(stdDev,2)));
             //https://en.wikipedia.org/wiki/Gaussian_blur
         }
     }
