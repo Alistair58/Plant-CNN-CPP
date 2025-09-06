@@ -21,7 +21,7 @@
 #include "stb_image.h"
 
 //Default values
-static float LR = 0.002;
+static float LR = 0.02;
 static int batchSize = 64;
 #define TRAIN 1
 #define TEST 2
@@ -31,12 +31,12 @@ std::string datasetDirPath = "C:/Users/Alistair/Pictures/house_plant_species";
 const std::string ANSI_RED = "\u001B[31m";
 const std::string ANSI_RESET = "\u001B[0m";
 const std::string ANSI_GREEN = "\u001B[32m";
+const std::string ANSI_CLEAR_LINE = "\033[2K";
 std::atomic<int> missedCount{0};
 
-static void compressionTest(Dataset *d,CNN *cnn,std::string fname);
 static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std::vector<CNN*>& cnns);
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads);
-static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData);
+static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool outputIndividuals);
 
 
 
@@ -47,7 +47,8 @@ static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData);
 int main(int argc,char **argv){
     //("train"|"test") 
     //"train" ->       {numBatches} (rs=(true|false))? (bs={batchSize})? (lr={LR})?
-    //"test"  ->       {numTestImages} (lr={LR})? (ds=(test|train))?
+    //"test"  ->       {numTestImages} (lr={LR})? (ds=(test|train))? (out=(true|false))?
+    //out => output every single test result
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = nullptr;
     const int numImageThreads = 2;
@@ -124,6 +125,7 @@ int main(int argc,char **argv){
     if(mode==TEST){
         int numTestImages = atoi(argv[2]);
         int testOnTrainingData = false;
+        bool outputIndividuals = false;
         if(numTestImages<=0){
             throw std::invalid_argument("For test, argument 2 must be the number of test images (a positive integer)");
         }
@@ -149,18 +151,29 @@ int main(int argc,char **argv){
                     throw std::invalid_argument("Parameter \"ds\" (dataset) can only be set to \"train\" or \"test\"");
                 }
             }
+            else if(toLower(splitRes[0])=="out"){
+                if(toLower(splitRes[1])=="true"){
+                    outputIndividuals = true;
+                }
+                else if(toLower(splitRes[1])=="false"){
+                    outputIndividuals = false;
+                }   
+                else{
+                    throw std::invalid_argument("Parameter \"out\" (output individuals) can only be set to \"true\" or \"false\"");
+                }
+            }
             else{
                 throw std::invalid_argument("Optional parameter \""+splitRes[0]+"\" is invalid for test");
             }
         }
         cnn = new CNN(LR,d,false,0.0);
-        test(cnn,d,numTestImages,testOnTrainingData);
+        test(cnn,d,numTestImages,testOnTrainingData,outputIndividuals);
     }
     delete d;
     delete cnn;
 }
     
-static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData){
+static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool outputIndividuals){
     int correctCount = 0;
     for (int i=0;i<numTest;i++) {
         //true for test data and false for training data
@@ -168,19 +181,33 @@ static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData){
         if(pI.label.length()!=0){
             std::string response = n->forwards(pI.data,false);
             bool correct = response==pI.label;
-            std::cout << (((correct)?ANSI_GREEN:ANSI_RED) +
-            pI.label +" ("+std::to_string(pI.index)+ ") Computer said: " + response+ANSI_RESET) << std::endl;
+            if(outputIndividuals){
+                std::cout << ("("+ std::to_string(i+1) + "/" + std::to_string(numTest)+")  "+((correct)?ANSI_GREEN:ANSI_RED)+
+                pI.label +" ("+std::to_string(pI.index)+ ") Computer said: " + response+ANSI_RESET) << std::endl;
+            }
+            else{
+                int percentageComplete = (float)i/numTest*100;
+                printf("\r[%.*s%.*s] (%d/%d) %d%% complete",
+                    percentageComplete/10, "##########",
+                    10-percentageComplete/10, "          ",
+                    i,numTest,
+                    percentageComplete
+                );
+                //stdout is line-buffered but we're not writing a new line with \n and so flush
+                fflush(stdout);
+            }
             if(correct) correctCount++;
         }
         else i--;
     }
-    std::cout << ("Accuracy: "+std::to_string((float)correctCount*100/numTest)+"%") <<std::endl;
+    std::cout << ("\r"+ANSI_CLEAR_LINE+"Accuracy: "+std::to_string((float)correctCount*100/numTest)+"%") <<std::endl;
 }
 
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads){
     uint64_t startTime = getCurrTimeMs();
     std::vector<CNN*> cnns(numCnnThreads);
     cnns[0] = n;
+    int savePeriod = 25;
     for(int i=1;i<numCnnThreads;i++){
         //shallow copy of weights and kernels
         //Must be shallow as apply gradients only updates cnn[0]'s weights and kernels
@@ -188,16 +215,25 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
     }
     for(int i=0;i<numBatches;i++){ // numBatches of batchSize
         trainBatch(n, d, batchSize,numImageThreads,cnns);
-        if(i%25 == 0 && i>0){ //save every 25 batches
+        if(i%savePeriod == 0 && i>0){ //save every 25 batches
             n->saveKernels();
             n->saveWeights();
-            std::cout << "Saved" << std::endl;
         }
-        std::cout << i << std::endl;
+        int percentageComplete = (float)i/numBatches*100;
+        std::string lastSavedStr = "  Most recent save at batch " + std::to_string((i/savePeriod)*savePeriod);
+        printf("\r[%.*s%.*s] (%d/%d) %d%% complete %.*s",
+            percentageComplete/10, "##########",
+            10-percentageComplete/10, "          ",
+            i,numBatches,
+            percentageComplete,
+            i>=savePeriod?lastSavedStr.length():0,lastSavedStr.c_str()
+        );
+        //stdout is line-buffered but we're not writing a new line with \n and so flush
+        fflush(stdout);
     }
     n->saveWeights();
     n->saveKernels();
-    std::cout << "Done" << std::endl;
+    std::cout << "\r"+ANSI_CLEAR_LINE+"Done" << std::endl;
     uint64_t endTime = getCurrTimeMs();
     int secs = (int)((endTime-startTime)/1000);
     int mins = (int) (secs/60);
@@ -241,6 +277,9 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
                         //Give up if we can't get the image in 5 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
                         p = (*plantImages)[i].load(std::memory_order_acquire);
+                        #if DEBUG
+                            std::cout << "CNN thread "<<threadId << " waiting" << std::endl;
+                        #endif
                         usleep(10000); //10ms
                     }
                     if(p!=nullptr && p->index!=-1 && p->label.length()>0){

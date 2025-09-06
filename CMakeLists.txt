@@ -30,7 +30,7 @@ if(${DEBUG})
     ) 
     target_link_options(Plant-CNN-CPP PRIVATE 
     )
-else()    
+else()
     target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0)
     target_compile_options(Plant-CNN-CPP PRIVATE
         -O3

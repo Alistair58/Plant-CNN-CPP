@@ -5,7 +5,7 @@
 
 //Creating a fresh CNN
 CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
-    numNeurons = {1920,64,47};
+    numNeurons = {1920,960,47};
     numMaps =     {3,  30,60,120};//includes the result of pooling (except final pooling)
     mapDimens =   {128,64,32,16};
     kernelSizes = {   5, 3, 3  };  //0 represents a pooling layer, the last one is excluded
@@ -189,7 +189,7 @@ std::string CNN::forwards(Tensor& imageInt,bool training){
         std::cout << "Pooling took "+std::to_string(endPooling-endConvLayers)+"ms" << std::endl;
     #endif
     //MLP
-    std::uniform_real_distribution dropoutDist(0,1);
+    std::uniform_real_distribution dropoutDist(0.0f,1.0f);
     //Dropout the first layer (the result of pooling)
     if(training && numNeurons.size()!=1){
         float* __restrict__ firstLayerActivations = activations[0].getData();
@@ -199,7 +199,7 @@ std::string CNN::forwards(Tensor& imageInt,bool training){
             }
         }
     }
-    
+
     for(int l=0;l<weights.size();l++){
         float *biasesData = weights[l].getBiases()->getData();
         float* __restrict__ prevActivations = activations[l].getData();

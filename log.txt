@@ -562,6 +562,7 @@ Time for 256 images (with augmentation):
 0:21s,0:21s 4 image threads, 4 cnn threads
 
 LR = 1.5625*10^-4
+Mode 6b:
 16,000: 12.4%
 32,000: 18.6%
 48,000: 26.9%
@@ -595,8 +596,9 @@ Time for 256 images (with augmentation):
 0:17s,0:16s,0:20s 
 
 Note: Saving has now moved to every 25 batches 
-Time for 1 epoch:
 
+
+Model 6c:
 11,840: 12.3% Train: 16.8% (Yes I did restart it)
 27,840: 19.3% Train: 20.4%
 43,840: 19.5% Train: 27.2%
@@ -614,3 +616,55 @@ Fixed the biases issue
 Single threaded:
 11,840: 11.6% Train: 13.1%
 27,840: 18.6% Train: 19.9%
+
+Model 6d:
+Image augmentation changed -> higher probabilites and larger changes
+MLP changed to 1920->64->47
+Dropout of 0.2
+
+LR = 0.002
+11,840: 3%
+27,840: 4.6%
+43,840: 6.5%
+LR = 0.005
+59,840: 5.8%
+75,840: 5.5%
+
+MLP changed to 1920->960->47
+n: test train
+11,840: 8.3%
+27,840: 10.8%
+43,840: 14.3%
+59,840: 13.1%
+91,840: 20.4% 20.9%
+123,840: 19.6% 24.3%
+155,840: 20.6% 23.6%
+187,840: 24.5% 25.3%
+219,840: 24.5% 27.8% 
+251,840: 26.6% 31.0%
+283,840: 25.2% 29.4%
+315,840: 27.7% 32.3%
+347,840: 24.9% 32.1%
+379,840: 29.2% 35.3%
+411,840: 30.1% 34.3%
+443,840: 28.7% 35.6%
+507,840: 32.9% 35.8%
+539,840: 33.8% 40.1%
+571,840: 28.5% 40.3%
+603,840: 33.3% 42.0%
+635,840: 33.9% 41.6%
+LR = 0.02
+667,840: 31% 40.3%
+699,840: 32.9% 43%
+
+Restarting:
+LR = 0.02
+
+
+
+Targets for speeding up: 
+parseImg 15ms - non 3x3 convolution
+Forward convolutional layers: 40ms (/70ms for forwards) - 3x3 convolutions
+MLP 4ms - unnecessary?
+
+Backwards convolutional layers: 100ms - 70ms for one of the layers - BIG target
