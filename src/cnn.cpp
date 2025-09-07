@@ -208,9 +208,16 @@ std::string CNN::forwards(Tensor& imageInt,bool training){
         for(int i=0;i<numNeurons[l+1];i++){
             if(training && l!=weights.size()-1 && dropoutDist(localRng)<=dropoutProb) continue; //drop it out
             int weightsTo = i*numNeurons[l];
-            for(int j=0;j<numNeurons[l];j++){
-                //likely quicker with axv2 but not the bottleneck at the moment (03/09/25)
-                currActivations[i] += prevActivations[j] * currWeights[weightsTo+j]; 
+            int j=0;
+            float *currWeightsTo = currWeights + weightsTo;
+            for(;j+7<numNeurons[l];j+=8){
+                __m256 prevActivationsM256 = _mm256_loadu_ps(&prevActivations[j]);
+                __m256 currWeightsM256 = _mm256_loadu_ps(&currWeightsTo[j]);
+                currActivations[i] += dotProduct8f(prevActivationsM256,currWeightsM256);
+            }
+            //scalar tail
+            for(;j<numNeurons[l];j++){
+                currActivations[i] += prevActivations[j] * currWeightsTo[j]; 
             }
             currActivations[i] += biasesData[i]; //add bias
             if(l!=weights.size()-1){ //We'll softmax the last layer and so relu is unnecessary
@@ -336,22 +343,49 @@ void CNN::mlpBackwards(std::vector<Tensor>& dcDzs){
         float*  __restrict__ currDcDzsData = dcDzs[l].getData();
         float*  __restrict__ activationsData = activations[l].getData();
         float *weightsData = weights[l].getData();
+        float* __restrict__ daDzs = (float*) malloc(activations[l].getTotalSize()*sizeof(float));
+        if(!daDzs){
+            throw std::runtime_error("Failed malloc in mlpBackwards");
+        }
+        for(int j=0;j<activations[l].getTotalSize();j++){
+            daDzs[j] = (((activationsData[j])<=0)?0.01f:1);
+        }
         for(int i=0;i<numNeurons[l+1];i++){
             int weightsNeuron = i*numNeurons[l];
-            for(int j=0;j<numNeurons[l];j++){//NOTE: Weights gradient != negative gradient
-                //Can be AX2'd
-                weightsGradData[weightsNeuron+j] += (nextDcDzsData[i]) * (activationsData[j]);
+            float* weightsToData = weightsData+weightsNeuron;
+            float* weightsToGradData = weightsGradData+weightsNeuron;
+            //NOTE: Weights gradient != negative gradient
+            int j=0;
+            __m256 nextDcDzsM256 = _mm256_set1_ps(nextDcDzsData[i]);
+            for(;j+7<numNeurons[l];j+=8){
+                __m256 weightsGradM256 = _mm256_loadu_ps(&weightsToGradData[j]);
+                __m256 activationsM256 = _mm256_loadu_ps(&activationsData[j]);
+                weightsGradM256 = _mm256_fmadd_ps(nextDcDzsM256,activationsM256,weightsGradM256);
+                _mm256_storeu_ps(&weightsToGradData[j],weightsGradM256);
                 //dC/dw = dC/da_i+1 * da_i+1/dz * dz/dw
-                currDcDzsData[j] +=  (nextDcDzsData[i]) * (weightsData[weightsNeuron+j]) * (((activationsData[j])<=0)?0.01f:1);//next layer
+                __m256 currDcDzsM256 = _mm256_loadu_ps(&currDcDzsData[j]);
+                __m256 weightsM256 = _mm256_loadu_ps(&weightsToData[j]); 
+                __m256 daDzsM256 = _mm256_loadu_ps(&daDzs[j]);
+                __m256 acc = _mm256_mul_ps(nextDcDzsM256,weightsM256);
+                currDcDzsM256 = _mm256_fmadd_ps(acc,daDzsM256,currDcDzsM256);
+                _mm256_storeu_ps(&currDcDzsData[j],currDcDzsM256);
+                //dC/dz_i = dC/dz_i+1 * dz_i+1/da_i * da_i/dz_i                
+            }
+            //scalar tail
+            for(;j<numNeurons[l];j++){
+                weightsToGradData[j] += (nextDcDzsData[i]) * (activationsData[j]);
+                //dC/dw = dC/da_i+1 * da_i+1/dz * dz/dw
+                currDcDzsData[j] +=  (nextDcDzsData[i]) * (weightsToData[j]) * daDzs[j];//next layer
                 //dC/dz_i = dC/dz_i+1 * dz_i+1/da_i * da_i/dz_i
             }
             //bias
             biasesGradData[i] += nextDcDzsData[i];
         }
+        free(daDzs);
     }
 }
 
-void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
+void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding){
     //We are working from the back -> front 
     //Prev is the thing closer to the input image and curr is closer the output vector
     //z = sum(k*x)+b
@@ -374,6 +408,25 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
     std::vector<int> currMapsChildSizes = maps[l].getChildSizes();
     std::vector<int> prevMapsChildSizes = maps[lSub1].getChildSizes();
     std::vector<int> kernelsChildSizes = kernels[lSub1].getChildSizes();
+    const int prevMapsChildSizes1 = prevMapsChildSizes[1];
+    const int currMapsChildSizes1 = currMapsChildSizes[1];
+    const int thisStride2 = 2*thisStride;
+    const int thisStride3 = 3*thisStride;
+    const int thisStride4 = 4*thisStride;
+    const int thisStride5 = 5*thisStride;
+    const int thisStride6 = 6*thisStride;
+    const int thisStride7 = 7*thisStride;
+    const int thisStride8 = 8*thisStride;
+    const __m256i strideOffsets = _mm256_setr_epi32(
+        0,
+        thisStride,
+        thisStride2,
+        thisStride3,
+        thisStride4,
+        thisStride5,
+        thisStride6,
+        thisStride7
+    );
     float buffer[8];
     //Precompute ReLU derivatives so we don't recompute them multiple times
     const size_t currMapSize = maps[l].getTotalSize();
@@ -429,24 +482,15 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
                         xEnd = prevDimens-kernelSize+k+1;
                     }
                     for(int y=yStart;y<yEnd;y+=thisStride){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
-                        int currMapRow = currMapChannel + thisY*currMapsChildSizes[1];
-                        int prevMapRow = prevMapChannel + y*prevMapsChildSizes[1];
+                        int currMapRow = currMapChannel + thisY*currMapsChildSizes1;
+                        int prevMapRow = prevMapChannel + y*prevMapsChildSizes1;
                         float* __restrict__ currMapDcDzsRowBase = currDcDzsData+currMapRow;
+                        float* __restrict__ prevMapRowBase = prevMapData+prevMapRow;
                         int x=xStart;
-                        for(;x+7*thisStride<xEnd;x+=8*thisStride){
-                            int basePrevMapIndex = prevMapRow+x;
-                            const __m256i prevMapIndices = _mm256_setr_epi32(
-                                basePrevMapIndex,
-                                basePrevMapIndex+thisStride,
-                                basePrevMapIndex+thisStride*2,
-                                basePrevMapIndex+thisStride*3,
-                                basePrevMapIndex+thisStride*4,
-                                basePrevMapIndex+thisStride*5,
-                                basePrevMapIndex+thisStride*6,
-                                basePrevMapIndex+thisStride*7
-                            );
-                            float *currMapDcDzsBasePtr = currMapDcDzsRowBase + thisX;
-                            const __m256 prevMapVals = _mm256_i32gather_ps(prevMapData,prevMapIndices,4);      
+                        for(;x+thisStride7<xEnd;x+=thisStride8){
+                            float* __restrict__ currMapDcDzsBasePtr = currMapDcDzsRowBase + thisX;
+                            float* __restrict__ prevMapBasePtr = prevMapRowBase+x;
+                            const __m256 prevMapVals = _mm256_i32gather_ps(prevMapBasePtr,strideOffsets,4);      
                             const __m256 currMapDerivs = _mm256_loadu_ps(currMapDcDzsBasePtr);
                             
                             //Add it (dC/dx*dx/dk) to kernel derivative
@@ -457,20 +501,25 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
                                 __m256 product = _mm256_mul_ps(currMapDerivs,kernelVals);
                                 _mm256_storeu_ps(buffer,product);
                                 //Can't store non-contiguously in avx256
-                                float* __restrict__ prevDcDxsPtr = prevDcDxsData+basePrevMapIndex;
-                                for(int t=0;t<8;t++){ 
-                                    *(prevDcDxsPtr+t*thisStride) += buffer[t];
-                                }
+                                float* __restrict__ prevDcDxsPtr = prevDcDxsData+prevMapRow+x;
+                                *prevDcDxsPtr += buffer[0];
+                                *(prevDcDxsPtr+thisStride) += buffer[1];
+                                *(prevDcDxsPtr+thisStride2) += buffer[2];
+                                *(prevDcDxsPtr+thisStride3) += buffer[3];
+                                *(prevDcDxsPtr+thisStride4) += buffer[4];
+                                *(prevDcDxsPtr+thisStride5) += buffer[5];
+                                *(prevDcDxsPtr+thisStride6) += buffer[6];
+                                *(prevDcDxsPtr+thisStride7) += buffer[7];
                             }
                             thisX+=8;
                         }
                         //scalar tail
                         for(;x<xEnd;x+=thisStride){
-                            int currMapIndex = currMapRow + thisX;
-                            int prevMapIndex = prevMapRow + x;
-                                const float reusable = currDcDzsData[currMapIndex];
-                                sum += (prevMapData[prevMapIndex]) * reusable;//The previous activation
-                                if(l!=1) prevDcDxsData[prevMapIndex] += reusable * kernelVal; //don't have dcDxs for the first layer
+                            const int currMapIndex = currMapRow + thisX;
+                            const int prevMapIndex = prevMapRow + x;
+                            const float reusable = currDcDzsData[currMapIndex];
+                            sum += (prevMapData[prevMapIndex]) * reusable;//The previous activation
+                            if(l!=1) prevDcDxsData[prevMapIndex] += reusable * kernelVal; //don't have dcDxs for the first layer
                             thisX++;
                         }
                         thisX = 0;
@@ -522,6 +571,8 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     std::vector<int> lastMapsChildSizes = maps[lastMapsL].getChildSizes();
     std::vector<int> prevMapsChildSizes = maps[prevMapsL].getChildSizes();
     std::vector<int> lastKernelsChildSizes = kernels[lastKernelsL].getChildSizes();
+    const int lastMapsChildSizes1 = lastMapsChildSizes[1];
+    const int prevMapsChildSizes1 = prevMapsChildSizes[1];
     //don't count the max pixel more than once
     //ChatGPT says uint8_t is quicker than bool as bool does bit packing
     for(int i=0;i<numMaps[lastMapsL];i++){ //for each final map
@@ -559,6 +610,8 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                     }
                     for(int r=0;r<poolArea;r++){
                         int mlpIndex = mlpRegion + r;
+                        //If this activation has been dropped out
+                        if(dcDzs0Data[mlpIndex]==0.0f) continue;
                         int maxPixelIndex = maxPoolIndicesData[mlpIndex];
                         //Curr layer indices
                         int thisY = maxPixelIndex/currDimens;
@@ -572,10 +625,10 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                             //We set xStart and yStart such that it can't happen at the start
                             continue;
                         }      
-                        int lastMapIndex = lastMapChannel + thisY*lastMapsChildSizes[1] + thisX;
-                        int prevMapIndex = prevMapChannel + y*prevMapsChildSizes[1] + x;
+                        int lastMapIndex = lastMapChannel + thisY*lastMapsChildSizes1 + thisX;
+                        int prevMapIndex = prevMapChannel + y*prevMapsChildSizes1 + x;
                         //In the first MLP layer a=relu(x) where x is the max activation pixel from pooling
-                        sum+= prevMapsData[prevMapIndex] * dcDzs0Data[mlpIndex]; //The activation of the previous layer * the correct derivative from pooling
+                        sum += prevMapsData[prevMapIndex] * dcDzs0Data[mlpIndex]; //The activation of the previous layer * the correct derivative from pooling
                         //Conditional as otherwise we would go out of bounds
                         if(dcDxsSize>0) lastDcDxsData[prevMapIndex] += dcDzs0Data[mlpIndex] * kernelData[kernelIndex];//*kernel weight
                     }

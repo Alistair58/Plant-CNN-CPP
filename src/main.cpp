@@ -39,7 +39,6 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
 static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool outputIndividuals);
 
 
-
 //TODO
 //Fix overfitting
 //Speed up - see log.txt
@@ -56,7 +55,7 @@ int main(int argc,char **argv){
     int mode = -1;
     int numBatches = -1;
     bool restart = false;
-    float dropoutProbability = 0.2;
+    float dropoutProbability = 0.1;
     if(argc<3){
         throw std::invalid_argument("argv must contain at least 2 arguments");
     }

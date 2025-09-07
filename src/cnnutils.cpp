@@ -272,7 +272,6 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
             const float k21 = kernelData[kernelChannel + 7];
             const float k22 = kernelData[kernelChannel + 8];
 
-            // broadcast kernel scalars to AVX registers once per channel
             const __m256 K00 = _mm256_set1_ps(k00);
             const __m256 K01 = _mm256_set1_ps(k01);
             const __m256 K02 = _mm256_set1_ps(k02);
@@ -368,6 +367,54 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
             }
         }
     }
+    else if(kernelDimens[2]>=8){
+        //Do x_i*k_i for 8 in the same row with AVX
+        //Saves gathering
+        const int originalImgYBound = imHeight-yKernelRadius;
+        const int originalImgXBound = imWidth-xKernelRadius;
+        const int kernelChildSizes0 = kernelChildSizes[0];
+        const int kernelChildSizes1 = kernelChildSizes[1];
+        const int paddedImgDimens0 = paddedImgDimens[0];
+        const int paddedImageChildSizes0 = paddedImageChildSizes[0];
+        const int paddedImageChildSizes1 = paddedImageChildSizes[1];
+        const int resultChildSizes0 = resultChildSizes[0];
+        const int kernelDimens1 = kernelDimens[1];
+        const int kernelDimens2 = kernelDimens[2];
+        for(int l=0;l<paddedImgDimens0;l++){
+            int newY = 0;
+            int newX = 0;
+            //Precomputing multiplications
+            int kernelChannel = l*kernelChildSizes0;
+            int paddedImageChannel = l*paddedImageChildSizes0-xKernelRadius; //saving the subtractions
+            for(int y=yKernelRadius;y<originalImgYBound;y+=yStride){
+                int resultRow = newY*resultChildSizes0;
+                for(int x=xKernelRadius;x<originalImgXBound;x+=xStride){
+                    int paddedImageChannelShortct = paddedImageChannel + x; 
+                    float* __restrict__ resultPtr = resultData+resultRow+newX;
+                    //May already have result from another input channel
+                    for(int j=0;j<kernelDimens1;j++){
+                        int kernelRow = kernelChannel + j*kernelChildSizes1;
+                        int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImageChildSizes1;
+                        float* __restrict__ paddedImageRowBase = &paddedImageData[paddedImageRow];
+                        float *kernelRowBase = kernelData+kernelRow;
+                        int k=0;
+                        for(;k+7<kernelDimens2;k+=8){
+                            const __m256 K = _mm256_loadu_ps(kernelRowBase+k);
+                            const __m256 R = _mm256_loadu_ps(paddedImageRowBase+k);
+                            *resultPtr += dotProduct8f(K,R);
+                        }
+                        //Scalar tail
+                        for(;k<kernelDimens2;k++){
+                            *resultPtr += *(kernelRowBase+k) * *(paddedImageRowBase+k);
+                        }
+                    }
+                    newX++;
+                }
+                newX=0;
+                newY++;
+            }
+        }
+    }
     else{
         const int originalImgYBound = imHeight-yKernelRadius;
         const int originalImgXBound = imWidth-xKernelRadius;
@@ -402,7 +449,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
                 for(;x+7*xStride<originalImgXBound;x+=8*xStride){
                     int paddedImageChannelShortct = paddedImageChannel + x; 
                     float* __restrict__ resultPtr = resultData+resultRow+newX;
-                    //May already has result from another input channel
+                    //May already have result from another input channel
                     __m256 acc = _mm256_loadu_ps(resultPtr);
                     //do each individual kernel element across 8 convolutions at once
                     //e.g. do kernel (0,0) multiplied by image (0,0),(0,3),(0,6) ...

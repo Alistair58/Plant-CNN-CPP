@@ -657,9 +657,15 @@ LR = 0.02
 667,840: 31% 40.3%
 699,840: 32.9% 43%
 
-Restarting:
-LR = 0.02
-
+Model 6e:
+LR = 0.02, dropout = 0.1
+19,200: 16.600000% 19.000000%
+51,200: 22.100000% 27.400000%
+83,200: 24.000000% 32.400002%
+115,200: 26.700001% 34.500000%
+147,200: 29.500000% 40.900002%
+275,200:  31.9% 44.7%  (It started doing the large gradient thing and so I lost the position)
+307,200: 29.0% 38.5%
 
 
 Targets for speeding up: 
@@ -668,3 +674,28 @@ Forward convolutional layers: 40ms (/70ms for forwards) - 3x3 convolutions
 MLP 4ms - unnecessary?
 
 Backwards convolutional layers: 100ms - 70ms for one of the layers - BIG target
+
+After:
+Backwards convolutional layers: 65ms - 40ms for biggest 
+Backwards takes 70ms
+Forwards takes 70ms 
+
+Image should have xStride of 10
+New big kernel mode: 12ms,11ms
+Non big kernel mode: 10ms,12ms 
+
+xStride of 27
+New big kernel mode:68ms,74ms,68ms
+Non big kernel mode: 64ms,84ms,80ms
+
+
+Time for 256 images:
+0:15s,0:15s,0:15s
+
+Model 6e round 2 - I think the large gradient makes it an unfair comparison
+I want to see if the train accuracy keeps rising 
+It if it keeps rising, I need to look for more anti-overfitting measures
+If it doesn't, do I need a larger model? 
+LR = 0.02, dropout = 0.1
+
+
