@@ -5,10 +5,6 @@ set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-#Enable maximum optimization and native vector instructions
-
-#Takes a very long time as it goes through all libraries e.g. vector.h and isn't particularly effective 
-
 project(Plant-CNN-CPP CXX)
 add_executable(Plant-CNN-CPP
     src/main.cpp
@@ -21,6 +17,7 @@ add_executable(Plant-CNN-CPP
     src/imageutils.cpp
 )
 
+
 if(${DEBUG})
     set(CMAKE_BUILD_TYPE Debug)
     target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=${DEBUG})
@@ -28,10 +25,19 @@ if(${DEBUG})
     -mavx2
     -march=native
     ) 
-    target_link_options(Plant-CNN-CPP PRIVATE 
+elseif(${PROFILING})
+    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0 PROFILING=${PROFILING})
+    target_compile_options(Plant-CNN-CPP PRIVATE
+        -O3
+        -march=native
+        -mavx2
+        -ffast-math
+        -funroll-loops
+        -mfma
+        -ffp-contract=fast
     )
 else()
-    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0)
+    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0 PROFILING=0)
     target_compile_options(Plant-CNN-CPP PRIVATE
         -O3
         -march=native
@@ -50,8 +56,8 @@ target_compile_definitions(Plant-CNN-CPP PRIVATE
 )
 
 
-target_link_libraries(Plant-CNN-CPP
-        )
+target_link_libraries(Plant-CNN-CPP PRIVATE
+)
 
 target_include_directories(Plant-CNN-CPP PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src

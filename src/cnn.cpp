@@ -1,15 +1,18 @@
 #include "cnn.hpp"
+#if PROFILING
+    #include "timer.hpp"
+#endif
 
 //----------------------------------------------------
 //CONSTRUCTORS 
 
 //Creating a fresh CNN
 CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
-    numNeurons = {1920,960,47};
-    numMaps =     {3,  30,60,120};//includes the result of pooling (except final pooling)
-    mapDimens =   {128,64,32,16};
-    kernelSizes = {   5, 3, 3  };  //0 represents a pooling layer, the last one is excluded
-    strides =     {   2, 2, 2,4}; //pooling strides are included
+    numNeurons = {4096,1028,47};
+    numMaps =     {3,  32,64,128,256,256};//includes the result of pooling (except final pooling)
+    mapDimens =   {256,128,64,32,16,16};
+    kernelSizes = {   3,  3, 3, 3, 3  };  //0 represents a pooling layer, the last one is excluded
+    strides =     {   2,  2, 2, 2, 1, 4}; //pooling strides are included
     padding = true;
     this->dropoutProb = dropoutProbability;
 
@@ -123,18 +126,35 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
 //KEY METHODS 
 
 
-std::string CNN::forwards(Tensor& imageInt,bool training){
-    #if DEBUG
-        uint64_t startTime = getCurrTimeMs();
+std::string CNN::forwards(Tensor& imageInt,bool training
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){
+    #if PROFILING
+        Timer *forwardsTimer = parentTimer->addChildTimer("forwards");
     #endif
     reset();
-    maps[0] = parseImg(imageInt);
-    normaliseImg(maps[0],d->getPixelMeans(),d->getPixelStdDevs());
-    #if DEBUG
-        uint64_t startConvLayers = getCurrTimeMs();
+    maps[0] = parseImg(imageInt
+    #if PROFILING
+        ,parentTimer?forwardsTimer:nullptr
+    #endif
+    );
+    normaliseImg(maps[0],d->getPixelMeans(),d->getPixelStdDevs()
+    #if PROFILING
+        ,parentTimer?forwardsTimer:nullptr
+    #endif
+    );
+    #if PROFILING
+        Timer *convolutionalLayersTimer = nullptr;
+        if(parentTimer) convolutionalLayersTimer = forwardsTimer->addChildTimer("convolutionalLayers");
     #endif
     //Convolutional and pooling layers
     for(int l=1;l<numMaps.size();l++){
+        #if PROFILING
+            Timer *convolutionalLayerTimer = nullptr;
+            if(parentTimer) convolutionalLayerTimer = convolutionalLayersTimer->addChildTimer("convolutionLayer"+std::to_string(l-1));
+        #endif
         for(int i=0;i<numMaps[l];i++){
             //Does copy-elision and so no ctor is called and memory is shared
             Tensor currChannel = maps[l].slice({i}); 
@@ -146,19 +166,24 @@ std::string CNN::forwards(Tensor& imageInt,bool training){
             else{   
                 //Slice with biases
                 Tensor kernel = kernels[l-1].slice({i},{i});
-                #if DEBUG >= 2
-                    uint64_t convStart = getCurrTimeMs();
+
+                currChannel = convolution(maps[l-1],kernel,strides[l-1],strides[l-1],padding
+                #if PROFILING
+                    ,parentTimer?convolutionalLayerTimer:nullptr
                 #endif
-                currChannel = convolution(maps[l-1],kernel,strides[l-1],strides[l-1],padding);
-                #if DEBUG >= 2 
-                    std::cout << "Convolutional layer "+std::to_string(l)+" channel "+std::to_string(i)+" took "+std::to_string(getCurrTimeMs()-convStart)+"ms" << std::endl;
-                #endif 
+                );
             }
         }
+        #if PROFILING
+            if(parentTimer) convolutionalLayerTimer->stop();
+        #endif
     }
-    #if DEBUG
-        uint64_t endConvLayers = getCurrTimeMs();
-        std::cout << "Convolutional layers took "+std::to_string(endConvLayers-startConvLayers)+"ms" << std::endl;
+    #if PROFILING
+        Timer *poolingTimer;
+        if(parentTimer){
+            convolutionalLayersTimer->stop();
+            poolingTimer = forwardsTimer->addChildTimer("pooling");
+        }
     #endif
     //Final pooling 
     int poolingDimen = mapDimens[mapDimens.size()-1]/strides[strides.size()-1];
@@ -184,9 +209,12 @@ std::string CNN::forwards(Tensor& imageInt,bool training){
             );
         }
     }
-    #if DEBUG
-        uint64_t endPooling = getCurrTimeMs();
-        std::cout << "Pooling took "+std::to_string(endPooling-endConvLayers)+"ms" << std::endl;
+    #if PROFILING
+        Timer *mlpTimer = nullptr;
+        if(parentTimer){
+            poolingTimer->stop();
+            mlpTimer = forwardsTimer->addChildTimer("mlp");
+        }
     #endif
     //MLP
     std::uniform_real_distribution dropoutDist(0.0f,1.0f);
@@ -234,29 +262,46 @@ std::string CNN::forwards(Tensor& imageInt,bool training){
             result = i;
         }
     }
+    #if PROFILING
+        if(parentTimer) mlpTimer->stop();
+    #endif
     #if DEBUG
-        std::cout << "MLP took "+std::to_string(getCurrTimeMs()-endPooling)+"ms" << std::endl;
-
         d1 outputVec = activations[activations.size()-1].toVector<d1>();
         std::cout << "[";
         for(int i=0;i<outputVec.size()-1;i++){
             std::cout << std::to_string(outputVec[i])+",";
         }
         std::cout << std::to_string(outputVec[outputVec.size()-1])+"]" << std::endl;
-        std::cout << "Forwards took "+std::to_string(getCurrTimeMs()-startTime)+"ms" <<std::endl;
     #endif
     #if DEBUG >= 2
         saveMaps();
         saveActivations();
     #endif
+    #if PROFILING
+        if(parentTimer) forwardsTimer->stop();
+    #endif
     return d->plantNames[result];
 } 
 
-void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to its internal gradient arrays
-    forwards(imageInt,true); //set all the activations
+void CNN::backwards(Tensor& imageInt,std::string answer
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){ //adds the gradient to its internal gradient arrays
+    #if PROFILING
+        Timer *backwardsTimer = nullptr;
+        if(parentTimer) backwardsTimer = parentTimer->addChildTimer("backwards");
+    #endif
+    //set all the activations
+    forwards(imageInt,true
+    #if PROFILING
+        ,parentTimer?backwardsTimer:nullptr
+    #endif
+    ); 
     //Gradients are not reset each time to enable batches
-    #if DEBUG
-        uint64_t mlpStart = getCurrTimeMs();
+    #if PROFILING
+        Timer *mlpTimer = nullptr;
+        if(parentTimer) mlpTimer = backwardsTimer->addChildTimer("mlp");
     #endif
     //MLP derivs
     if(!(d->plantToIndex.contains(answer))){
@@ -282,8 +327,12 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
     }
 
     mlpBackwards(dcDzs); 
-    #if DEBUG
-        std::cout << "Backwards MLP took "+std::to_string(getCurrTimeMs()-mlpStart)+"ms" << std::endl;
+    #if PROFILING
+        Timer *finalPoolingConvTimer = nullptr;
+        if(parentTimer){
+            mlpTimer->stop();
+            finalPoolingConvTimer = backwardsTimer->addChildTimer("finalPoolingConv");
+        }
     #endif
     //x is the image pixel value and so these dcDxs are the derivatives based on pixels which are carried backwards
     std::vector<Tensor> dcDxs(numMaps.size()-2);
@@ -298,36 +347,42 @@ void CNN::backwards(Tensor& imageInt,std::string answer){ //adds the gradient to
             dcDxs[l] = Tensor({numMaps[l+1],mapDimens[l+1],mapDimens[l+1]});
         }
     }
-    #if DEBUG
-       uint64_t convolutionStart = getCurrTimeMs();
-    #endif
     //makes computational sense to do pooling and conv together
     finalPoolingConvBackwards(dcDzs,dcDxs,padding);
-    #if DEBUG 
-        uint64_t prevConvEnd = getCurrTimeMs();
-        std::cout << "finalPoolingConvBackwards took "+std::to_string(prevConvEnd-convolutionStart)+"ms" << std::endl;
+    #if PROFILING
+        Timer *convolutionsTimer = nullptr;
+        if(parentTimer){
+            finalPoolingConvTimer->stop();
+            convolutionsTimer = backwardsTimer->addChildTimer("convolutions");
+        }
     #endif
     for(int l=numMaps.size()-2;l>0;l--){ //>0 is due to the input dimens being included in numMaps and -2 as we've already done the last layer
+        #if PROFILING
+            Timer *convolutionsLayerTimer = nullptr;
+            if(parentTimer){
+                convolutionsLayerTimer = convolutionsTimer->addChildTimer("convolutionsLayer"+std::to_string(l-1)); 
+            }
+        #endif
         if(kernelSizes[l-1]==0){
             poolingConvBackwards(dcDxs, --l,padding); //prev (l-1) --conv-> curr (l) --pool-> pooled (l+1)
             //skip 1 layer as we have done it within poolingConvBackwards
-            #if DEBUG
-                std::cout << "poolingConvBackwards took "+std::to_string(getCurrTimeMs()-prevConvEnd)+"ms" << std::endl;
-                prevConvEnd = getCurrTimeMs(); 
+            #if PROFILING
+                if(parentTimer) convolutionsLayerTimer->addComments("(pooling)");
             #endif
         }
         else{
             convBackwards(dcDxs,l,padding); //prev (l-1) --conv-> curr (l)
-            #if DEBUG 
-                std::cout << "convBackwards took "+std::to_string(getCurrTimeMs()-prevConvEnd)+"ms" << std::endl;
-                prevConvEnd = getCurrTimeMs(); 
-            #endif
         }
+        #if PROFILING
+            if(parentTimer) convolutionsLayerTimer->stop();
+        #endif
         
     }
-    #if DEBUG
-        std::cout << "Backwards Convolution (all layers) took "+std::to_string(getCurrTimeMs()-convolutionStart)+"ms" << std::endl;
-        std::cout << "Backwards took "+std::to_string(getCurrTimeMs()-mlpStart)+"ms" << std::endl;
+    #if PROFILING
+        if(parentTimer){
+            convolutionsTimer->stop();
+            backwardsTimer->stop();
+        }
     #endif
 }
 

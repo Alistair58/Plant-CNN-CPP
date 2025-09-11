@@ -16,6 +16,10 @@
 #include <immintrin.h>
 #include "json.hpp"
 
+#if PROFILING
+    #include "timer.hpp"
+#endif
+
 class CNN; //forward declaration needed for compilation of applyGradients
 
 class CnnUtils {
@@ -40,23 +44,47 @@ class CnnUtils {
 
         //UTILS
         void reset();
-        std::vector<Tensor> loadKernels(bool loadNew);
-        std::vector<Tensor> loadWeights(bool loadNew);
+        std::vector<Tensor> loadKernels(bool loadNew
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif 
+        );
+        std::vector<Tensor> loadWeights(bool loadNew
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif 
+        );
         //For debugging use
         void saveActivations();
         void saveMaps();
 
     public:
         //IMAGE-RELATED
-        Tensor parseImg(Tensor& img);
-        static void normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs);
+        Tensor parseImg(Tensor& img
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        );
+        static void normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif 
+        );
         static Tensor gaussianBlurKernel(int width,int height);
         static Tensor maxPool(Tensor& image,int xStride,int yStride);
         Tensor maxPool(Tensor& image,int xStride,int yStride,int *maxPoolIndices);
         //variable size output
-        static Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding);
+        static Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        );
         //fixed size output
-        static Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding);
+        static Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        );
 
         //MATH UTILS
         static std::vector<float> softmax(std::vector<float> inp);
@@ -91,12 +119,36 @@ class CnnUtils {
         static inline float dotProduct8f(__m256 a,__m256 b);
 
         //UTILS
-        void applyGradients(int batchSize);
-        void applyGradients(std::vector<CNN*>& cnns,int batchSize);
-        void resetKernels();
-        void resetWeights();
-        void saveWeights();
-        void saveKernels();
+        void applyGradients(int batchSize
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif 
+        );
+        void applyGradients(std::vector<CNN*>& cnns,int batchSize
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        );
+        void resetKernels(
+        #if PROFILING
+            Timer *parentTimer = nullptr
+        #endif
+        );
+        void resetWeights(
+        #if PROFILING
+            Timer *parentTimer = nullptr
+        #endif
+        );
+        void saveWeights(
+        #if PROFILING
+            Timer *parentTimer = nullptr
+        #endif    
+        );
+        void saveKernels(
+        #if PROFILING
+            Timer *parentTimer = nullptr
+        #endif
+        );
         void resetGrad(std::vector<Tensor>& grad);
 
         //(GET|SET)TERS

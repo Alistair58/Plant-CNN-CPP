@@ -1,10 +1,18 @@
 #include "plantimage.hpp"
 
-PlantImage::PlantImage(std::string fname, std::string plantName){ //fname can be relative or absolute
+PlantImage::PlantImage(std::string fname, std::string plantName
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){ //fname can be relative or absolute
     if(fname.length()>2 && fname.substr(0,3)!="C:/"){
         fname = datasetDirPath+fname; 
     }
-    this->data = fileToImageTensor(fname);
+    this->data = fileToImageTensor(fname
+    #if PROFILING
+            ,parentTimer
+    #endif
+);
     this->label = plantName;
     std::vector<std::string> fnameSplit = strSplit(fname,{'.','/'});
     if(fnameSplit.size()>1){

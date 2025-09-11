@@ -37,8 +37,16 @@ class Dataset {
         Dataset(std::string dirPathIn,float trainTestSplitRatio);
         std::vector<float> getPixelMeans() const;
         std::vector<float> getPixelStdDevs() const;
-        PlantImage *randomImage(bool test) const;
-        PlantImage randomImageObj(bool test) const;
+        PlantImage *randomImage(bool test
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        ) const;
+        PlantImage randomImageObj(bool test
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        ) const;
         void compilePixelStats() const;
 
 };

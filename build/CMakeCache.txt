@@ -228,6 +228,9 @@ CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 //No help, variable specified on the command line.
 DEBUG:UNINITIALIZED=0
 
+//No help, variable specified on the command line.
+PROFILING:UNINITIALIZED=1
+
 //Value Computed by CMake
 Plant-CNN-CPP_BINARY_DIR:STATIC=C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build
 
@@ -236,6 +239,9 @@ Plant-CNN-CPP_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 Plant-CNN-CPP_SOURCE_DIR:STATIC=C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP
+
+//The directory containing a CMake configuration file for benchmark.
+benchmark_DIR:PATH=benchmark_DIR-NOTFOUND
 
 
 ########################

@@ -11,9 +11,14 @@
 //The pretty looking [{i,j,k}] is too slow for these inner loops
 //So the raw pointer is used
 
-Tensor CnnUtils::parseImg(Tensor& img){
-    #if DEBUG
-        uint64_t startTime = getCurrTimeMs();
+Tensor CnnUtils::parseImg(Tensor& img
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){
+    #if PROFILING
+        Timer *parseImgTimer = nullptr;
+        if(parentTimer) parseImgTimer = parentTimer->addChildTimer("parseImg");
     #endif 
     //The produced images may have a slight black border around them
     //Keeping a constant stride doesn't stretch the image 
@@ -42,17 +47,26 @@ Tensor CnnUtils::parseImg(Tensor& img){
         //Copy-elision
         Tensor sliced = img4d.slice({l});
         //Deep copy
-        result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0],mapDimens[0],false);
+        result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0],mapDimens[0],false
+        #if PROFILING
+        ,parentTimer?parseImgTimer:nullptr
+        #endif 
+        );
     }
-    #if DEBUG
-        std::cout << "parseImg took " << (getCurrTimeMs()-startTime) << "ms" << std::endl;
-    #endif
+    #if PROFILING
+        if(parentTimer) parseImgTimer->stop();
+    #endif 
     return result;
 }
 
-void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs){
-    #if DEBUG
-        uint64_t startTime = getCurrTimeMs();
+void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs
+#if PROFILING
+    ,Timer *parentTimer
+#endif 
+){
+    #if PROFILING
+        Timer *normaliseImgTimer = nullptr;
+        if(parentTimer) normaliseImgTimer = parentTimer->addChildTimer("normaliseImg");
     #endif 
     std::vector<int> imgDimens = img.getDimens();
     if(imgDimens.size()!=3){
@@ -69,8 +83,8 @@ void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vecto
             }
         }
     }
-    #if DEBUG
-        std::cout << "normaliseImg took " << (getCurrTimeMs()-startTime) << "ms" << std::endl;
+    #if PROFILING
+        if(parentTimer) normaliseImgTimer->stop();
     #endif
 }
 
@@ -164,9 +178,16 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride,int *maxPoolIndic
     return result;
 }
 //variable size output
-Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,const int yStride,bool padding){ 
-    #if DEBUG >=2
-        uint64_t convStart = getCurrTimeMs();
+Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,const int yStride,bool padding
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){ 
+    #if PROFILING
+        Timer *convolutionTimer = nullptr;
+        if(parentTimer) convolutionTimer = parentTimer->addChildTimer("convolution");
+        Timer *preconvolutionTimer = nullptr;
+        if(parentTimer) preconvolutionTimer = convolutionTimer->addChildTimer("preconvolution");
     #endif 
     std::vector<int> imgDimens = image.getDimens();
     std::vector<int> kernelDimens = kernel.getDimens();
@@ -198,9 +219,6 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
     float*  __restrict__ paddedImageData = paddedImage.getData();
     std::vector<int> imageChildSizes = image.getChildSizes();
     std::vector<int> paddedImageChildSizes = paddedImage.getChildSizes();
-    #if DEBUG >=2
-        uint64_t paddingLoopStart = getCurrTimeMs();
-    #endif
     if(padding){
         for(int l=0;l<imgDimens[0];l++){ //for each image channel
             int imageChannel = l*imageChildSizes[0];
@@ -223,15 +241,15 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
     else{
         paddedImage = image; //The assignment operator performs a value by value copy of the data
     }
-    #if DEBUG >=2
-        std::cout << "Padding loop took "+std::to_string(getCurrTimeMs()-paddingLoopStart)+"ms padding was set to "+((padding)?"true":"false") << std::endl;
-    #endif
     const int imHeight = paddedImgDimens[1]; //assumption that all channels have same dimensions
     const int imWidth = paddedImgDimens[2];
+    
     Tensor result({
         (int)ceil((float)(imHeight-2*yKernelRadius)/yStride),
         (int)ceil((float)(imWidth-2*xKernelRadius)/xStride)
     }); //0 initialised
+
+
     float *kernelData = kernel.getData();
     float*  __restrict__ resultData = result.getData();
     Tensor *biases = kernel.getBiases();
@@ -245,8 +263,10 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
         throw std::invalid_argument("Too many biases for a 3D kernel");
     }
     //No biases is valid
-    #if DEBUG >=2
-        uint64_t convLoopStart = getCurrTimeMs();
+    #if PROFILING
+        if(parentTimer) preconvolutionTimer->stop();
+        Timer *loopTimer = nullptr;
+        if(parentTimer) loopTimer = convolutionTimer->addChildTimer("loop");
     #endif
     if(kernelDimens[1]==3 &&  kernelDimens[2]==3){
         //unrolled 3x3 version 
@@ -495,10 +515,6 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
     }
     
 
-    #if DEBUG >=2
-        uint64_t convLoopEnd = getCurrTimeMs();
-        std::cout << "Conv loop took "+std::to_string(convLoopEnd-convLoopStart)+"ms" << std::endl;
-    #endif 
     std::vector<int> resultDimens = result.getDimens();
     for(int y=0;y<resultDimens[0];y++){
         int resultRow = y*resultChildSizes[0];
@@ -506,21 +522,43 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
             resultData[resultRow+x] = leakyRelu(resultData[resultRow+x]+bias); //has to be here as otherwise we would relu before we've done all the channels
         }
     }
-    #if DEBUG >=2
-        std::cout << "Conv function took "+std::to_string(getCurrTimeMs()-convStart)+"ms" << std::endl;
+    #if PROFILING
+        if(parentTimer){
+            loopTimer->stop();
+            convolutionTimer->stop();
+        } 
     #endif
     return result;
 }
 
 
 //fixed size output
-Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding){ 
+Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){ 
+    #if PROFILING
+        Timer *fixedSizedConvolutionTimer = nullptr;
+        if(parentTimer) fixedSizedConvolutionTimer = parentTimer->addChildTimer("fixedSizedConvolution");
+    #endif
     //by padding a normal convolution with 0s
-    Tensor convResult = convolution(image, kernel, xStride, yStride,padding);
+    Tensor convResult = convolution(image, kernel, xStride, yStride,padding
+    #if PROFILING
+        ,parentTimer?fixedSizedConvolutionTimer:nullptr
+    #endif
+    );
     std::vector<int> convResultDimens = convResult.getDimens();
     if(convResultDimens[0]==newHeight && convResultDimens[1]==newWidth){
+        #if PROFILING
+            fixedSizedConvolutionTimer->stop();
+        #endif
         return convResult;
     }
+    #if PROFILING
+        Timer *paddingTimer = nullptr;
+        if(parentTimer) paddingTimer = fixedSizedConvolutionTimer->addChildTimer("padding");
+    #endif
     Tensor result({newHeight,newWidth}); //The data is 0 initialised
     float*  __restrict__ convResultData = convResult.getData();
     float*  __restrict__ resultData = result.getData();
@@ -532,6 +570,12 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
             resultData[resultRow+x] = convResultData[convResultRow+x];
         }
     }
+    #if PROFILING
+        if(parentTimer){
+            paddingTimer->stop();
+            fixedSizedConvolutionTimer->stop();
+        }
+    #endif
     return result;
 }
 
@@ -578,9 +622,14 @@ void CnnUtils::reset(){
     }
 }
 
-std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
-    #if DEBUG
-        uint64_t start = getCurrTimeMs();
+std::vector<Tensor> CnnUtils::loadKernels(bool loadNew
+#if PROFILING
+    ,Timer *parentTimer
+#endif 
+){
+    #if PROFILING
+        Timer *loadKernelsTimer = nullptr;
+        if(parentTimer) loadKernelsTimer = parentTimer->addChildTimer("loadKernels");
     #endif
     if(loadNew){
         std::vector<Tensor> result(numMaps.size()-1);
@@ -595,8 +644,11 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
                 result[l].setBiases(biases);
             }
         }
+        #if PROFILING
+            if(parentTimer) loadKernelsTimer->stop("(loadNew)");
+        #endif
         #if DEBUG
-            std::cout << "loadKernels (loadNew) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+            std::cout << "Loaded kernels" << std::endl;
         #endif
         return result;
     }
@@ -614,11 +666,16 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
             int height = kernelsVec[i][0][0].size();
             int width = kernelsVec[i][0][0][0].size();
             result[i] = Tensor({numOutChans,numInChans,height,width});
+            float* __restrict__ resultIPtr = result[i].getData();
+            std::vector<int> childSizes = result[i].getChildSizes();
             for(int j=0;j<numOutChans;j++){
+                float* __restrict__ resultJPtr = resultIPtr+j*childSizes[0];
                 for(int k=0;k<numInChans;k++){
+                    float* __restrict__ resultKPtr = resultJPtr+k*childSizes[1];
                     for(int l=0;l<height;l++){
+                        float* __restrict__ resultLPtr = resultKPtr+l*childSizes[2];
                         for(int m=0;m<width;m++){
-                            *((result[i])[{j,k,l,m}]) = kernelsVec[i][j][k][l][m];
+                            *(resultLPtr+m) = kernelsVec[i][j][k][l][m];
                         }
                     }
                 }
@@ -641,16 +698,24 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew){
             result[i].setBiases(biases);
         }
         #if DEBUG
-            std::cout << "loadKernels (loadOld) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+            std::cout << "Loaded kernels" << std::endl;
+        #endif
+        #if PROFILING
+            if(parentTimer) loadKernelsTimer->stop("(loadOld)");
         #endif
         return result;
     }
 }
 
-std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
+std::vector<Tensor> CnnUtils::loadWeights(bool loadNew
+#if PROFILING
+    ,Timer *parentTimer
+#endif 
+){
     //Each layer of weights is a tensor
-    #if DEBUG
-        uint64_t start = getCurrTimeMs();
+    #if PROFILING
+        Timer *loadWeightsTimer = nullptr;
+        if(parentTimer) loadWeightsTimer = parentTimer->addChildTimer("loadWeights");
     #endif
     if(loadNew){
         std::vector<Tensor> result((int)numNeurons.size()-1);
@@ -660,8 +725,11 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
             layer.setBiases(biases);
             result[l] = layer;
         }
+        #if PROFILING
+            if(parentTimer) loadWeightsTimer->stop("(loadNew)");
+        #endif
         #if DEBUG
-            std::cout << "loadWeights (loadNew) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+            std::cout << "Loaded weights" << std::endl;
         #endif
         return result;
     }
@@ -675,9 +743,13 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
         //Copy values into tensors
         for(int i=0;i<weightsVec.size();i++){
             result[i] = Tensor({(int)weightsVec[i].size(),(int)weightsVec[i][0].size()});
+            float* __restrict__ resultIPtr = result[i].getData();
+            std::vector<int> childSizes = result[i].getChildSizes();
+            const int childSizes0 = childSizes[0];
             for(int j=0;j<weightsVec[i].size();j++){
+                float* __restrict resultJPtr = resultIPtr + j*childSizes0;
                 for(int k=0;k<weightsVec[i][j].size();k++){
-                    *(result[i][{j,k}]) = weightsVec[i][j][k];
+                    *(resultJPtr+k) = weightsVec[i][j][k];
                 }
             }
         }
@@ -696,35 +768,48 @@ std::vector<Tensor> CnnUtils::loadWeights(bool loadNew){
             }
             result[i].setBiases(biases);
         }
+        #if PROFILING
+            if(parentTimer) loadWeightsTimer->stop("(loadOld)");
+        #endif
         #if DEBUG
-            std::cout << "loadWeights (loadOld) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+            std::cout << "Loaded weights" << std::endl;
         #endif
         return result;
     }
 }
        
-void CnnUtils::applyGradients(int batchSize){ //(and reset gradients)
-    #if DEBUG
-        uint64_t start = getCurrTimeMs();
+void CnnUtils::applyGradients(int batchSize
+#if PROFILING
+    ,Timer *parentTimer
+#endif 
+){ //(and reset gradients)
+    #if PROFILING
+        Timer *applyGradientsSingleTimer = nullptr;
+        if(parentTimer) applyGradientsSingleTimer = parentTimer->addChildTimer("applyGradientsSingle");
     #endif
     applyGradient(kernels,kernelsGrad,batchSize);
     applyGradient(weights,weightsGrad,batchSize);
-    #if DEBUG
-        std::cout << "applyGradients took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+    #if PROFILING
+        if(parentTimer) applyGradientsSingleTimer->stop();
     #endif
 }
 
-void CnnUtils::applyGradients(std::vector<CNN*>& cnns,int batchSize){ //(and reset gradients)
-    #if DEBUG
-        uint64_t start = getCurrTimeMs();
+void CnnUtils::applyGradients(std::vector<CNN*>& cnns,int batchSize
+#if PROFILING
+    ,Timer *parentTimer
+#endif 
+){ //(and reset gradients)
+    #if PROFILING
+        Timer *applyGradientsMultipleTimer = nullptr;
+        if(parentTimer) applyGradientsMultipleTimer = parentTimer->addChildTimer("applyGradientsMultiple");
     #endif
     //this cnn must be included in cnns
     for(int n=0;n<cnns.size();n++){
         applyGradient(kernels,(cnns[n]->kernelsGrad),batchSize);
         applyGradient(weights,(cnns[n]->weightsGrad),batchSize);
     }
-    #if DEBUG
-        std::cout << "applyGradients (multiple CNNs) took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+    #if PROFILING
+        if(parentTimer) applyGradientsMultipleTimer->stop();
     #endif
 }
 
@@ -812,9 +897,14 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
     }
 }
 
-void CnnUtils::resetKernels(){
-    #if DEBUG
-        uint64_t startTime = getCurrTimeMs();
+void CnnUtils::resetKernels(
+#if PROFILING
+    Timer *parentTimer
+#endif 
+){
+    #if PROFILING
+        Timer *resetKernelsTimer = nullptr;
+        if(parentTimer) resetKernelsTimer = parentTimer->addChildTimer("resetKernels");
     #endif
     std::random_device rd{}; //Non-deterministic seeder
     std::mt19937 gen{rd()}; //Mersenne twister 
@@ -845,16 +935,26 @@ void CnnUtils::resetKernels(){
         float *biasesData = biases->getData();
         memset(biasesData,0,biasesSize*sizeof(float));
     }
-    #if DEBUG
-        std::cout << "resetKernels took "+std::to_string(getCurrTimeMs()-startTime)+"ms" << std::endl;
+    
+    saveKernels(
+    #if PROFILING
+        parentTimer?resetKernelsTimer:nullptr
     #endif
-    saveKernels();
+    );
+    #if PROFILING
+        if(parentTimer) resetKernelsTimer->stop();
+    #endif
     
 }
 
-void CnnUtils::resetWeights() {
-    #if DEBUG
-        uint64_t startTime = getCurrTimeMs();
+void CnnUtils::resetWeights(
+#if PROFILING
+    Timer *parentTimer
+#endif 
+) {
+    #if PROFILING
+        Timer *resetWeightsTimer = nullptr;
+        if(parentTimer) resetWeightsTimer = parentTimer->addChildTimer("resetWeights");
     #endif
     std::random_device rd{}; //Non-deterministic seeder
     std::mt19937 gen{rd()}; //Mersenne twister 
@@ -877,18 +977,27 @@ void CnnUtils::resetWeights() {
         float *biasesData = biases->getData();
         memset(biasesData,0,biasesSize*sizeof(float));
     }
-    #if DEBUG
-        std::cout << "resetWeights took "+std::to_string(getCurrTimeMs()-startTime)+"ms" << std::endl;
+    saveWeights(
+    #if PROFILING
+       parentTimer?resetWeightsTimer:nullptr
     #endif
-    saveWeights();
+    );
+    #if PROFILING
+        if(parentTimer) resetWeightsTimer->stop();
+    #endif
     
 }
 
 
 
-void CnnUtils::CnnUtils::saveWeights() {
-    #if DEBUG
-        uint64_t start = getCurrTimeMs();
+void CnnUtils::CnnUtils::saveWeights(
+#if PROFILING
+    Timer *parentTimer
+#endif 
+) {
+    #if PROFILING
+        Timer *saveWeightsTimer = nullptr;
+        if(parentTimer) saveWeightsTimer = parentTimer->addChildTimer("saveWeights");
     #endif
     d3 weightsVec(weights.size());
     d2 biasesVec(weights.size());
@@ -906,15 +1015,19 @@ void CnnUtils::CnnUtils::saveWeights() {
     nlohmann::json jsonBiases = biasesVec;
     biasesFile << jsonBiases.dump();
     biasesFile.close();
-
-    #if DEBUG
-        std::cout << "saveWeights took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+    #if PROFILING
+        if(parentTimer) saveWeightsTimer->stop();
     #endif
 }
 
-void CnnUtils::saveKernels() {
-    #if DEBUG
-        uint64_t start = getCurrTimeMs();
+void CnnUtils::saveKernels(
+#if PROFILING
+    Timer *parentTimer
+#endif    
+) {
+    #if PROFILING
+        Timer *saveKernelsTimer = nullptr;
+        if(parentTimer) saveKernelsTimer = parentTimer->addChildTimer("saveKernels");
     #endif
     d5 kernelsVec(kernels.size());
     d2 biasesVec(kernels.size());
@@ -933,8 +1046,8 @@ void CnnUtils::saveKernels() {
     biasesFile << jsonBiases.dump();
     biasesFile.close();
 
-    #if DEBUG
-        std::cout << "saveKernels took "+std::to_string(getCurrTimeMs()-start)+"ms" << std::endl;
+    #if PROFILING
+        if(parentTimer) saveKernelsTimer->stop();
     #endif
 }
 

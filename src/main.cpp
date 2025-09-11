@@ -26,22 +26,32 @@ static int batchSize = 64;
 #define TRAIN 1
 #define TEST 2
 
+#if PROFILING
+    #include "timer.hpp"
+#endif
+
 std::string currDir = std::filesystem::current_path().string();
 std::string datasetDirPath = "C:/Users/Alistair/Pictures/house_plant_species";
-const std::string ANSI_RED = "\u001B[31m";
-const std::string ANSI_RESET = "\u001B[0m";
-const std::string ANSI_GREEN = "\u001B[32m";
-const std::string ANSI_CLEAR_LINE = "\033[2K";
+
 std::atomic<int> missedCount{0};
 
-static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std::vector<CNN*>& cnns);
+static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std::vector<CNN*>& cnns
+#if PROFILING
+    ,Timer *parentTimer = nullptr
+#endif
+);
+
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads);
 static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool outputIndividuals);
 
+//DONE
+
 
 //TODO
-//Fix overfitting
-//Speed up - see log.txt
+//Speed up preconvolution
+//Speed up something else
+//Test new larger model
+
 
 int main(int argc,char **argv){
     //("train"|"test") 
@@ -55,7 +65,7 @@ int main(int argc,char **argv){
     int mode = -1;
     int numBatches = -1;
     bool restart = false;
-    float dropoutProbability = 0.1;
+    float dropoutProbability = 0.2;
     if(argc<3){
         throw std::invalid_argument("argv must contain at least 2 arguments");
     }
@@ -173,12 +183,19 @@ int main(int argc,char **argv){
 }
     
 static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool outputIndividuals){
+    #if PROFILING
+        Timer testTimer = Timer("test");
+    #endif
     int correctCount = 0;
     for (int i=0;i<numTest;i++) {
         //true for test data and false for training data
         PlantImage pI = d->randomImageObj(!testOnTrainingData);
         if(pI.label.length()!=0){
-            std::string response = n->forwards(pI.data,false);
+            std::string response = n->forwards(pI.data,false
+            #if PROFILING
+                ,&testTimer
+            #endif
+            );
             bool correct = response==pI.label;
             if(outputIndividuals){
                 std::cout << ("("+ std::to_string(i+1) + "/" + std::to_string(numTest)+")  "+((correct)?ANSI_GREEN:ANSI_RED)+
@@ -200,9 +217,16 @@ static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool ou
         else i--;
     }
     std::cout << ("\r"+ANSI_CLEAR_LINE+"Accuracy: "+std::to_string((float)correctCount*100/numTest)+"%") <<std::endl;
+    #if PROFILING
+        testTimer.stop();
+        testTimer.output();
+    #endif
 }
 
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads){
+    #if PROFILING
+        Timer trainTimer = Timer("train");
+    #endif
     uint64_t startTime = getCurrTimeMs();
     std::vector<CNN*> cnns(numCnnThreads);
     cnns[0] = n;
@@ -213,10 +237,22 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
         cnns[i] = new CNN(n,LR,d,false); 
     }
     for(int i=0;i<numBatches;i++){ // numBatches of batchSize
-        trainBatch(n, d, batchSize,numImageThreads,cnns);
+        trainBatch(n, d, batchSize,numImageThreads,cnns
+        #if PROFILING
+            ,&trainTimer
+        #endif
+        );
         if(i%savePeriod == 0 && i>0){ //save every 25 batches
-            n->saveKernels();
-            n->saveWeights();
+            n->saveKernels(
+            #if PROFILING
+                &trainTimer
+            #endif
+            );
+            n->saveWeights(
+            #if PROFILING
+                &trainTimer
+            #endif
+            );
         }
         int percentageComplete = (float)i/numBatches*100;
         std::string lastSavedStr = "  Most recent save at batch " + std::to_string((i/savePeriod)*savePeriod);
@@ -230,8 +266,16 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
         //stdout is line-buffered but we're not writing a new line with \n and so flush
         fflush(stdout);
     }
-    n->saveWeights();
-    n->saveKernels();
+    n->saveWeights(
+    #if PROFILING
+        &trainTimer
+    #endif
+    );
+    n->saveKernels(
+    #if PROFILING
+        &trainTimer
+    #endif    
+    );
     std::cout << "\r"+ANSI_CLEAR_LINE+"Done" << std::endl;
     uint64_t endTime = getCurrTimeMs();
     int secs = (int)((endTime-startTime)/1000);
@@ -247,10 +291,22 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
     for(int i=1;i<cnns.size();i++){
         delete cnns[i];
     }
+    #if PROFILING
+        trainTimer.stop();
+        trainTimer.output();
+    #endif
 }
 
 
-static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std::vector<CNN*>& cnns){ //batch size must be a multiple of numThreads
+static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std::vector<CNN*>& cnns
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){ //batch size must be a multiple of numThreads
+    #if PROFILING
+        Timer *batchTimer = nullptr;
+        if(parentTimer) batchTimer = parentTimer->addChildTimer("batch");
+    #endif
     int numCnnThreads = cnns.size();
     std::vector<std::thread> cnnThreads(numCnnThreads);
     std::vector<std::thread> imageThreads(numImageThreads);
@@ -258,20 +314,44 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
     for(int i=0;i<batchSize;i++) plantImages[i].store(nullptr,std::memory_order_relaxed);
     for(int iT=0;iT<numImageThreads;iT++){
         imageThreads[iT] = std::thread(
-            [](int threadId,int batchSize,int numImageThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d){
+            [](int threadId,int batchSize,int numImageThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d
+            #if PROFILING
+                ,Timer *imageThreadTimer
+            #endif
+            ){
                 for(int i=threadId;i<batchSize;i+=numImageThreads){
-                    PlantImage *p = d->randomImage(false);
+                    PlantImage *p = d->randomImage(false
+                    #if PROFILING 
+                        ,imageThreadTimer?imageThreadTimer:nullptr
+                    #endif
+                    );
                     (*plantImages)[i].store(p,std::memory_order_release); 
                 }
+                #if PROFILING 
+                    if(imageThreadTimer) imageThreadTimer->stop();
+                #endif
             },iT,batchSize,numImageThreads,&plantImages,d
+            #if PROFILING
+                ,parentTimer?batchTimer->addChildTimer("imageThread"+std::to_string(iT)):nullptr
+            #endif
         );
     }
     for(int cT=0;cT<numCnnThreads;cT++){ 
         cnnThreads[cT]= std::thread(
-            [](int threadId,int batchSize,int numCnnThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d,std::vector<CNN*> *cnns){
+            [](int threadId,int batchSize,int numCnnThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d,std::vector<CNN*> *cnns
+            #if PROFILING
+                ,Timer *cnnThreadTimer
+            #endif
+            ){
                 for (int i=threadId;i<batchSize;i+=numCnnThreads) {
                     uint64_t startTime = getCurrTimeMs();
                     PlantImage* p = (*plantImages)[i].load(std::memory_order_acquire);
+                    #if PROFILING
+                        Timer *waitingForImageTimer = nullptr;
+                        if(cnnThreadTimer){
+                            waitingForImageTimer = cnnThreadTimer->addChildTimer("waitingForImage");
+                        }
+                    #endif
                     while (p == nullptr && (getCurrTimeMs() - startTime) < 5000){
                         //Give up if we can't get the image in 5 seconds
                         //Note: this doesn't stop the image from being loaded (if it's still loading)
@@ -281,8 +361,15 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
                         #endif
                         usleep(10000); //10ms
                     }
+                    #if PROFILING
+                        if(cnnThreadTimer) waitingForImageTimer->stop();
+                    #endif
                     if(p!=nullptr && p->index!=-1 && p->label.length()>0){
-                        (*cnns)[threadId]->backwards(p->data,p->label);
+                        (*cnns)[threadId]->backwards(p->data,p->label
+                        #if PROFILING
+                            ,cnnThreadTimer?cnnThreadTimer:nullptr
+                        #endif
+                        );
                     }
                     else missedCount.fetch_add(1, std::memory_order_relaxed);
                     if(p!=nullptr){
@@ -291,7 +378,13 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
                     }
                     //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
                 }
+                #if PROFILING
+                    if(cnnThreadTimer) cnnThreadTimer->stop();
+                #endif 
             },cT,batchSize,numCnnThreads,&plantImages,d,&cnns
+            #if PROFILING
+                ,parentTimer?batchTimer->addChildTimer("cnnThread"+std::to_string(cT)):nullptr
+            #endif
         );
     }
     int i=0;
@@ -312,7 +405,11 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
         #endif
         i++;
     }
-    n->applyGradients(cnns,batchSize);
+    n->applyGradients(cnns,batchSize
+    #if PROFILING
+        ,parentTimer?batchTimer:nullptr
+    #endif
+    );
     for(i=0;i<batchSize;i++){
         PlantImage *p = plantImages[i].load(std::memory_order_acquire);
         if(p!=nullptr){
@@ -320,5 +417,8 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
             delete p;
         }
     }
+    #if PROFILING
+        if(parentTimer) batchTimer->stop();
+    #endif
 }
 

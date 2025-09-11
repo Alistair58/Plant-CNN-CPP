@@ -15,8 +15,16 @@ class CNN : public CnnUtils{
         CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights=true);
     
         //KEY METHODS 
-        std::string forwards(Tensor& imageInt,bool training);
-        void backwards(Tensor& imageInt,std::string answer);
+        std::string forwards(Tensor& imageInt,bool training
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif 
+        );
+        void backwards(Tensor& imageInt,std::string answer
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        );
     private:
         //BACKPROPAGATION-RELATED
         void mlpBackwards(std::vector<Tensor>& dcDzs);

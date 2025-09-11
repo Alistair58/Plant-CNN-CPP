@@ -9,13 +9,21 @@
 #include "stb_image.h"
 #include "utils.hpp"
 
+#if PROFILING
+    #include "timer.hpp"
+#endif
+
 class PlantImage:public ImageUtils{
     public:
         std::string label = "";
         int index = -1;
 
         PlantImage() {};
-        PlantImage(std::string fname, std::string plantName);
+        PlantImage(std::string fname, std::string plantName
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        );
         
 };
 

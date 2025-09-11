@@ -72,6 +72,10 @@
         "list": "cpp",
         "queue": "cpp",
         "stack": "cpp",
-        "text_encoding": "cpp"
+        "text_encoding": "cpp",
+        "executor": "cpp",
+        "io_context": "cpp",
+        "netfwd": "cpp",
+        "timer": "cpp"
     }
 }

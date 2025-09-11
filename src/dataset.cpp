@@ -1,5 +1,7 @@
 #include "dataset.hpp"
-
+#if PROFILING
+    #include "timer.hpp"
+#endif
 
 void Dataset::loadPixelStats(){
     std::ifstream statsFile(currDir+"/res/stats.json");
@@ -38,7 +40,6 @@ Dataset::Dataset(std::string dirPathInp,float trainTestSplitRatio){
             std::string folderName = std::regex_replace(folderPath,parentFoldersRegex,"");
             plantNames.push_back(folderName);
             for(const auto &subEntry:fs::directory_iterator(entry)){
-                std::regex allExceptExtensionRegex("^[^\\.]+");
                 std::string filePath = subEntry.path().string();
                 //Some plants have a . in their name and so a regex isn't applicable e.g. "Begonia (Begonia spp.)"
                 std::vector<std::string> filePathSections = strSplit(filePath,{'.'});
@@ -68,7 +69,11 @@ std::vector<float> Dataset::getPixelStdDevs() const{
 }
 
 
-PlantImage *Dataset::randomImage(bool test) const{
+PlantImage *Dataset::randomImage(bool test
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+) const{
     std::uniform_int_distribution<int> distIndex(0, this->size - 1);
     int index = distIndex(localRng);
     int prevIndex = this->size;
@@ -99,12 +104,20 @@ PlantImage *Dataset::randomImage(bool test) const{
             std::string plantName = plantNames[i];
             std::string fname = dirPath+"/"+plantName+"/"+std::to_string(subIndex);
             for(std::string fileExtension:fileExtensions){ //Try all file extensions
-                PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName);
+                PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName
+                #if PROFILING
+                    ,parentTimer
+                #endif
+                );
                 if(plantImage->data.getTotalSize() > 0){ //valid image
                     #if DEBUG
                         std::cout << "Loaded: "+fname+fileExtension << std::endl;
                     #endif 
-                    if(!test) ImageUtils::augment(plantImage->data);
+                    if(!test) ImageUtils::augment(plantImage->data
+                    #if PROFILING
+                        ,parentTimer
+                    #endif
+                    );
                     return plantImage;
                 }
                 delete plantImage;
@@ -116,8 +129,16 @@ PlantImage *Dataset::randomImage(bool test) const{
     return new PlantImage("","");
 }
 
-PlantImage Dataset::randomImageObj(bool test) const{
-    PlantImage *ptr = randomImage(test);
+PlantImage Dataset::randomImageObj(bool test
+#if PROFILING
+    ,Timer *parentTimer
+#endif 
+) const{
+    PlantImage *ptr = randomImage(test
+    #if PROFILING
+        ,parentTimer
+    #endif
+    );
     PlantImage obj = *ptr;
     delete ptr;
     return obj;

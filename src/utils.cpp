@@ -28,14 +28,14 @@ uint64_t getCurrTimeMs(){
     std::chrono::milliseconds time = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()
     );
-    return (int64_t) time.count();
+    return (uint64_t) time.count();
 }
 
 uint64_t getCurrTimeUs(){
     std::chrono::microseconds time = std::chrono::duration_cast<std::chrono::microseconds>(
         std::chrono::system_clock::now().time_since_epoch()
     );
-    return (int64_t) time.count();
+    return (uint64_t) time.count();
 }
 
 std::string toLower(std::string s){
@@ -51,3 +51,18 @@ thread_local std::mt19937 localRng([]{
     uint64_t seed = rd() ^ time_seed ^ (thread_hash << 1);
     return std::mt19937((uint32_t)seed);
 }());
+
+const std::string ANSI_RED = "\u001B[31m";
+const std::string ANSI_RESET = "\u001B[0m";
+const std::string ANSI_GREEN = "\u001B[32m";
+const std::string ANSI_CLEAR_LINE = "\033[2K";
+//I don't want black or white
+const std::string ANSI_COLOURS[6] = {
+    "\u001B[31m", //Red
+    "\u001B[32m", //Green
+    "\u001B[33m", //Yellow
+    "\u001B[34m", //Blue
+    "\u001B[35m", //Purple
+    "\u001B[36m"  //Cyan
+};
+const int NUM_ANSI_COLOURS = 6;
