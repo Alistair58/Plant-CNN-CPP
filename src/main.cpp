@@ -48,8 +48,7 @@ static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool ou
 
 
 //TODO
-//Speed up preconvolution
-//Speed up something else
+//Speed up backwards convolution
 //Test new larger model
 
 

@@ -25,7 +25,7 @@ class Timer{
         int64_t cumulativeTimeTakenUs = -1;
         uint64_t numUsages = 0;
         bool inProgress = false;
-        std::string notes = "";
+        std::string note = "";
         void reuse(){
             if(this->inProgress){
                 throw std::runtime_error("Timer cannot be reused if currently timing");
@@ -37,28 +37,30 @@ class Timer{
     public:
         Timer(){};
 
-        Timer(std::string timerName,std::string comments=""){
+        Timer(std::string timerName,std::string noteInput=""){
             this->name = timerName;
             this->numUsages = 1;
             this->inProgress = true;
             this->startTime = Clock::now();
-            this->notes += comments;
+            this->note = noteInput;
         }
-        void stop(std::string comments=""){
+        void stop(std::string noteInput=""){
             if(this->cumulativeTimeTakenUs==-1) this->cumulativeTimeTakenUs = 0;
             this->cumulativeTimeTakenUs += (int64_t) std::chrono::duration_cast<std::chrono::microseconds>(Clock::now()-startTime).count();
             this->inProgress = false;
-            this->notes += comments;
+            if(noteInput.size()>0){
+                this->note = noteInput;
+            }
         }
 
-        Timer *addChildTimer(std::string childTimerName){
+        Timer *addChildTimer(std::string childTimerName,std::string noteInput=""){
             for(int i=0;i<childTimers.size();i++){
-                if(childTimers[i]->name==childTimerName){
+                if(childTimers[i]->name==childTimerName && childTimers[i]->note==noteInput){
                     childTimers[i]->reuse();
                     return childTimers[i].get();
                 }
             }
-            childTimers.emplace_back(std::make_unique<Timer>(childTimerName));
+            childTimers.emplace_back(std::make_unique<Timer>(childTimerName,noteInput));
             return childTimers.back().get();
         }
 
@@ -75,7 +77,7 @@ class Timer{
             float meanTimeTakenMs = (float)cumulativeTimeTakenUs/numUsages/1000;
             std::ostringstream oss;
             oss << std::fixed << std::setprecision(3) << meanTimeTakenMs;  //3 decimal places
-            std::string timerResult = name + ": " + oss.str() + "ms "+this->notes;
+            std::string timerResult = name + ": " + oss.str() + "ms"+((this->note.length()>0)?"  - "+this->note:"");
             std::string indentColour = ANSI_COLOURS[indentation.length()%NUM_ANSI_COLOURS];
             result += "\n"+indentColour+indentation+timerResult+ANSI_RESET;
             for(std::unique_ptr<Timer>& child:childTimers){
@@ -86,8 +88,8 @@ class Timer{
             }
         }
 
-        void addComments(std::string comments){
-            notes += comments;
+        void setNote(std::string noteInput){
+            this->note = noteInput;
         }
 };
 #endif

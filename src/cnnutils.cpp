@@ -178,16 +178,20 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride,int *maxPoolIndic
     return result;
 }
 //variable size output
-Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,const int yStride,bool padding
+Tensor CnnUtils::convolution(const Tensor& image,Tensor& kernel,const int xStride,const int yStride,bool padding
 #if PROFILING
     ,Timer *parentTimer
 #endif
 ){ 
     #if PROFILING
         Timer *convolutionTimer = nullptr;
-        if(parentTimer) convolutionTimer = parentTimer->addChildTimer("convolution");
         Timer *preconvolutionTimer = nullptr;
-        if(parentTimer) preconvolutionTimer = convolutionTimer->addChildTimer("preconvolution");
+        
+        if(parentTimer){
+            convolutionTimer = parentTimer->addChildTimer("convolution");
+            preconvolutionTimer = convolutionTimer->addChildTimer("preconvolution");
+            
+        }
     #endif 
     std::vector<int> imgDimens = image.getDimens();
     std::vector<int> kernelDimens = kernel.getDimens();
@@ -205,51 +209,92 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
     }
     const int xKernelRadius = (int) floor(kernelDimens[2]/2); //Not actually a radius, actually half the width
     const int yKernelRadius = (int) floor(kernelDimens[1]/2);
+
     std::vector<int> paddedImgDimens;
+    std::vector<int> paddedImageChildSizes;
+    Tensor paddedImage;
+
+    float*  __restrict__ imageData = image.getData();
+    std::vector<int> imageChildSizes = image.getChildSizes();
+    
     if(padding){
         int paddedHeight = imgDimens[1]+yKernelRadius*2;
         int paddedWidth = imgDimens[2]+xKernelRadius*2;
         paddedImgDimens = {imgDimens[0],paddedHeight,paddedWidth};
+        #if PROFILING
+            Timer *paddingAllocTimer = nullptr;
+            if(parentTimer){
+                paddingAllocTimer = preconvolutionTimer->addChildTimer("paddingAlloc");
+            }
+        #endif
+        paddedImage = Tensor(paddedImgDimens);
+        #if PROFILING
+            Timer *paddingLoopTimer = nullptr;
+            if(parentTimer){
+                paddingAllocTimer->stop();
+                paddingLoopTimer = preconvolutionTimer->addChildTimer("paddingLoop");
+            }
+        #endif
+
+        paddedImageChildSizes = paddedImage.getChildSizes();
+        const int imgDimens0 = imgDimens[0];
+        const int imgDimens1 = imgDimens[1];
+        const int imgDimens2 = imgDimens[2];
+        const int imageChildSizes0 = imageChildSizes[0];
+        const int imageChildSizes1 = imageChildSizes[1];
+        const int paddedImageChildSizes0 = paddedImageChildSizes[0];
+        const int paddedImageChildSizes1 = paddedImageChildSizes[1];
+        
+        float*  __restrict__ paddedImageData = paddedImage.getData();
+        for(int l=0;l<imgDimens0;l++){ //for each image channel
+            int imageChannel = l*imageChildSizes0;
+            int paddedImageChannel = l*paddedImageChildSizes0+xKernelRadius; //saving additions
+            int yLoopBound = imgDimens1+yKernelRadius;
+            for(int y=yKernelRadius;y<yLoopBound;y++){
+                int imageRow = imageChannel + (y-yKernelRadius)*imageChildSizes1;
+                int paddedImageRow = paddedImageChannel + y*paddedImageChildSizes1;
+                //paddedImage: xKernelRadius to paddedWidth-xKernelRadius
+                //image: 0 to width
+                float* __restrict__ paddedImagePtr = paddedImageData+paddedImageRow;
+                float* imagePtr = imageData+imageRow;
+                const float* endImageRow = imagePtr+imgDimens2;
+                for(;imagePtr+7<endImageRow;paddedImagePtr+=8,imagePtr+=8){
+                    __m256 imageSection = _mm256_loadu_ps(imagePtr);
+                    _mm256_storeu_ps(paddedImagePtr,imageSection);
+                }
+                for(;imagePtr<endImageRow;paddedImagePtr++,imagePtr++){
+                    *paddedImagePtr = *imagePtr;
+                }
+            }
+        }
+        #if PROFILING
+            if(parentTimer) paddingLoopTimer->stop();
+        #endif
     }
     else{
         paddedImgDimens = imgDimens;
+        paddedImageChildSizes = image.getChildSizes();
+        //paddedImage is const - we never change the data and so it is safe to be shallow copied
+        paddedImage.shallowCopy(image); 
     }
-    Tensor paddedImage(paddedImgDimens);
-    float*  __restrict__ imageData = image.getData();
-    float*  __restrict__ paddedImageData = paddedImage.getData();
-    std::vector<int> imageChildSizes = image.getChildSizes();
-    std::vector<int> paddedImageChildSizes = paddedImage.getChildSizes();
-    if(padding){
-        for(int l=0;l<imgDimens[0];l++){ //for each image channel
-            int imageChannel = l*imageChildSizes[0];
-            int paddedImageChannel = l*paddedImageChildSizes[0]+xKernelRadius; //saving additions
-            int yLoopBound = imgDimens[1]+yKernelRadius;
-            for(int y=yKernelRadius;y<yLoopBound;y++){
-                int imageRow = imageChannel + (y-yKernelRadius)*imageChildSizes[1];
-                int paddedImageRow = paddedImageChannel + y*paddedImageChildSizes[1];
-                //Memcpy can be vectorised
-                //paddedImage: xKernelRadius to paddedWidth-xKernelRadius
-                //image: 0 to width
-                std::memcpy(
-                    paddedImageData + paddedImageRow,
-                    imageData + imageRow,
-                    sizeof(float) * imgDimens[2]
-                );
-            }
-        }
-    }
-    else{
-        paddedImage = image; //The assignment operator performs a value by value copy of the data
-    }
+    
     const int imHeight = paddedImgDimens[1]; //assumption that all channels have same dimensions
     const int imWidth = paddedImgDimens[2];
-    
+    #if PROFILING
+        Timer *resultAllocTimer = nullptr;
+        if(parentTimer){
+            resultAllocTimer = preconvolutionTimer->addChildTimer("resultAlloc");
+        }
+    #endif
     Tensor result({
         (int)ceil((float)(imHeight-2*yKernelRadius)/yStride),
         (int)ceil((float)(imWidth-2*xKernelRadius)/xStride)
     }); //0 initialised
+    #if PROFILING
+        if(parentTimer) resultAllocTimer->stop();
+    #endif
 
-
+    const float*  __restrict__ paddedImageData = paddedImage.getData();
     float *kernelData = kernel.getData();
     float*  __restrict__ resultData = result.getData();
     Tensor *biases = kernel.getBiases();
@@ -264,9 +309,11 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
     }
     //No biases is valid
     #if PROFILING
-        if(parentTimer) preconvolutionTimer->stop();
         Timer *loopTimer = nullptr;
-        if(parentTimer) loopTimer = convolutionTimer->addChildTimer("loop");
+        if(parentTimer){
+            preconvolutionTimer->stop();
+            loopTimer = convolutionTimer->addChildTimer("loop");
+        }
     #endif
     if(kernelDimens[1]==3 &&  kernelDimens[2]==3){
         //unrolled 3x3 version 
@@ -415,7 +462,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
                     for(int j=0;j<kernelDimens1;j++){
                         int kernelRow = kernelChannel + j*kernelChildSizes1;
                         int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImageChildSizes1;
-                        float* __restrict__ paddedImageRowBase = &paddedImageData[paddedImageRow];
+                        const float* __restrict__ paddedImageRowBase = &paddedImageData[paddedImageRow];
                         float *kernelRowBase = kernelData+kernelRow;
                         int k=0;
                         for(;k+7<kernelDimens2;k+=8){
@@ -476,7 +523,7 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
                     for(int j=0;j<kernelDimens1;j++){
                         int kernelRow = kernelChannel + j*kernelChildSizes1;
                         int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImageChildSizes1;
-                        float* __restrict__ paddedImageRowBase = &paddedImageData[paddedImageRow];
+                        const float* __restrict__ paddedImageRowBase = &paddedImageData[paddedImageRow];
                         float *kernelRowBase = kernelData+kernelRow;
                         for(int k=0;k<kernelDimens2;k++){
                             const float kernelVal = *(kernelRowBase+k);
@@ -499,8 +546,8 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,const int xStride,cons
                         int kernelRow = kernelChannel + j*kernelChildSizes1;
                         int paddedImageRow = paddedImageChannelShortct + (y+j-yKernelRadius)*paddedImageChildSizes1;
                         float *kernelEndPtr = &kernelData[kernelRow+kernelDimens2];
-                        for(float *kernelDataPtr = &kernelData[kernelRow],
-                            * __restrict__ paddedImageDataPtr = &paddedImageData[paddedImageRow]
+                        const float* __restrict__ paddedImageDataPtr = &paddedImageData[paddedImageRow];
+                        for(float *kernelDataPtr = &kernelData[kernelRow]
                             ;kernelDataPtr<kernelEndPtr;kernelDataPtr++,paddedImageDataPtr++){
                             sum += (*kernelDataPtr) * (*paddedImageDataPtr);
                         }

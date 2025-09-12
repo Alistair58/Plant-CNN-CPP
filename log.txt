@@ -766,3 +766,148 @@ To speed it up, I might need a new timing measure:
 Printing something took 2ms
 Printing something took 1ms
 Printing something took 3ms
+
+New timing measures:
+-----parseImg: 88.365ms
+------fixedSizedConvolution: 20.036ms
+-------convolution: 17.749ms
+--------preconvolution: 11.384ms
+--------loop: 6.363ms
+-------padding: 0.201ms
+
+------convolutionLayer0: 25.377ms
+-------convolution: 0.753ms
+--------preconvolution: 0.238ms
+--------loop: 0.514ms
+------convolutionLayer1: 277.160ms
+-------convolution: 3.819ms
+--------preconvolution: 2.204ms
+--------loop: 1.612ms
+
+
+Preconvolution is slow
+
+-----parseImg: 70.677ms
+------fixedSizedConvolution: 14.836ms
+-------convolution: 12.009ms
+--------preconvolution: 8.972ms
+---------padding: 8.899ms
+---------alloc: 0.070ms
+--------loop: 3.036ms
+
+------convolutionLayer0: 25.019ms
+-------convolution: 0.744ms
+--------preconvolution: 0.272ms
+---------padding: 0.260ms
+---------alloc: 0.010ms
+--------loop: 0.471ms
+
+It's the padding - luckily
+But it's also a damned if you, damned if you don't:
+
+-----parseImg: 31.429ms
+------fixedSizedConvolution: 6.134ms
+-------convolution: 5.168ms
+--------preconvolution: 3.542ms
+---------padding: 1.057ms Without padding
+---------alloc: 0.093ms
+--------loop: 1.623ms
+-------padding: 0.259ms
+
+------convolutionLayer0: 23.189ms
+-------convolution: 0.669ms
+--------preconvolution: 0.314ms
+---------padding: 0.237ms With padding
+---------alloc: 0.011ms
+--------loop: 0.353ms
+
+Both of these paths use memcpy to copy the data and I think this is the bottleneck
+I'll vectorise it
+
+-----parseImg: 32.391ms  -
+------fixedSizedConvolution: 6.537ms  -
+-------convolution: 5.626ms  -
+--------preconvolution: 4.212ms  -
+---------paddingAlloc: 2.874ms  -
+---------padding: 1.250ms  - Without padding
+---------resultAlloc: 0.083ms  -
+--------loop: 1.412ms  -
+-------padding: 0.129ms  -
+
+------convolutionLayer0: 23.918ms  -
+-------convolution: 0.719ms  -
+--------preconvolution: 0.161ms  -
+---------paddingAlloc: 0.060ms  -
+---------padding: 0.091ms  - With padding
+---------resultAlloc: 0.006ms  -
+--------loop: 0.557ms  -
+
+It hasn't really made a difference
+I have discovered that the allocation of large images is slow and so should probably be avoided
+If there's no padding, the padding alloc is unnecessary
+
+-----parseImg: 14.627ms
+------fixedSizedConvolution: 1.676ms
+-------convolution: 1.515ms
+--------preconvolution: 0.081ms
+---------resultAlloc: 0.079ms
+--------loop: 1.432ms
+-------padding: 0.157ms
+
+------convolutionLayer0: 41.755ms
+-------convolution: 1.133ms
+--------preconvolution: 0.796ms
+---------paddingAlloc: 0.618ms
+---------paddingLoop: 0.136ms
+---------resultAlloc: 0.038ms
+--------loop: 0.336ms
+
+The padding alloc speed is very varied - OS-related?
+The alloc can take up to 4ms and the loop seems to usually take less than 1ms
+So if I don't have padding, the CNN will be a lot faster.
+My padding is just 0s and so is currently useless
+
+
+Model 7 adjusted:
+318x318x3
+158x158x32 (3x3 conv stride 2)
+78x78x64 (3x3 conv stride 2)
+38x38x128 (3x3 conv stride 2)
+18x18x256 (3x3 conv stride 2)
+16x16x256 (3x3 conv stride 1)
+4x4x256 (max pool)
+4096
+1028 (FC)
+47 (FC)
+
+-----parseImg: 19.902ms
+------fixedSizedConvolution: 2.047ms
+-------convolution: 1.834ms
+--------preconvolution: 0.061ms
+---------resultAlloc: 0.059ms
+--------loop: 1.770ms
+-------padding: 0.210ms
+
+------convolutionLayer0: 20.624ms
+-------convolution: 0.625ms
+--------preconvolution: 0.009ms
+---------resultAlloc: 0.008ms
+--------loop: 0.614ms
+
+Time for 256 training examples with larger model, no padding:
+1:04, 1:14, 1:18
+Smaller model with padding:
+1:24, 1:27
+
+CPU felt like sitting at 2GHz and so that's why these times are slower than before
+For fairness, the last no padding time was recorded after the last padding time
+
+Adjusted model it is.
+The larger feature maps now means that backwards is the bottleneck
+
+Forwards 600ms 
+Backwards 1500ms
+  - finalPoolingConv 200ms
+  - convolutional layers 1300ms
+    - 400ms for all conv layers apart from first
+  

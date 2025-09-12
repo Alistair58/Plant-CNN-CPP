@@ -74,7 +74,7 @@ class CnnUtils {
         static Tensor maxPool(Tensor& image,int xStride,int yStride);
         Tensor maxPool(Tensor& image,int xStride,int yStride,int *maxPoolIndices);
         //variable size output
-        static Tensor convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding
+        static Tensor convolution(const Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding
         #if PROFILING
             ,Timer *parentTimer = nullptr
         #endif

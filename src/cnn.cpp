@@ -10,10 +10,10 @@
 CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
     numNeurons = {4096,1028,47};
     numMaps =     {3,  32,64,128,256,256};//includes the result of pooling (except final pooling)
-    mapDimens =   {256,128,64,32,16,16};
+    mapDimens =   {318,158,78,38,18,16};
     kernelSizes = {   3,  3, 3, 3, 3  };  //0 represents a pooling layer, the last one is excluded
     strides =     {   2,  2, 2, 2, 1, 4}; //pooling strides are included
-    padding = true;
+    padding = false;
     this->dropoutProb = dropoutProbability;
 
     this->d = dataset;
@@ -367,7 +367,7 @@ void CNN::backwards(Tensor& imageInt,std::string answer
             poolingConvBackwards(dcDxs, --l,padding); //prev (l-1) --conv-> curr (l) --pool-> pooled (l+1)
             //skip 1 layer as we have done it within poolingConvBackwards
             #if PROFILING
-                if(parentTimer) convolutionsLayerTimer->addComments("(pooling)");
+                if(parentTimer) convolutionsLayerTimer->setNote("(pooling)");
             #endif
         }
         else{

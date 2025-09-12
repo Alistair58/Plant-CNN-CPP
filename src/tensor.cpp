@@ -1,4 +1,5 @@
 #include "tensor.hpp"
+#include <immintrin.h>
 
 Tensor::Tensor(const std::vector<int>& inputDimens){
     dimens = inputDimens;
@@ -73,12 +74,16 @@ Tensor& Tensor::operator=(const Tensor &t){
         this->biases = std::make_shared<Tensor>(*tBiases);
     }
     else this->biases.reset();
-    //More efficient than a loop
-    std::memcpy(
-        this->getData(),
-        t.getData(),
-        sizeof(float)*totalSize
-    );
+    float *thisDataPtr = this->getData();
+    float *tDataPtr = t.getData();
+    const float *thisEndPtr = thisDataPtr+totalSize;
+    for(;thisDataPtr+7<thisEndPtr;thisDataPtr+=8,tDataPtr+=8){
+        __m256 tData = _mm256_loadu_ps(tDataPtr);
+        _mm256_storeu_ps(thisDataPtr,tData);
+    }
+    for(;thisDataPtr<thisEndPtr;thisDataPtr++,tDataPtr++){
+        *thisDataPtr = *tDataPtr;
+    }
     return *this;
 }
 
@@ -125,7 +130,7 @@ Tensor& Tensor::operator=(Tensor&& t){
     return *this;
 }
 
-void Tensor::shallowCopy(Tensor& src){
+void Tensor::shallowCopy(const Tensor& src){
     //Shared pointer and so will delete itself if necessary
     this->biases = src.biases;
     this->data =  src.data;
