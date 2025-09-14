@@ -294,7 +294,7 @@ Tensor CnnUtils::convolution(const Tensor& image,Tensor& kernel,const int xStrid
         if(parentTimer) resultAllocTimer->stop();
     #endif
 
-    const float*  __restrict__ paddedImageData = paddedImage.getData();
+    const float *paddedImageData = paddedImage.getData();
     float *kernelData = kernel.getData();
     float*  __restrict__ resultData = result.getData();
     Tensor *biases = kernel.getBiases();
@@ -578,6 +578,101 @@ Tensor CnnUtils::convolution(const Tensor& image,Tensor& kernel,const int xStrid
     return result;
 }
 
+//Saving the padding allocation
+//prePaddingImage doesn't contain the image data, it just needs to be the correct size
+Tensor CnnUtils::convolution(const Tensor& image,Tensor& prePaddedImage,Tensor& kernel,const int xStride,const int yStride
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){
+    #if PROFILING
+        Timer *prePaddedConvolutionTimer = nullptr;
+        Timer *paddingTimer = nullptr;
+        if(parentTimer){
+            prePaddedConvolutionTimer = parentTimer->addChildTimer("prePaddedConvolution");
+            paddingTimer = prePaddedConvolutionTimer->addChildTimer("padding");
+        }
+    #endif
+    std::vector<int> imageDimens = image.getDimens();
+    std::vector<int> pImageDimens = prePaddedImage.getDimens();
+    std::vector<int> kernelDimens = kernel.getDimens();
+    if(imageDimens.size()!=3){
+        throw std::invalid_argument("Image must have 3 dimensions for convolution");
+    }
+    if(pImageDimens.size()!=3){
+        throw std::invalid_argument("Padded image must have 3 dimensions for convolution");
+    }
+    if(kernelDimens.size()!=3){
+        throw std::invalid_argument("Kernel must have 3 dimensions for convolution");
+    }
+    const int yKernelRadius = std::floor(kernelDimens[1]/2);
+    const int xKernelRadius = std::floor(kernelDimens[2]/2);
+    if(pImageDimens[0]!=imageDimens[0]){
+        throw std::invalid_argument("Padded image must have the same number of channels as the unpadded image");
+    }
+    const int correctPaddedHeight = imageDimens[1]+2*yKernelRadius;
+    const int correctPaddedWidth = imageDimens[2]+2*xKernelRadius;
+    if(correctPaddedHeight!=pImageDimens[1] || correctPaddedWidth!=pImageDimens[2]){
+        throw std::invalid_argument("Padded image had been padded incorrectly");
+    }
+    float *pImageData = prePaddedImage.getData();
+    const float *imageData = image.getData();
+    std::vector<int> pImageChildSizes = prePaddedImage.getChildSizes();
+    std::vector<int> imageChildSizes = image.getChildSizes();
+    //Set the padding and copy the data
+    //It is not quicker to first set data to 0 and then do this
+    const int imageChildSizes0 = imageChildSizes[0];
+    const int pImageChildSizes0 = pImageChildSizes[0];
+    const int pImageDimens0 = pImageDimens[0];
+    const int imageDimens1 = imageDimens[1];
+    const int imageDimens2 = imageDimens[2];
+    const int pImageDimens2 = pImageDimens[2];
+    const int imageRowBytes = imageDimens2*sizeof(float);
+    for(int l=0;l<pImageDimens0;l++){
+        const float *imageChannel = imageData+l*imageChildSizes0;
+        float *pImageChannel = pImageData+l*pImageChildSizes0;
+        //Top padding
+        //Large and so probably worth a memset
+        std::memset(pImageChannel,0,yKernelRadius*pImageDimens2*sizeof(float));
+        for(int y=0;y<imageDimens1;y++){
+            float *pImageRow = pImageChannel+(y+yKernelRadius)*pImageDimens2;
+            //Left padding
+            float *pImagePtr = pImageRow;
+            float *pImageRowBody = pImageRow+xKernelRadius;
+            //xKernelRadius is likely small and so not worth calling memset or vectorising
+            for(;pImagePtr<pImageRowBody;pImagePtr++){
+                *pImagePtr = 0;
+            }
+           
+            const float *imageRow = imageChannel+y*imageDimens2;
+            //Copying the actual data
+            std::memcpy(pImageRowBody,imageRow,imageRowBytes);
+
+            pImagePtr = pImageRowBody+imageDimens2;
+            float *pImageNextRow = pImageRow+pImageDimens2;
+            //Right padding
+            for(;pImagePtr<pImageNextRow;pImagePtr++){
+                *pImagePtr = 0;
+            }
+        }
+        //Bottom padding
+        float *pImageEndPadding = pImageChannel + (imageDimens1+yKernelRadius)*pImageDimens[2];
+        std::memset(pImageEndPadding,0,yKernelRadius*pImageDimens2*sizeof(float));
+    }
+    #if PROFILING
+        if(parentTimer) paddingTimer->stop();
+    #endif 
+    //Copy-elision
+    Tensor result = convolution(prePaddedImage,kernel,xStride,yStride,false
+    #if PROFILING
+        ,prePaddedConvolutionTimer
+    #endif
+    );
+    #if PROFILING
+        if(parentTimer) prePaddedConvolutionTimer->stop();
+    #endif 
+    return result;
+}
 
 //fixed size output
 Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStride,int newWidth,int newHeight,bool padding

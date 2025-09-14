@@ -10,10 +10,10 @@
 CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
     numNeurons = {4096,1028,47};
     numMaps =     {3,  32,64,128,256,256};//includes the result of pooling (except final pooling)
-    mapDimens =   {318,158,78,38,18,16};
+    mapDimens =   {256,128,64,32,16,16};
     kernelSizes = {   3,  3, 3, 3, 3  };  //0 represents a pooling layer, the last one is excluded
     strides =     {   2,  2, 2, 2, 1, 4}; //pooling strides are included
-    padding = false;
+    padding = true;
     this->dropoutProb = dropoutProbability;
 
     this->d = dataset;
@@ -39,6 +39,14 @@ CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
     this->maps = std::vector<Tensor>(numMaps.size());
     for(int l=0;l<numMaps.size();l++){
         maps[l] = Tensor({numMaps[l],mapDimens[l],mapDimens[l]});
+    }
+    if(padding){
+        this->paddedMaps = std::vector<Tensor>(numMaps.size()-1); //last map is pooled not convolved - my favourite way of having a Martini
+        for(int l=0;l<numMaps.size()-1;l++){
+            int kernelRadius = std::floor(this->kernelSizes[l]/2);
+            int paddedDimen = mapDimens[l]+2*kernelRadius;
+            paddedMaps[l] = Tensor({numMaps[l],paddedDimen,paddedDimen});
+        }
     }
     for(int l=0;l<kernelSizes.size();l++){
         if(kernelSizes[l]==0){
@@ -108,6 +116,14 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
     for(int l=0;l<numMaps.size();l++){
         maps[l] = Tensor({numMaps[l],mapDimens[l],mapDimens[l]});
     }
+    if(padding){
+        this->paddedMaps = std::vector<Tensor>(numMaps.size()-1); //last map is pooled not convolved - my favourite way of having a Martini
+        for(int l=0;l<numMaps.size()-1;l++){
+            int kernelRadius = std::floor(this->kernelSizes[l]/2);
+            int paddedDimen = mapDimens[l]+2*kernelRadius;
+            paddedMaps[l] = Tensor({numMaps[l],paddedDimen,paddedDimen});
+        }
+    }
     for(int l=0;l<kernelSizes.size();l++){
         if(kernelSizes[l]==0){
             int pooledDimen = mapDimens[l]/strides[l];
@@ -167,7 +183,7 @@ std::string CNN::forwards(Tensor& imageInt,bool training
                 //Slice with biases
                 Tensor kernel = kernels[l-1].slice({i},{i});
 
-                currChannel = convolution(maps[l-1],kernel,strides[l-1],strides[l-1],padding
+                currChannel = convolution(maps[l-1],paddedMaps[l-1],kernel,strides[l-1],strides[l-1]
                 #if PROFILING
                     ,parentTimer?convolutionalLayerTimer:nullptr
                 #endif

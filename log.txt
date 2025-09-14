@@ -910,4 +910,59 @@ Backwards 1500ms
   - finalPoolingConv 200ms
   - convolutional layers 1300ms
     - 400ms for all conv layers apart from first
-  
+
+After doing some research, padding is actually good - doesn't lose edge information
+And it's only marginally slower 
+
+Forwards 1400ms
+ - Padding alloc is evidently the slow thing
+Backwards 800ms
+
+Adding once allocation for padding - like a parallel to maps
+
+Forwards 500ms
+Backwards 700ms
+
+So the actual solution was to stop being such a lazy bastard and actually write the code 
+Time for 256 training examples with padding:
+0:45,0:46
+Bosh
+
+The padding is still a bit slow:
+
+convolutionLayer0: 16.123ms
+-------prePaddedConvolution: 0.489ms
+--------padding: 0.145ms
+--------convolution: 0.342ms
+---------preconvolution: 0.008ms
+----------resultAlloc: 0.006ms
+---------loop: 0.333ms
+------convolutionLayer1: 111.281ms
+-------prePaddedConvolution: 1.726ms
+--------padding: 0.637ms
+--------convolution: 1.086ms
+---------preconvolution: 0.006ms
+----------resultAlloc: 0.003ms
+---------loop: 1.079ms
+------convolutionLayer2: 96.465ms
+-------prePaddedConvolution: 0.745ms
+--------padding: 0.254ms
+--------convolution: 0.489ms
+---------preconvolution: 0.003ms
+----------resultAlloc: 0.001ms
+---------loop: 0.485ms
+------convolutionLayer3: 104.506ms
+-------prePaddedConvolution: 0.402ms
+--------padding: 0.145ms
+--------convolution: 0.255ms
+---------preconvolution: 0.005ms
+----------resultAlloc: 0.000ms
+---------loop: 0.250ms
+
+Memsetting the whole thing didn't make a difference
+I manually optimised it and it's not any quicker
+This might just be the time it takes to copy this amount of bytes
+Onto backwards optimisation:
+
+
+

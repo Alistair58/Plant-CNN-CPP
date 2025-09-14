@@ -31,6 +31,7 @@ class CnnUtils {
         std::vector<Tensor> weights;
         std::vector<Tensor> weightsGrad; //Also not negative
         std::vector<Tensor> maps; //Note: the input image is included in "maps" for simplicity
+        std::vector<Tensor> paddedMaps; //Reusing padding is better than allocating for every convolutions
         Dataset *d;
         std::vector<int> numNeurons;
         std::vector<int> numMaps; //includes the result of pooling (except final pooling)
@@ -77,6 +78,13 @@ class CnnUtils {
         static Tensor convolution(const Tensor& image,Tensor& kernel,int xStride,int yStride,bool padding
         #if PROFILING
             ,Timer *parentTimer = nullptr
+        #endif
+        );
+        //Saving the padding allocation
+        //prePaddingImage doesn't contain the image data, it just needs to be the correct size
+        Tensor convolution(const Tensor& image,Tensor& prePaddedImage,Tensor& kernel,const int xStride,const int yStride
+        #if PROFILING
+            ,Timer *parentTimer
         #endif
         );
         //fixed size output
