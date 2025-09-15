@@ -125,6 +125,7 @@ class CnnUtils {
         }
         static inline float dotProduct8f(float *X,float *Y);
         static inline float dotProduct8f(__m256 a,__m256 b);
+        static inline float horizontalSum(__m256 a);
 
         //UTILS
         void applyGradients(int batchSize
@@ -176,29 +177,31 @@ inline float CnnUtils::dotProduct8f(float *X,float *Y){
 inline float CnnUtils::dotProduct8f(__m256 a,__m256 b){
     __m256 prod = _mm256_mul_ps(a, b);   // Multiply X[i] * Y[i]
     //Now horizontally sum all 8 floats in prod
+    return horizontalSum(prod);
+}
+
+inline float CnnUtils::horizontalSum(__m256 a){
+    //Horizontally sum all 8 floats in a
     //lower 4 floats
-    // {x0*y0,x1*y1,...}
-    __m128 low  = _mm256_castps256_ps128(prod);          
+    // {a0,a1,...}
+    __m128 low  = _mm256_castps256_ps128(a);          
     //upper 4 floats
-    // {x4*y4,x5*y5,...}
-    __m128 high = _mm256_extractf128_ps(prod, 1);    
+    // {a4,a5,...}
+    __m128 high = _mm256_extractf128_ps(a, 1);    
     //add lower and upper halves    
-    // {x0*y0+x4*y4,x1*y1+x5*y5,...}
+    // {a0+a4,a1+a5,...}
     __m128 sum128 = _mm_add_ps(low, high);            
     //Sum the 4 floats in sum128
-    //let xi*yi+x(i+4)*y(i+4) = ri
-    // i.e. r0+r1+r2+r3
     //We can't access the elements easily and so we do some shuffling (with a bit of unnecessary parallel additions) 
-    // sum128 = {r0,r1,r2,r3}
     //Duplicate the high bits
-    // shuf = {r1,r1,r3,r3}
+    // shuf = {a1+a5,a1+a5,a3+a7,a3+a7}
     __m128 shuf = _mm_movehdup_ps(sum128);               
-    // sums = {r0+r1,...,r2+r3,...}
+    // sums = {a1+a5+a0+a4,...,a3+a7+a2+a6,...}
     __m128 sums = _mm_add_ps(sum128, shuf);       
     //Move the 2 high floats to the low position
-    // sums = {r2+r3,........} 
+    // sums = {a3+a7+a2+a6,........} 
     shuf = _mm_movehl_ps(shuf, sums);
-    //Add lowest floats (r0+r1) + (r2+r3)
+    //Add lowest floats (a1+a5+a0+a4) + (a3+a7+a2+a6)
     sums = _mm_add_ss(sums, shuf);      
     //Final sum in lowest float
     return _mm_cvtss_f32(sums); 

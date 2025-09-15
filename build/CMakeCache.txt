@@ -226,10 +226,10 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
 //No help, variable specified on the command line.
-DEBUG:UNINITIALIZED=0
+DEBUG:UNINITIALIZED=1
 
 //No help, variable specified on the command line.
-PROFILING:UNINITIALIZED=1
+PROFILING:UNINITIALIZED=0
 
 //Value Computed by CMake
 Plant-CNN-CPP_BINARY_DIR:STATIC=C:/Users/Alistair/VS-Code-Projects/Plant-CNN-CPP/build

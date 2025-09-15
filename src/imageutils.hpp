@@ -34,6 +34,11 @@ class ImageUtils{
             ,Timer *parentTimer = nullptr
         #endif
         );
+        static void horizontalFlip(Tensor &inp
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        );
         static void toGreyscale(Tensor& inp
         #if PROFILING
             ,Timer *parentTimer = nullptr

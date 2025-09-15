@@ -182,12 +182,23 @@ std::string CNN::forwards(Tensor& imageInt,bool training
             else{   
                 //Slice with biases
                 Tensor kernel = kernels[l-1].slice({i},{i});
-
-                currChannel = convolution(maps[l-1],paddedMaps[l-1],kernel,strides[l-1],strides[l-1]
-                #if PROFILING
-                    ,parentTimer?convolutionalLayerTimer:nullptr
-                #endif
-                );
+                if(i==0){
+                    //We need to set the paddedMap with the correct data and padding 
+                    currChannel = convolution(maps[l-1],paddedMaps[l-1],kernel,strides[l-1],strides[l-1]
+                    #if PROFILING
+                        ,parentTimer?convolutionalLayerTimer:nullptr
+                    #endif
+                    );
+                }   
+                else{
+                    //We've already set the paddedMap with the correct data
+                    //Tell it not to pad
+                    currChannel = convolution(paddedMaps[l-1],kernel,strides[l-1],strides[l-1],false
+                    #if PROFILING
+                        ,parentTimer?convolutionalLayerTimer:nullptr
+                    #endif
+                    );
+                }
             }
         }
         #if PROFILING
@@ -387,7 +398,12 @@ void CNN::backwards(Tensor& imageInt,std::string answer
             #endif
         }
         else{
-            convBackwards(dcDxs,l,padding); //prev (l-1) --conv-> curr (l)
+            //prev (l-1) --conv-> curr (l)
+            convBackwards(dcDxs,l,padding
+            #if PROFILING
+                ,convolutionsLayerTimer
+            #endif
+            ); 
         }
         #if PROFILING
             if(parentTimer) convolutionsLayerTimer->stop();
@@ -456,7 +472,11 @@ void CNN::mlpBackwards(std::vector<Tensor>& dcDzs){
     }
 }
 
-void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding){
+void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){
     //We are working from the back -> front 
     //Prev is the thing closer to the input image and curr is closer the output vector
     //z = sum(k*x)+b
@@ -501,11 +521,25 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding){
     float buffer[8];
     //Precompute ReLU derivatives so we don't recompute them multiple times
     const size_t currMapSize = maps[l].getTotalSize();
+    #if PROFILING
+        Timer *dcDzsMallocTimer = nullptr;
+        if(parentTimer){
+            dcDzsMallocTimer = parentTimer->addChildTimer("dcDzsMalloc");
+        }
+    #endif
     float* __restrict__ currDcDzsData = (float*) malloc(currMapSize*sizeof(float));
+    #if PROFILING
+        Timer *dcDzsLoopTimer = nullptr;
+        if(parentTimer){
+            dcDzsMallocTimer->stop();
+            dcDzsLoopTimer = parentTimer->addChildTimer("dcDzsLoop");
+        }
+    #endif
     if(!currDcDzsData){
         throw std::runtime_error("Failed malloc in convBackwards");
     }
     const float * __restrict__ currMapDataEndPtr = currMapData+currMapSize;
+    
     for(
         float* __restrict__ currDcDzsPtr = currDcDzsData,
         * __restrict__ currMapDataPtr = currMapData,
@@ -517,6 +551,13 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding){
         *currDcDzsPtr = (((*currMapDataPtr)<=0) ? 0.01f : 1.0f) * (*currDcDxsPtr);
     }
 
+    #if PROFILING
+        Timer *backwardsConvLoopTimer = nullptr;
+        if(parentTimer){
+            dcDzsLoopTimer->stop();
+            backwardsConvLoopTimer = parentTimer->addChildTimer("backwardsConvLoop");
+        }
+    #endif
     for(int i=0;i<numMaps[l];i++){ //For each convolution output
         int currMapChannel = i*currMapsChildSizes[0];
         int kernelToChannel = i*kernelsChildSizes[0]; //kernels are [layer][nextLayerChannel][prevLayerChannel]
@@ -558,6 +599,7 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding){
                         float* __restrict__ currMapDcDzsRowBase = currDcDzsData+currMapRow;
                         float* __restrict__ prevMapRowBase = prevMapData+prevMapRow;
                         int x=xStart;
+                        __m256 acc = _mm256_set1_ps(0);
                         for(;x+thisStride7<xEnd;x+=thisStride8){
                             float* __restrict__ currMapDcDzsBasePtr = currMapDcDzsRowBase + thisX;
                             float* __restrict__ prevMapBasePtr = prevMapRowBase+x;
@@ -565,7 +607,7 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding){
                             const __m256 currMapDerivs = _mm256_loadu_ps(currMapDcDzsBasePtr);
                             
                             //Add it (dC/dx*dx/dk) to kernel derivative
-                            sum += dotProduct8f(prevMapVals,currMapDerivs);
+                            acc = _mm256_fmadd_ps(prevMapVals,currMapDerivs,acc);
                             
                             if(l!=1){
                                 __m256 kernelVals = _mm256_set1_ps(kernelVal);
@@ -584,6 +626,7 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding){
                             }
                             thisX+=8;
                         }
+                        sum += horizontalSum(acc);
                         //scalar tail
                         for(;x<xEnd;x+=thisStride){
                             const int currMapIndex = currMapRow + thisX;
@@ -611,6 +654,9 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding){
         }
         kernelBiasesGradData[i] += biasSum;
     }
+    #if PROFILING
+        if(parentTimer) backwardsConvLoopTimer->stop();
+    #endif
     free(currDcDzsData);
 }
 

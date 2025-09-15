@@ -962,7 +962,173 @@ convolutionLayer0: 16.123ms
 Memsetting the whole thing didn't make a difference
 I manually optimised it and it's not any quicker
 This might just be the time it takes to copy this amount of bytes
-Onto backwards optimisation:
+However, we don't actually need to pad again for every output channel - they all share the same inputs
 
 
+Forwards 430ms
+Backwards 900ms
 
+I haven't touched backwards and so my computer is just being slow.
+
+Making backwards faster:
+----convolutions: 723.486ms
+-----convolutionsLayer3: 243.700ms
+------dcDzsMalloc: 0.015ms
+------dcDzsLoop: 0.074ms
+------backwardsConvLoop: 243.592ms
+-----convolutionsLayer2: 230.836ms
+------dcDzsMalloc: 0.016ms
+------dcDzsLoop: 0.319ms
+------backwardsConvLoop: 230.458ms
+-----convolutionsLayer1: 224.848ms
+------dcDzsMalloc: 0.048ms
+------dcDzsLoop: 0.901ms
+------backwardsConvLoop: 223.688ms
+-----convolutionsLayer0: 24.087ms
+------dcDzsMalloc: 0.043ms
+------dcDzsLoop: 1.757ms
+------backwardsConvLoop: 21.900ms
+
+The loop is the problem
+
+I removed the dcDxs caluculation and it had no effect:
+-----convolutionsLayer3: 257.122ms
+------dcDzsMalloc: 0.013ms
+------dcDzsLoop: 0.077ms
+------backwardsConvLoop: 257.006ms
+-----convolutionsLayer2: 241.528ms
+------dcDzsMalloc: 0.005ms
+------dcDzsLoop: 0.521ms
+------backwardsConvLoop: 240.982ms
+-----convolutionsLayer1: 242.842ms
+------dcDzsMalloc: 0.044ms
+------dcDzsLoop: 0.920ms
+------backwardsConvLoop: 241.613ms
+-----convolutionsLayer0: 31.907ms
+------dcDzsMalloc: 0.044ms
+------dcDzsLoop: 1.647ms
+------backwardsConvLoop: 29.741ms
+
+The gather isn't even slow - removing it for layers that don't require a gather:
+-----convolutionsLayer3: 281.490ms
+------dcDzsMalloc: 0.016ms
+------dcDzsLoop: 0.110ms
+------backwardsConvLoop: 280.944ms
+-----convolutionsLayer2: 267.640ms
+------dcDzsMalloc: 0.018ms
+------dcDzsLoop: 0.341ms
+------backwardsConvLoop: 266.956ms
+-----convolutionsLayer1: 255.395ms
+------dcDzsMalloc: 0.048ms
+------dcDzsLoop: 0.838ms
+------backwardsConvLoop: 254.258ms
+-----convolutionsLayer0: 30.878ms
+------dcDzsMalloc: 0.038ms
+------dcDzsLoop: 1.709ms
+------backwardsConvLoop: 28.656ms
+
+Removing dotProduct8f:
+-----convolutionsLayer3: 185.893ms
+------dcDzsMalloc: 0.010ms
+------dcDzsLoop: 0.055ms
+------backwardsConvLoop: 185.625ms
+-----convolutionsLayer2: 169.374ms
+------dcDzsMalloc: 0.011ms
+------dcDzsLoop: 0.195ms
+------backwardsConvLoop: 169.040ms
+-----convolutionsLayer1: 164.917ms
+------dcDzsMalloc: 0.039ms
+------dcDzsLoop: 4.376ms
+------backwardsConvLoop: 160.324ms
+-----convolutionsLayer0: 14.554ms
+------dcDzsMalloc: 0.037ms
+------dcDzsLoop: 1.304ms
+------backwardsConvLoop: 12.900ms
+
+If I just add to the sum every iteration:
+-----convolutionsLayer3: 105.993ms
+------dcDzsMalloc: 0.010ms
+------dcDzsLoop: 0.048ms
+------backwardsConvLoop: 105.835ms
+-----convolutionsLayer2: 110.244ms
+------dcDzsMalloc: 0.008ms
+------dcDzsLoop: 0.224ms
+------backwardsConvLoop: 109.868ms
+-----convolutionsLayer1: 103.139ms
+------dcDzsMalloc: 0.042ms
+------dcDzsLoop: 0.614ms
+------backwardsConvLoop: 102.322ms
+-----convolutionsLayer0: 16.219ms
+------dcDzsMalloc: 0.137ms
+------dcDzsLoop: 1.321ms
+------backwardsConvLoop: 14.487ms
+
+And if I do the same for the scalar tail:
+-----convolutionsLayer3: 143.964ms
+------dcDzsMalloc: 0.009ms
+------dcDzsLoop: 0.040ms
+------backwardsConvLoop: 143.893ms
+-----convolutionsLayer2: 104.508ms
+------dcDzsMalloc: 0.017ms
+------dcDzsLoop: 0.307ms
+------backwardsConvLoop: 103.988ms
+-----convolutionsLayer1: 95.931ms
+------dcDzsMalloc: 0.034ms
+------dcDzsLoop: 0.721ms
+------backwardsConvLoop: 94.990ms
+-----convolutionsLayer0: 17.917ms
+------dcDzsMalloc: 0.036ms
+------dcDzsLoop: 1.268ms
+------backwardsConvLoop: 16.282ms
+
+So there's not really any major inefficiencies in memory access or anything like that,
+there's just a lot of work the program has to do
+
+Using the horizontalSum once:
+-----convolutionsLayer3: 220.916ms
+------dcDzsMalloc: 0.013ms
+------dcDzsLoop: 0.084ms
+------backwardsConvLoop: 220.802ms
+-----convolutionsLayer2: 207.283ms
+------dcDzsMalloc: 0.013ms
+------dcDzsLoop: 0.235ms
+------backwardsConvLoop: 206.774ms
+-----convolutionsLayer1: 203.236ms
+------dcDzsMalloc: 0.039ms
+------dcDzsLoop: 2.720ms
+------backwardsConvLoop: 200.294ms
+-----convolutionsLayer0: 18.178ms
+------dcDzsMalloc: 0.038ms
+------dcDzsLoop: 1.338ms
+------backwardsConvLoop: 16.506ms
+
+Time for 1 epoch:
+PyTorch - 10:28
+Mine - 38:39
+
+Small model:
+Time for 256 images: 0:15
+1 epoch:
+Mine - 15:33
+PyTorch - 4:08
+
+Model 7a:
+LR = 0.02
+BS = 64
+Dropout = 0.2
+Using the padded model (not the adjusted model)
+Augmentations:
+    Zoom p=0.25, v=[1.25,2]
+    Rotate p=0.25, v=[-pi/4,+pi/4]
+    Horizontal flip p=0.2
+    Greyscale p=0.05
+    Gaussian blur p=0.0625, 5x5 kernel 
+    Brightness p=0.2, v=[0.5,1.75]
+    Contrast p=0.2, v=[0.5,2]
+    Saturation p=0.2 v =[0.5,2]
+This gives a 0.2052 chance of not being augmented
+
+I could train it on my C++ model but it would take 3x longer than PyTorch 
+I could make my C++ model as fast as PyTorch but I don't have infinite time
+The majority of time taken in just loops now and so performance gains seem to be diminishing
+So for those reasons, I'll be training on PyTorch first

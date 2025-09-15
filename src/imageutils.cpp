@@ -182,7 +182,7 @@ void ImageUtils::zoom(Tensor &inp,float scaleFactor
             for(int x_p=0;x_p<width;x_p++){
                 int x_pc = x_p - c_x;
                 int y_pc = y_p - c_y;
-                //rotation matrix
+                //Inverse scale factor - find where the value of this pixel should come from
                 int x = x_pc/scaleFactor + c_x;
                 int y = y_pc/scaleFactor + c_y;
                 if(x>=0 && x<width && y>=0 && y<height){
@@ -197,6 +197,44 @@ void ImageUtils::zoom(Tensor &inp,float scaleFactor
         if(parentTimer) zoomTimer->stop();
     #endif
 }
+
+void ImageUtils::horizontalFlip(Tensor &inp
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+    ){
+    #if PROFILING
+        Timer *horizontalFlipTimer = nullptr;
+        if(parentTimer){
+            horizontalFlipTimer = parentTimer->addChildTimer("horizontalFlip");
+        }
+    #endif
+    std::vector<int> dimens = inp.getDimens();
+    std::vector<int> childSizes = inp.getChildSizes();
+    const int height = dimens[1];
+    const int width = dimens[2];
+    Tensor res = Tensor(dimens);
+    const int c_y = height/2;
+    const int c_x = width/2;
+    float* __restrict__ resData = res.getData();
+    float *origData = inp.getData();
+    for(int c=0;c<dimens[0];c++){
+        int channel = c*childSizes[0];
+        for(int y_p=0;y_p<height;y_p++){
+            int row = channel + y_p*width;
+            for(int x_p=0;x_p<width;x_p++){
+                int x = width-x_p;
+                resData[row+x_p] = origData[channel+y_p*width+x];
+            }
+        }
+    }
+    //deep copy
+    inp = res;
+    #if PROFILING
+        if(parentTimer) horizontalFlipTimer->stop();
+    #endif
+}
+
 
 void ImageUtils::toGreyscale(Tensor &inp
 #if PROFILING
@@ -391,9 +429,10 @@ void ImageUtils::augment(Tensor &inp
         Timer *augmentTimer = nullptr;
         if(parentTimer) augmentTimer = parentTimer->addChildTimer("augment");
     #endif
+    bool greyscaled = false;
     std::uniform_real_distribution<double> augmentOrNot(0, 1);
     double prob = augmentOrNot(localRng);
-    if(prob<0.25){ //zoom in on 1 in 4
+    if(prob<0.25){ //Zoom in on 1 in 4
         //If you zoom in somewhere, other than the centre, you might miss the plant
         std::uniform_real_distribution<double> scaleFactorDist(1.25,2);
         ImageUtils::zoom(inp,scaleFactorDist(localRng)
@@ -403,7 +442,7 @@ void ImageUtils::augment(Tensor &inp
         );
     }
     prob = augmentOrNot(localRng);
-    if(prob<0.25){ //rotate 1 in 4
+    if(prob<0.25){ //Rotate 1 in 4
         std::uniform_real_distribution<double> angleDist(-std::numbers::pi/4,std::numbers::pi/4);
         ImageUtils::rotate(inp,angleDist(localRng)
         #if PROFILING
@@ -412,14 +451,65 @@ void ImageUtils::augment(Tensor &inp
         );
     }
     prob = augmentOrNot(localRng);
-    if(prob<0.05){ //greyscale 1 in 20
+    if(prob<0.2){ //Flip 1 in 5
+        ImageUtils::horizontalFlip(inp
+        #if PROFILING
+            ,augmentTimer
+        #endif
+        );
+    }
+    prob = augmentOrNot(localRng);
+    if(prob<0.05){ //Greyscale 1 in 20
         ImageUtils::toGreyscale(inp
+        #if PROFILING
+            ,augmentTimer
+        #endif
+        );
+        greyscaled = true;
+    }
+   
+    prob = augmentOrNot(localRng);
+    if(prob<0.0625){ //Blur 1 in 16
+        gaussianBlur(inp,5 //5x5 kernel
+        #if PROFILING
+            ,augmentTimer
+        #endif
+        );  
+    }
+    prob = augmentOrNot(localRng);
+    if(prob<0.2){ //Change brightness on 1 in 5
+        std::uniform_real_distribution<float> brightnessDist(0.5,1.75); 
+        float brightnessFactor = brightnessDist(localRng);
+        changeBrightness(inp,brightnessFactor
         #if PROFILING
             ,augmentTimer
         #endif
         );
     }
 
+    //Color-related 
+    //Do not apply to greyscale
+    if(greyscaled) return;
+    prob = augmentOrNot(localRng);
+    if(prob<0.2){ //Change contrast on 1 in 5
+        std::uniform_real_distribution<float> contrastDist(0.5,2); 
+        float contrastFactor = contrastDist(localRng);
+        changeContrast(inp,contrastFactor
+        #if PROFILING
+            ,augmentTimer
+        #endif
+        );
+    }
+    prob = augmentOrNot(localRng);
+    if(prob<0.2){ //Change saturation on 1 in 5
+        std::uniform_real_distribution<float> saturationDist(0.5,2); 
+        float saturationFactor = saturationDist(localRng);
+        changeSaturation(inp,saturationFactor
+        #if PROFILING
+            ,augmentTimer
+        #endif
+        );
+    }
     #if PROFILING
         if(parentTimer) augmentTimer->stop();
     #endif
