@@ -489,7 +489,12 @@ void ImageUtils::augment(Tensor &inp
 
     //Color-related 
     //Do not apply to greyscale
-    if(greyscaled) return;
+    if(greyscaled){
+        #if PROFILING
+            if(parentTimer) augmentTimer->stop();
+        #endif
+        return;
+    }
     prob = augmentOrNot(localRng);
     if(prob<0.2){ //Change contrast on 1 in 5
         std::uniform_real_distribution<float> contrastDist(0.5,2); 

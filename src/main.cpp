@@ -58,7 +58,7 @@ int main(int argc,char **argv){
     //out => output every single test result
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = nullptr;
-    const int numImageThreads = 2;
+    const int numImageThreads = 4;
     const int numCnnThreads = 8;
     int mode = -1;
     int numBatches = -1;

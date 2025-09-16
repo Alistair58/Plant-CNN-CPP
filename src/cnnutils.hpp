@@ -20,6 +20,12 @@
     #include "timer.hpp"
 #endif
 
+typedef struct dimens{
+    int c;
+    int h;
+    int w;
+}dimens;
+
 class CNN; //forward declaration needed for compilation of applyGradients
 
 class CnnUtils {
@@ -34,10 +40,9 @@ class CnnUtils {
         std::vector<Tensor> paddedMaps; //Reusing padding is better than allocating for every convolutions
         Dataset *d;
         std::vector<int> numNeurons;
-        std::vector<int> numMaps; //includes the result of pooling (except final pooling)
-        std::vector<int> mapDimens;
-        std::vector<int> kernelSizes; //0 represents a pooling layer, the last one is excluded
-        std::vector<int> strides; //pooling strides are included
+        std::vector<dimens> mapDimens; //c,h,w - includes the result of pooling (except final pooling)
+        std::vector<std::pair<int,int>> kernelSizes; //0 represents a pooling layer, the last one is excluded
+        std::vector<std::pair<int,int>> strides; //pooling strides are included
         std::vector<std::unique_ptr<int[]>> maxPoolIndices;
         bool padding;
         float LR;
@@ -161,8 +166,7 @@ class CnnUtils {
         void resetGrad(std::vector<Tensor>& grad);
 
         //(GET|SET)TERS
-        std::vector<int> getNumMaps(){ return numMaps; }
-        std::vector<int> getMapDimens(){ return mapDimens; }
+        std::vector<dimens> getMapDimens(){ return mapDimens; }
     private:
         //INTERNAL UTILS
         void applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient,int batchSize);

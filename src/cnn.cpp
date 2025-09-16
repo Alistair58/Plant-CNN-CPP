@@ -9,10 +9,29 @@
 //Creating a fresh CNN
 CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
     numNeurons = {4096,1028,47};
-    numMaps =     {3,  32,64,128,256,256};//includes the result of pooling (except final pooling)
-    mapDimens =   {256,128,64,32,16,16};
-    kernelSizes = {   3,  3, 3, 3, 3  };  //0 represents a pooling layer, the last one is excluded
-    strides =     {   2,  2, 2, 2, 1, 4}; //pooling strides are included
+    //includes the result of pooling (except final pooling)
+    mapDimens = std::vector<dimens>(6);
+    mapDimens[0] = {3,256,256};
+    mapDimens[1] = {32,128,128};
+    mapDimens[2] = {64,64,64};
+    mapDimens[3] = {128,32,32};
+    mapDimens[4] = {256,16,16};
+    mapDimens[5] = {256,16,16};
+    //0 represents a pooling layer, the last one is excluded
+    kernelSizes = std::vector<std::pair<int,int>>(5);
+    kernelSizes[0] = {3,3}; //h,w
+    kernelSizes[1] = {3,3};
+    kernelSizes[2] = {3,3};
+    kernelSizes[3] = {3,3};
+    kernelSizes[4] = {3,3}; 
+    //pooling strides are included
+    strides = std::vector<std::pair<int,int>>(6);
+    strides[0] = {2,2};//y,x - pooling strides are included
+    strides[1] = {2,2};
+    strides[2] = {2,2};
+    strides[3] = {2,2};
+    strides[4] = {1,1};
+    strides[5] = {4,4};
     padding = true;
     this->dropoutProb = dropoutProbability;
 
@@ -36,28 +55,32 @@ CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
     for(int l=0;l<numNeurons.size();l++){
         activations[l] = Tensor({numNeurons[l]});
     }
-    this->maps = std::vector<Tensor>(numMaps.size());
-    for(int l=0;l<numMaps.size();l++){
-        maps[l] = Tensor({numMaps[l],mapDimens[l],mapDimens[l]});
+    this->maps = std::vector<Tensor>(mapDimens.size());
+    for(int l=0;l<mapDimens.size();l++){
+        maps[l] = Tensor({mapDimens[l].c,mapDimens[l].h,mapDimens[l].w});
     }
     if(padding){
-        this->paddedMaps = std::vector<Tensor>(numMaps.size()-1); //last map is pooled not convolved - my favourite way of having a Martini
-        for(int l=0;l<numMaps.size()-1;l++){
-            int kernelRadius = std::floor(this->kernelSizes[l]/2);
-            int paddedDimen = mapDimens[l]+2*kernelRadius;
-            paddedMaps[l] = Tensor({numMaps[l],paddedDimen,paddedDimen});
+        this->paddedMaps = std::vector<Tensor>(mapDimens.size()-1); //last map is pooled not convolved - my favourite way of having a Martini
+        for(int l=0;l<mapDimens.size()-1;l++){
+            int kernelRadiusY = std::floor(this->kernelSizes[l].first/2);
+            int kernelRadiusX = std::floor(this->kernelSizes[l].second/2);
+            int paddedHeight = mapDimens[l].h+2*kernelRadiusY;
+            int paddedWidth = mapDimens[l].w+2*kernelRadiusX;
+            paddedMaps[l] = Tensor({mapDimens[l].c,paddedHeight,paddedWidth});
         }
     }
     for(int l=0;l<kernelSizes.size();l++){
-        if(kernelSizes[l]==0){
-            int pooledDimen = mapDimens[l]/strides[l];
-            maxPoolIndices.push_back(std::unique_ptr<int[]>(new int[numMaps[l]*pooledDimen*pooledDimen]));
+        if(kernelSizes[l].first==0 || kernelSizes[l].second==0){ //pooling
+            int pooledDimenX = mapDimens[l].w/strides[l].second;
+            int pooledDimenY = mapDimens[l].h/strides[l].first;
+            maxPoolIndices.push_back(std::unique_ptr<int[]>(new int[mapDimens[l].c*pooledDimenY*pooledDimenX]));
         }
     }
     //final pooling
-    int finalPooledDimen = mapDimens[mapDimens.size()-1]/strides[strides.size()-1];
+    int finalPooledDimenX = mapDimens[mapDimens.size()-1].w/strides[strides.size()-1].second;
+    int finalPooledDimenY = mapDimens[mapDimens.size()-1].h/strides[strides.size()-1].first;
     maxPoolIndices.push_back(std::unique_ptr<int[]>(
-        new int[numMaps[numMaps.size()-1]*finalPooledDimen*finalPooledDimen]
+        new int[mapDimens[mapDimens.size()-1].c*finalPooledDimenY*finalPooledDimenX]
     ));
     if(restart){
         resetKernels();
@@ -68,7 +91,6 @@ CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
 //Creating a copy from a template CNN (I can't call it template)
 CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
     numNeurons = original->numNeurons;
-    numMaps = original->numMaps;
     mapDimens = original->mapDimens;
     kernelSizes = original->kernelSizes;
     strides = original->strides;
@@ -112,28 +134,32 @@ CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
     for(int l=0;l<numNeurons.size();l++){
         activations[l] = Tensor({numNeurons[l]});
     }
-    this->maps = std::vector<Tensor>(numMaps.size());
-    for(int l=0;l<numMaps.size();l++){
-        maps[l] = Tensor({numMaps[l],mapDimens[l],mapDimens[l]});
+    this->maps = std::vector<Tensor>(mapDimens.size());
+    for(int l=0;l<mapDimens.size();l++){
+        maps[l] = Tensor({mapDimens[l].c,mapDimens[l].h,mapDimens[l].w});
     }
     if(padding){
-        this->paddedMaps = std::vector<Tensor>(numMaps.size()-1); //last map is pooled not convolved - my favourite way of having a Martini
-        for(int l=0;l<numMaps.size()-1;l++){
-            int kernelRadius = std::floor(this->kernelSizes[l]/2);
-            int paddedDimen = mapDimens[l]+2*kernelRadius;
-            paddedMaps[l] = Tensor({numMaps[l],paddedDimen,paddedDimen});
+        this->paddedMaps = std::vector<Tensor>(mapDimens.size()-1); //last map is pooled not convolved - my favourite way of having a Martini
+        for(int l=0;l<mapDimens.size()-1;l++){
+            int kernelRadiusY = std::floor(this->kernelSizes[l].first/2);
+            int kernelRadiusX = std::floor(this->kernelSizes[l].second/2);
+            int paddedHeight = mapDimens[l].h+2*kernelRadiusY;
+            int paddedWidth = mapDimens[l].w+2*kernelRadiusX;
+            paddedMaps[l] = Tensor({mapDimens[l].c,paddedHeight,paddedWidth});
         }
     }
     for(int l=0;l<kernelSizes.size();l++){
-        if(kernelSizes[l]==0){
-            int pooledDimen = mapDimens[l]/strides[l];
-            maxPoolIndices.push_back(std::unique_ptr<int[]>(new int[numMaps[l]*pooledDimen*pooledDimen]));
+        if(kernelSizes[l].first==0 || kernelSizes[l].second==0){ //pooling
+            int pooledDimenX = mapDimens[l].w/strides[l].second;
+            int pooledDimenY = mapDimens[l].h/strides[l].first;
+            maxPoolIndices.push_back(std::unique_ptr<int[]>(new int[mapDimens[l].c*pooledDimenY*pooledDimenX]));
         }
     }
     //final pooling
-    int finalPooledDimen = mapDimens[mapDimens.size()-1]/strides[strides.size()-1];
+    int finalPooledDimenX = mapDimens[mapDimens.size()-1].w/strides[strides.size()-1].second;
+    int finalPooledDimenY = mapDimens[mapDimens.size()-1].h/strides[strides.size()-1].first;
     maxPoolIndices.push_back(std::unique_ptr<int[]>(
-        new int[numMaps[numMaps.size()-1]*finalPooledDimen*finalPooledDimen]
+        new int[mapDimens[mapDimens.size()-1].c*finalPooledDimenY*finalPooledDimenX]
     ));
 }
 
@@ -166,25 +192,25 @@ std::string CNN::forwards(Tensor& imageInt,bool training
         if(parentTimer) convolutionalLayersTimer = forwardsTimer->addChildTimer("convolutionalLayers");
     #endif
     //Convolutional and pooling layers
-    for(int l=1;l<numMaps.size();l++){
+    for(int l=1;l<mapDimens.size();l++){
         #if PROFILING
             Timer *convolutionalLayerTimer = nullptr;
             if(parentTimer) convolutionalLayerTimer = convolutionalLayersTimer->addChildTimer("convolutionLayer"+std::to_string(l-1));
         #endif
-        for(int i=0;i<numMaps[l];i++){
+        for(int i=0;i<mapDimens[l].c;i++){
             //Does copy-elision and so no ctor is called and memory is shared
             Tensor currChannel = maps[l].slice({i}); 
-            if(kernelSizes[l-1]==0){
+            if(kernelSizes[l-1].first==0 || kernelSizes[l-1].second==0){
                 //1:1 mapping for a max pool layer
                 Tensor prevChannel = maps[l-1].slice({i});
-                currChannel = maxPool(prevChannel,strides[l-1],strides[l-1]); //maxPool requires 1:1 channels between layers
+                currChannel = maxPool(prevChannel,strides[l-1].second,strides[l-1].first); //maxPool requires 1:1 channels between layers
             }
             else{   
                 //Slice with biases
                 Tensor kernel = kernels[l-1].slice({i},{i});
                 if(i==0){
                     //We need to set the paddedMap with the correct data and padding 
-                    currChannel = convolution(maps[l-1],paddedMaps[l-1],kernel,strides[l-1],strides[l-1]
+                    currChannel = convolution(maps[l-1],paddedMaps[l-1],kernel,strides[l-1].second,strides[l-1].first
                     #if PROFILING
                         ,parentTimer?convolutionalLayerTimer:nullptr
                     #endif
@@ -193,7 +219,7 @@ std::string CNN::forwards(Tensor& imageInt,bool training
                 else{
                     //We've already set the paddedMap with the correct data
                     //Tell it not to pad
-                    currChannel = convolution(paddedMaps[l-1],kernel,strides[l-1],strides[l-1],false
+                    currChannel = convolution(paddedMaps[l-1],kernel,strides[l-1].second,strides[l-1].first,false
                     #if PROFILING
                         ,parentTimer?convolutionalLayerTimer:nullptr
                     #endif
@@ -213,26 +239,27 @@ std::string CNN::forwards(Tensor& imageInt,bool training
         }
     #endif
     //Final pooling 
-    int poolingDimen = mapDimens[mapDimens.size()-1]/strides[strides.size()-1];
-    int poolingArea = poolingDimen*poolingDimen;
-    Tensor pooled({numMaps[numMaps.size()-1],poolingDimen,poolingDimen});
+    int poolingDimenX = mapDimens[mapDimens.size()-1].w/strides[strides.size()-1].second;
+    int poolingDimenY = mapDimens[mapDimens.size()-1].h/strides[strides.size()-1].first;
+    int poolingArea = poolingDimenY*poolingDimenX;
+    Tensor pooled({mapDimens[mapDimens.size()-1].c,poolingDimenY,poolingDimenX});
     float *pooledData = pooled.getData();
     float *activations0Data = activations[0].getData();
     std::vector<int> pooledChildSizes = pooled.getChildSizes();
-    for(int i=0;i<numMaps[numMaps.size()-1];i++){
+    for(int i=0;i<mapDimens[mapDimens.size()-1].c;i++){
         Tensor pooledChannel = pooled.slice({i});
-        Tensor prevChannel = maps[numMaps.size()-1].slice({i});
+        Tensor prevChannel = maps[mapDimens.size()-1].slice({i});
         int *maxPoolIndicesMap = &(maxPoolIndices[maxPoolIndices.size()-1][i*poolingArea]);
-        pooledChannel = maxPool(prevChannel,strides[strides.size()-1],strides[strides.size()-1],maxPoolIndicesMap);
+        pooledChannel = maxPool(prevChannel,strides[strides.size()-1].second,strides[strides.size()-1].first,maxPoolIndicesMap);
         int activationsPoolingArea = i*poolingArea;
         int poolingChannel = i*pooledChildSizes[0];
-        for(int y=0;y<poolingDimen;y++){
-            int activationsPoolingRow = activationsPoolingArea + y*poolingDimen;
+        for(int y=0;y<poolingDimenY;y++){
+            int activationsPoolingRow = activationsPoolingArea + y*poolingDimenX;
             int poolingRow = poolingChannel + y*pooledChildSizes[1];
             std::memcpy(
                 activations0Data+activationsPoolingRow,
                 pooledData+poolingRow,
-                poolingDimen*sizeof(float)
+                poolingDimenX*sizeof(float)
             );
         }
     }
@@ -362,16 +389,16 @@ void CNN::backwards(Tensor& imageInt,std::string answer
         }
     #endif
     //x is the image pixel value and so these dcDxs are the derivatives based on pixels which are carried backwards
-    std::vector<Tensor> dcDxs(numMaps.size()-2);
+    std::vector<Tensor> dcDxs(mapDimens.size()-2);
     //No dcDxs for first or last (last goes straight into the MLP)
-    for(int l=0;l<numMaps.size()-2;l++){
-        if(kernelSizes[l+1]==0){
+    for(int l=0;l<mapDimens.size()-2;l++){
+        if(kernelSizes[l+1].first==0 || kernelSizes[l+1].second==0){
             //There doesn't need to be any dcDxs for any pre-pooling maps
             //Blank dcDxs for pre-pooling layers so that indices stay consistent with map indices
             dcDxs[l] = Tensor({0});
         }
         else{
-            dcDxs[l] = Tensor({numMaps[l+1],mapDimens[l+1],mapDimens[l+1]});
+            dcDxs[l] = Tensor({mapDimens[l+1].c,mapDimens[l+1].h,mapDimens[l+1].w});
         }
     }
     //makes computational sense to do pooling and conv together
@@ -383,14 +410,14 @@ void CNN::backwards(Tensor& imageInt,std::string answer
             convolutionsTimer = backwardsTimer->addChildTimer("convolutions");
         }
     #endif
-    for(int l=numMaps.size()-2;l>0;l--){ //>0 is due to the input dimens being included in numMaps and -2 as we've already done the last layer
+    for(int l=mapDimens.size()-2;l>0;l--){ //>0 is due to the input dimens being included in numMaps and -2 as we've already done the last layer
         #if PROFILING
             Timer *convolutionsLayerTimer = nullptr;
             if(parentTimer){
                 convolutionsLayerTimer = convolutionsTimer->addChildTimer("convolutionsLayer"+std::to_string(l-1)); 
             }
         #endif
-        if(kernelSizes[l-1]==0){
+        if(kernelSizes[l-1].first==0 || kernelSizes[l-1].second==0){
             poolingConvBackwards(dcDxs, --l,padding); //prev (l-1) --conv-> curr (l) --pool-> pooled (l+1)
             //skip 1 layer as we have done it within poolingConvBackwards
             #if PROFILING
@@ -483,12 +510,15 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding
     //x = ReLU(z)
     const int lSub1 = l-1;
     const int lSub2 = l-2;
-    const int prevDimens = mapDimens[lSub1];
-    const int currDimens = mapDimens[l];
-    const int kernelSize = kernelSizes[lSub1];
-    const int kernelRadius = (int) floor(kernelSize/2);
-    const int thisStride = strides[lSub1];
-    float*  __restrict__ currDcDxsData = dcDxs[lSub1].getData(); //yes, l-1 is correct (dcDxs only has numMaps.size()-2 layers)
+    const int prevDimensX = mapDimens[lSub1].w;
+    const int prevDimensY = mapDimens[lSub1].h;
+    const int kernelSizeX = kernelSizes[lSub1].second;
+    const int kernelSizeY = kernelSizes[lSub1].first;
+    const int kernelRadiusX = kernelSizeX/2;
+    const int kernelRadiusY = kernelSizeY/2;
+    const int thisStrideX = strides[lSub1].second;
+    const int thisStrideY = strides[lSub1].first;
+    float*  __restrict__ currDcDxsData = dcDxs[lSub1].getData(); //yes, l-1 is correct (dcDxs only has mapDimens.size()-2 layers)
     float*  __restrict__ prevDcDxsData = nullptr;
     if(l!=1) prevDcDxsData = dcDxs[lSub2].getData(); //No derivatives need to be stored for the first layer
     float*  __restrict__ currMapData = maps[l].getData();
@@ -501,24 +531,8 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding
     std::vector<int> kernelsChildSizes = kernels[lSub1].getChildSizes();
     const int prevMapsChildSizes1 = prevMapsChildSizes[1];
     const int currMapsChildSizes1 = currMapsChildSizes[1];
-    const int thisStride2 = 2*thisStride;
-    const int thisStride3 = 3*thisStride;
-    const int thisStride4 = 4*thisStride;
-    const int thisStride5 = 5*thisStride;
-    const int thisStride6 = 6*thisStride;
-    const int thisStride7 = 7*thisStride;
-    const int thisStride8 = 8*thisStride;
-    const __m256i strideOffsets = _mm256_setr_epi32(
-        0,
-        thisStride,
-        thisStride2,
-        thisStride3,
-        thisStride4,
-        thisStride5,
-        thisStride6,
-        thisStride7
-    );
-    float buffer[8];
+    const int thisStrideX7 = 7*thisStrideX;
+    const int thisStrideX8 = 8*thisStrideX;
     //Precompute ReLU derivatives so we don't recompute them multiple times
     const size_t currMapSize = maps[l].getTotalSize();
     #if PROFILING
@@ -550,113 +564,271 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding
         //Can be AVX2'd if necessary
         *currDcDzsPtr = (((*currMapDataPtr)<=0) ? 0.01f : 1.0f) * (*currDcDxsPtr);
     }
-
     #if PROFILING
-        Timer *backwardsConvLoopTimer = nullptr;
+        Timer *preparingStridingTimer = nullptr;
         if(parentTimer){
             dcDzsLoopTimer->stop();
-            backwardsConvLoopTimer = parentTimer->addChildTimer("backwardsConvLoop");
+            preparingStridingTimer = parentTimer->addChildTimer("preparingStriding");
         }
     #endif
-    for(int i=0;i<numMaps[l];i++){ //For each convolution output
-        int currMapChannel = i*currMapsChildSizes[0];
-        int kernelToChannel = i*kernelsChildSizes[0]; //kernels are [layer][nextLayerChannel][prevLayerChannel]
-        for(int prevMapI=0;prevMapI<numMaps[lSub1];prevMapI++){ //For each previous channel
-            int prevMapChannel = prevMapI*prevMapsChildSizes[0];
-            int kernelFromChannel = kernelToChannel + prevMapI*kernelsChildSizes[1];
-            for(int j=0;j<kernelSize;j++){
-                int kernelRow = kernelFromChannel + j*kernelsChildSizes[2];
-                int yStart, yEnd;
-                if(padding){
-                    yStart = (j<kernelRadius)? floorMod((j-kernelRadius),thisStride) : j-kernelRadius; //want modulus (positive) not the remainder
-                    yEnd = std::min(prevDimens-kernelRadius+j,prevDimens); //When j>=kernelRadius, it reaches the end item. We don't care about the stride as this is the upper bound
-                }
-                else{
-                    yStart = j;
-                    yEnd = prevDimens-kernelSize+j+1;
-                }
-                for(int k=0;k<kernelSize;k++){ //For each element in the kernel (k,j)
-                    //Add up all the activations that it sees
-                    int kernelIndex = kernelRow + k;
-                    float kernelVal = kernelData[kernelIndex];
-                    float sum = 0;
-                    int thisY,thisX;
-                    thisY = thisX = 0;
-                    
-                    int xStart, xEnd;
-                    if(padding){
-                        xStart = (k<kernelRadius)? floorMod((k-kernelRadius),thisStride) : k-kernelRadius;
-                        xEnd = std::min(prevDimens-kernelRadius+k,prevDimens); //Same here - makes sense with a drawing
-                        //The limits are needed as we have removed the padding and so we have to stop it earlier
-                    }
-                    else{
-                        xStart = k;
-                        xEnd = prevDimens-kernelSize+k+1;
-                    }
-                    for(int y=yStart;y<yEnd;y+=thisStride){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
-                        int currMapRow = currMapChannel + thisY*currMapsChildSizes1;
-                        int prevMapRow = prevMapChannel + y*prevMapsChildSizes1;
-                        float* __restrict__ currMapDcDzsRowBase = currDcDzsData+currMapRow;
-                        float* __restrict__ prevMapRowBase = prevMapData+prevMapRow;
-                        int x=xStart;
-                        __m256 acc = _mm256_set1_ps(0);
-                        for(;x+thisStride7<xEnd;x+=thisStride8){
-                            float* __restrict__ currMapDcDzsBasePtr = currMapDcDzsRowBase + thisX;
-                            float* __restrict__ prevMapBasePtr = prevMapRowBase+x;
-                            const __m256 prevMapVals = _mm256_i32gather_ps(prevMapBasePtr,strideOffsets,4);      
-                            const __m256 currMapDerivs = _mm256_loadu_ps(currMapDcDzsBasePtr);
-                            
-                            //Add it (dC/dx*dx/dk) to kernel derivative
-                            acc = _mm256_fmadd_ps(prevMapVals,currMapDerivs,acc);
-                            
-                            if(l!=1){
-                                __m256 kernelVals = _mm256_set1_ps(kernelVal);
-                                __m256 product = _mm256_mul_ps(currMapDerivs,kernelVals);
-                                _mm256_storeu_ps(buffer,product);
-                                //Can't store non-contiguously in avx256
-                                float* __restrict__ prevDcDxsPtr = prevDcDxsData+prevMapRow+x;
-                                *prevDcDxsPtr += buffer[0];
-                                *(prevDcDxsPtr+thisStride) += buffer[1];
-                                *(prevDcDxsPtr+thisStride2) += buffer[2];
-                                *(prevDcDxsPtr+thisStride3) += buffer[3];
-                                *(prevDcDxsPtr+thisStride4) += buffer[4];
-                                *(prevDcDxsPtr+thisStride5) += buffer[5];
-                                *(prevDcDxsPtr+thisStride6) += buffer[6];
-                                *(prevDcDxsPtr+thisStride7) += buffer[7];
-                            }
-                            thisX+=8;
-                        }
-                        sum += horizontalSum(acc);
-                        //scalar tail
-                        for(;x<xEnd;x+=thisStride){
-                            const int currMapIndex = currMapRow + thisX;
-                            const int prevMapIndex = prevMapRow + x;
-                            const float reusable = currDcDzsData[currMapIndex];
-                            sum += (prevMapData[prevMapIndex]) * reusable;//The previous activation
-                            if(l!=1) prevDcDxsData[prevMapIndex] += reusable * kernelVal; //don't have dcDxs for the first layer
-                            thisX++;
-                        }
-                        thisX = 0;
-                        thisY++;
-                    }
-                    kernelGradData[kernelIndex] += sum; 
+    //Store the strided data contiguously so it can be loaded quicker
+    Tensor stridedPrevMap({mapDimens[lSub1].c,thisStrideX,mapDimens[lSub1].h,(int)std::ceil((float)mapDimens[lSub1].w/thisStrideX)});
+    float* __restrict__ stridedPrevMapData = stridedPrevMap.getData();
+    std::vector<int> stridedPrevMapChildSizes = stridedPrevMap.getChildSizes();
+    for(int c=0;c<mapDimens[lSub1].c;c++){
+        float* __restrict__ stridedPrevMapChannel = stridedPrevMapData+c*stridedPrevMapChildSizes[0];
+        float* __restrict__ prevMapChannel = prevMapData+c*prevMapsChildSizes[0];
+        for(int i=0;i<thisStrideX;i++){
+            float* __restrict__ stridedPrevMapStride = stridedPrevMapChannel+i*stridedPrevMapChildSizes[1];
+            for(int y=0;y<mapDimens[lSub1].h;y++){
+                float* __restrict__ stridedPrevMapRowPtr = stridedPrevMapStride+y*stridedPrevMapChildSizes[2];
+                //+i is important
+                float* __restrict__ prevMapRowPtr = prevMapChannel+y*prevMapsChildSizes1 + i;
+                float* __restrict__ prevMapRowEndPtr = prevMapRowPtr+prevMapsChildSizes1;
+
+                for(;prevMapRowPtr<prevMapRowEndPtr;prevMapRowPtr+=thisStrideX,stridedPrevMapRowPtr++){
+                    *stridedPrevMapRowPtr = *prevMapRowPtr;
                 }
             }
         }
-        //Bias doesn't care about the inputs and so only needs the output
-        //Bias has to be here as otherwise it would count the same pixels multiple times
-        //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression)
-        float biasSum = 0;
-        float* __restrict__ currDcDzsPtr = currDcDzsData+currMapChannel;
-        const float* __restrict__ currDcDzsEndPtr = currDcDzsPtr+currMapsChildSizes[0];
-        for(;currDcDzsPtr<currDcDzsEndPtr;currDcDzsPtr++){
-            biasSum += *currDcDzsPtr;
-        }
-        kernelBiasesGradData[i] += biasSum;
     }
-    #if PROFILING
-        if(parentTimer) backwardsConvLoopTimer->stop();
-    #endif
+
+    if(l!=1){
+        //l==1 does not have dcDxs
+        //Create a way for the dcDxs to be stored continguously as this is faster
+        //They are put in the correct place at the end
+        Tensor stridedPrevDcDxs({mapDimens[lSub1].c,thisStrideX,mapDimens[lSub1].h,(int)std::ceil((float)mapDimens[lSub1].w/thisStrideX)});
+        float* __restrict__ stridedPrevDcDxsData = stridedPrevDcDxs.getData();
+        std::vector<int> stridedPrevDcDxsChildSizes = stridedPrevDcDxs.getChildSizes();
+        #if PROFILING
+            Timer *backwardsConvLoopTimer = nullptr;
+            if(parentTimer){
+                preparingStridingTimer->stop();
+                backwardsConvLoopTimer = parentTimer->addChildTimer("backwardsConvLoop");
+            }
+        #endif
+        
+        for(int i=0;i<mapDimens[l].c;i++){ //For each convolution output
+            int currMapChannel = i*currMapsChildSizes[0];
+            int kernelToChannel = i*kernelsChildSizes[0]; //kernels are [layer][nextLayerChannel][prevLayerChannel]
+            for(int prevMapI=0;prevMapI<mapDimens[lSub1].c;prevMapI++){ //For each previous channel
+                int prevMapChannel = prevMapI*prevMapsChildSizes[0];
+                int kernelFromChannel = kernelToChannel + prevMapI*kernelsChildSizes[1];
+                float* __restrict__ stridedPrevDcDxsChannel = stridedPrevDcDxsData+prevMapI*stridedPrevDcDxsChildSizes[0];
+                float* __restrict__ stridedPrevMapChannel = stridedPrevMapData+prevMapI*stridedPrevMapChildSizes[0];
+                for(int j=0;j<kernelSizeY;j++){
+                    int kernelRow = kernelFromChannel + j*kernelsChildSizes[2];
+                    int yStart, yEnd;
+                    if(padding){
+                        yStart = (j<kernelRadiusY)? floorMod((j-kernelRadiusY),thisStrideY) : j-kernelRadiusY; //want modulus (positive) not the remainder
+                        yEnd = std::min(prevDimensY-kernelRadiusY+j,prevDimensY); //When j>=kernelRadius, it reaches the end item. We don't care about the stride as this is the upper bound
+                    }
+                    else{
+                        yStart = j;
+                        yEnd = prevDimensY-kernelSizeY+j+1;
+                    }
+                    for(int k=0;k<kernelSizeX;k++){ //For each element in the kernel (k,j)
+                        //Add up all the activations that it sees
+                        int kernelIndex = kernelRow + k;
+                        float kernelVal = kernelData[kernelIndex];
+                        float sum = 0;
+                        int thisY,thisX;
+                        thisY = thisX = 0;
+                        
+                        int xStart, xEnd;
+                        if(padding){
+                            xStart = (k<kernelRadiusX)? floorMod((k-kernelRadiusX),thisStrideX) : k-kernelRadiusX;
+                            xEnd = std::min(prevDimensX-kernelRadiusX+k,prevDimensX); //Same here - makes sense with a drawing
+                            //The limits are needed as we have removed the padding and so we have to stop it earlier
+                        }
+                        else{
+                            xStart = k;
+                            xEnd = prevDimensX-kernelSizeX+k+1;
+                        }
+                        int strideOffset = xStart%thisStrideX;
+                        int xHeadstart = xStart/thisStrideX;
+                        float* __restrict__ stridedPrevDcDxsOffset = stridedPrevDcDxsChannel+strideOffset*stridedPrevDcDxsChildSizes[1]+xHeadstart;
+                        float* __restrict__ stridedPrevMapOffset = stridedPrevMapChannel+strideOffset*stridedPrevMapChildSizes[1]+xHeadstart;
+                        for(int y=yStart;y<yEnd;y+=thisStrideY){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
+                            int currMapRow = currMapChannel + thisY*currMapsChildSizes1;
+                            int prevMapRow = prevMapChannel + y*prevMapsChildSizes1;
+                            float* __restrict__ currMapDcDzsRowBase = currDcDzsData+currMapRow;
+                            float* __restrict__ stridedPrevDcDxsRow = stridedPrevDcDxsOffset+y*stridedPrevDcDxsChildSizes[2];
+                            float* __restrict__ stridedPrevMapRow = stridedPrevMapOffset+y*stridedPrevMapChildSizes[2];
+                            int x=xStart;
+                            __m256 acc = _mm256_set1_ps(0);
+                            for(;x+thisStrideX7<xEnd;x+=thisStrideX8){
+                                float* __restrict__ currMapDcDzsBasePtr = currMapDcDzsRowBase + thisX;
+                                const __m256 prevMapVals = _mm256_loadu_ps(stridedPrevMapRow+thisX);      
+                                const __m256 currMapDerivs = _mm256_loadu_ps(currMapDcDzsBasePtr);
+                                
+                                //Add it (dC/dx*dx/dk) to kernel derivative
+                                acc = _mm256_fmadd_ps(prevMapVals,currMapDerivs,acc);
+                                
+                                float* __restrict__ prevDcDxsPtr = stridedPrevDcDxsRow+thisX;
+                                __m256 kernelVals = _mm256_set1_ps(kernelVal);
+                                __m256 storedSum = _mm256_loadu_ps(prevDcDxsPtr);
+                                __m256 result = _mm256_fmadd_ps(currMapDerivs,kernelVals,storedSum);
+                                _mm256_storeu_ps(prevDcDxsPtr,result);
+                                thisX+=8;
+                            }
+                            sum += horizontalSum(acc);
+                            //scalar tail
+                            for(;x<xEnd;x+=thisStrideX){
+                                const int currMapIndex = currMapRow + thisX;
+                                const int prevMapIndex = prevMapRow + x;
+                                const float reusable = currDcDzsData[currMapIndex];
+                                sum += (prevMapData[prevMapIndex]) * reusable;//The previous activation
+                                *(stridedPrevDcDxsRow+thisX) += reusable * kernelVal; //don't have dcDxs for the first layer
+                                thisX++;
+                            }
+                            thisX = 0;
+                            thisY++;
+                        }
+                        kernelGradData[kernelIndex] += sum; 
+                    }
+                }
+            }
+            //Bias doesn't care about the inputs and so only needs the output
+            //Bias has to be here as otherwise it would count the same pixels multiple times
+            //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression)
+            float biasSum = 0;
+            float* __restrict__ currDcDzsPtr = currDcDzsData+currMapChannel;
+            const float* __restrict__ currDcDzsEndPtr = currDcDzsPtr+currMapsChildSizes[0];
+            for(;currDcDzsPtr<currDcDzsEndPtr;currDcDzsPtr++){
+                biasSum += *currDcDzsPtr;
+            }
+            kernelBiasesGradData[i] += biasSum;
+        }
+        #if PROFILING
+            Timer *unstridingDcDxsTimer = nullptr;
+            if(parentTimer){
+                backwardsConvLoopTimer->stop();
+                unstridingDcDxsTimer = parentTimer->addChildTimer("unstridingDcDxs");
+            }
+        #endif
+        for(int c=0;c<mapDimens[lSub1].c;c++){
+            float* __restrict__ stridedPrevDcDxsChannel = stridedPrevDcDxsData+c*stridedPrevDcDxsChildSizes[0];
+            float* __restrict__ prevDcDxsChannel = prevDcDxsData+c*prevMapsChildSizes[0];
+            for(int i=0;i<thisStrideX;i++){
+                float* __restrict__ stridedPrevDcDxsStride = stridedPrevDcDxsChannel+i*stridedPrevDcDxsChildSizes[1];
+                for(int y=0;y<mapDimens[lSub1].h;y++){
+                    float* __restrict__ stridedPrevDcDxsRowPtr = stridedPrevDcDxsStride+y*stridedPrevDcDxsChildSizes[2];
+                    //+i is important
+                    float* __restrict__ prevDcDxsRowPtr = prevDcDxsChannel+y*prevMapsChildSizes1 + i;
+                    float* __restrict__ prevDcDxsRowEndPtr = prevDcDxsRowPtr+prevMapsChildSizes1;
+
+                    for(;prevDcDxsRowPtr<prevDcDxsRowEndPtr;prevDcDxsRowPtr+=thisStrideX,stridedPrevDcDxsRowPtr++){
+                        *prevDcDxsRowPtr += *stridedPrevDcDxsRowPtr;
+                    }
+                }
+            }        
+        }
+        #if PROFILING
+            if(parentTimer){
+                unstridingDcDxsTimer->stop();
+            }
+        #endif
+    }
+    else{
+        #if PROFILING
+            Timer *backwardsConvLoopTimer = nullptr;
+            if(parentTimer){
+                preparingStridingTimer->stop();
+                backwardsConvLoopTimer = parentTimer->addChildTimer("backwardsConvLoop");
+            }
+        #endif
+        
+        for(int i=0;i<mapDimens[l].c;i++){ //For each convolution output
+            int currMapChannel = i*currMapsChildSizes[0];
+            int kernelToChannel = i*kernelsChildSizes[0]; //kernels are [layer][nextLayerChannel][prevLayerChannel]
+            for(int prevMapI=0;prevMapI<mapDimens[lSub1].c;prevMapI++){ //For each previous channel
+                int prevMapChannel = prevMapI*prevMapsChildSizes[0];
+                int kernelFromChannel = kernelToChannel + prevMapI*kernelsChildSizes[1];
+                float* __restrict__ stridedPrevMapChannel = stridedPrevMapData+prevMapI*stridedPrevMapChildSizes[0];
+                for(int j=0;j<kernelSizeY;j++){
+                    int kernelRow = kernelFromChannel + j*kernelsChildSizes[2];
+                    int yStart, yEnd;
+                    if(padding){
+                        yStart = (j<kernelRadiusY)? floorMod((j-kernelRadiusY),thisStrideY) : j-kernelRadiusY; //want modulus (positive) not the remainder
+                        yEnd = std::min(prevDimensY-kernelRadiusY+j,prevDimensY); //When j>=kernelRadius, it reaches the end item. We don't care about the stride as this is the upper bound
+                    }
+                    else{
+                        yStart = j;
+                        yEnd = prevDimensY-kernelSizeY+j+1;
+                    }
+                    for(int k=0;k<kernelSizeX;k++){ //For each element in the kernel (k,j)
+                        //Add up all the activations that it sees
+                        int kernelIndex = kernelRow + k;
+                        float kernelVal = kernelData[kernelIndex];
+                        float sum = 0;
+                        int thisY,thisX;
+                        thisY = thisX = 0;
+                        
+                        int xStart, xEnd;
+                        if(padding){
+                            xStart = (k<kernelRadiusX)? floorMod((k-kernelRadiusX),thisStrideX) : k-kernelRadiusX;
+                            xEnd = std::min(prevDimensX-kernelRadiusX+k,prevDimensX); //Same here - makes sense with a drawing
+                            //The limits are needed as we have removed the padding and so we have to stop it earlier
+                        }
+                        else{
+                            xStart = k;
+                            xEnd = prevDimensX-kernelSizeX+k+1;
+                        }
+                        int strideOffset = xStart%thisStrideX;
+                        int xHeadstart = xStart/thisStrideX;
+                        float* __restrict__ stridedPrevMapOffset = stridedPrevMapChannel+strideOffset*stridedPrevMapChildSizes[1]+xHeadstart;
+                        for(int y=yStart;y<yEnd;y+=thisStrideY){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
+                            int currMapRow = currMapChannel + thisY*currMapsChildSizes1;
+                            int prevMapRow = prevMapChannel + y*prevMapsChildSizes1;
+                            float* __restrict__ currMapDcDzsRowBase = currDcDzsData+currMapRow;
+                            float* __restrict__ stridedPrevMapRow = stridedPrevMapOffset+y*stridedPrevMapChildSizes[2];
+                            int x=xStart;
+                            __m256 acc = _mm256_set1_ps(0);
+                            for(;x+thisStrideX7<xEnd;x+=thisStrideX8){
+                                float* __restrict__ currMapDcDzsBasePtr = currMapDcDzsRowBase + thisX;
+                                const __m256 prevMapVals = _mm256_loadu_ps(stridedPrevMapRow+thisX);      
+                                const __m256 currMapDerivs = _mm256_loadu_ps(currMapDcDzsBasePtr);
+                                
+                                //Add it (dC/dx*dx/dk) to kernel derivative
+                                acc = _mm256_fmadd_ps(prevMapVals,currMapDerivs,acc);
+        
+                                thisX+=8;
+                            }
+                            sum += horizontalSum(acc);
+                            //scalar tail
+                            for(;x<xEnd;x+=thisStrideX){
+                                const int currMapIndex = currMapRow + thisX;
+                                const int prevMapIndex = prevMapRow + x;
+                                const float reusable = currDcDzsData[currMapIndex];
+                                sum += (prevMapData[prevMapIndex]) * reusable;//The previous activation
+                                thisX++;
+                            }
+                            thisX = 0;
+                            thisY++;
+                        }
+                        kernelGradData[kernelIndex] += sum; 
+                    }
+                }
+            }
+            //Bias doesn't care about the inputs and so only needs the output
+            //Bias has to be here as otherwise it would count the same pixels multiple times
+            //Bias deriv = cost deriv * relu deriv * 1 (only 1 bias term in each new pixel expression)
+            float biasSum = 0;
+            float* __restrict__ currDcDzsPtr = currDcDzsData+currMapChannel;
+            const float* __restrict__ currDcDzsEndPtr = currDcDzsPtr+currMapsChildSizes[0];
+            for(;currDcDzsPtr<currDcDzsEndPtr;currDcDzsPtr++){
+                biasSum += *currDcDzsPtr;
+            }
+            kernelBiasesGradData[i] += biasSum;
+        }
+        #if PROFILING
+            if(parentTimer){
+                backwardsConvLoopTimer->stop();
+            }
+        #endif
+    }
+    
     free(currDcDzsData);
 }
 
@@ -677,14 +849,21 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     float *kernelGradData = kernelsGrad[lastKernelsL].getData();
     float *kernelBiasesGradData = kernelsGrad[lastKernelsL].getBiases()->getData(); //only 1 for each channel (1d)
     int* __restrict__ maxPoolIndicesData = maxPoolIndices[maxPoolIndices.size()-1].get();
-    int prevDimens = mapDimens[prevMapsL];
-    int currDimens = mapDimens[lastMapsL];
-    int kernelSize = kernelSizes[lastKernelsL];
-    int kernelRadius = (int) floor(kernelSize/2);
-    int poolStride = strides[strides.size()-1];
-    int thisStride = strides[strides.size()-2];
-    int poolWidth = mapDimens[lastMapsL]/strides[strides.size()-1];
-    int poolArea = poolWidth*poolWidth;
+    int prevDimensX = mapDimens[prevMapsL].w;
+    int prevDimensY = mapDimens[prevMapsL].h;
+    int currDimensX = mapDimens[lastMapsL].w;
+    int currDimensY = mapDimens[lastMapsL].h;
+    int kernelSizeX = kernelSizes[lastKernelsL].second;
+    int kernelSizeY = kernelSizes[lastKernelsL].first;
+    int kernelRadiusX = (int) floor(kernelSizeX/2);
+    int kernelRadiusY = (int) floor(kernelSizeY/2);
+    int poolStrideX = strides[strides.size()-1].second;
+    int poolStrideY = strides[strides.size()-1].first;
+    int thisStrideX = strides[strides.size()-2].second;
+    int thisStrideY = strides[strides.size()-2].first;
+    int poolWidth = mapDimens[lastMapsL].w/strides[strides.size()-1].second;
+    int poolHeight = mapDimens[lastMapsL].h/strides[strides.size()-1].first;
+    int poolArea = poolWidth*poolHeight;
     std::vector<int> lastMapsChildSizes = maps[lastMapsL].getChildSizes();
     std::vector<int> prevMapsChildSizes = maps[prevMapsL].getChildSizes();
     std::vector<int> lastKernelsChildSizes = kernels[lastKernelsL].getChildSizes();
@@ -692,38 +871,38 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     const int prevMapsChildSizes1 = prevMapsChildSizes[1];
     //don't count the max pixel more than once
     //ChatGPT says uint8_t is quicker than bool as bool does bit packing
-    for(int i=0;i<numMaps[lastMapsL];i++){ //for each final map
+    for(int i=0;i<mapDimens[lastMapsL].c;i++){ //for each final map
         const int mlpRegion = i*poolArea; 
         int lastMapChannel = i*lastMapsChildSizes[0];
         int kernelToChannel = i*lastKernelsChildSizes[0];
-        for(int prevMapI=0;prevMapI<numMaps[prevMapsL];prevMapI++){
+        for(int prevMapI=0;prevMapI<mapDimens[prevMapsL].c;prevMapI++){
             int prevMapChannel = prevMapI*prevMapsChildSizes[0];
             int kernelFromChannel = kernelToChannel + prevMapI*lastKernelsChildSizes[1];
-            for(int j=0;j<kernelSize;j++){
+            for(int j=0;j<kernelSizeY;j++){
                 int kernelRow = kernelFromChannel + j*lastKernelsChildSizes[2];
                 int yStart, yEnd;
                 if(padding){
-                    yStart = (j<kernelRadius)? floorMod((j-kernelRadius),thisStride) : j-kernelRadius; //want modulus (positive) not the remainder
-                    yEnd = std::min(prevDimens-kernelRadius+j,prevDimens); //When j>=kernelRadius, it reaches the end item. We don't care about the stride as this is the upper bound
+                    yStart = (j<kernelRadiusY)? floorMod((j-kernelRadiusY),thisStrideY) : j-kernelRadiusY; //want modulus (positive) not the remainder
+                    yEnd = std::min(prevDimensY-kernelRadiusY+j,prevDimensY); //When j>=kernelRadius, it reaches the end item. We don't care about the stride as this is the upper bound
                 }
                 else{
                     yStart = j;
-                    yEnd = prevDimens-kernelSize+j+1;
+                    yEnd = prevDimensY-kernelSizeY+j+1;
                 }
 
-                for(int k=0;k<kernelSize;k++){ //For each element in the kernel (k,j)
+                for(int k=0;k<kernelSizeX;k++){ //For each element in the kernel (k,j)
                     int kernelIndex = kernelRow + k;
                     //Add up all the activations that it sees
                     float sum = 0;
                     int xStart, xEnd;
                     if(padding){
-                        xStart = (k<kernelRadius)? floorMod((k-kernelRadius),thisStride) : k-kernelRadius;
-                        xEnd = std::min(prevDimens-kernelRadius+k,prevDimens); //Same here - makes sense with a drawing
+                        xStart = (k<kernelRadiusX)? floorMod((k-kernelRadiusX),thisStrideX) : k-kernelRadiusX;
+                        xEnd = std::min(prevDimensX-kernelRadiusX+k,prevDimensX); //Same here - makes sense with a drawing
                         //The limits are needed as we have removed the padding and so we have to stop it earlier
                     }
                     else{
                         xStart = k;
-                        xEnd = prevDimens - kernelSize+k+1;
+                        xEnd = prevDimensX - kernelSizeX+k+1;
                     }
                     for(int r=0;r<poolArea;r++){
                         int mlpIndex = mlpRegion + r;
@@ -731,11 +910,11 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                         if(dcDzs0Data[mlpIndex]==0.0f) continue;
                         int maxPixelIndex = maxPoolIndicesData[mlpIndex];
                         //Curr layer indices
-                        int thisY = maxPixelIndex/currDimens;
-                        int thisX = maxPixelIndex - thisY*currDimens;
+                        int thisY = maxPixelIndex/currDimensY;
+                        int thisX = maxPixelIndex - thisY*currDimensX;
                         //Prev layer indices
-                        int y = yStart + thisY*thisStride;
-                        int x = xStart + thisX*thisStride;
+                        int y = yStart + thisY*thisStrideY;
+                        int x = xStart + thisX*thisStrideX;
                         if (y >= yEnd || x >= xEnd) {
                             //If this kernel element doesn't touch a real pixel
                             //Occurs when we've padded and so x and y are out of bounds (in the padding)
@@ -766,13 +945,20 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
 void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
     int lSub1 = l-1;
     int lPlus1 = l+1;
-    int prevDimens = mapDimens[lSub1];
-    int currDimens = mapDimens[l];
-    int kernelSize = kernelSizes[lSub1];
-    int kernelRadius = (int) floor(kernelSize/2);
-    int poolStride = strides[l];
-    int thisStride = strides[lSub1];
-    int poolDimens = mapDimens[lPlus1];
+    int prevDimensX = mapDimens[lSub1].w;
+    int prevDimensY = mapDimens[lSub1].h;
+    int currDimensX = mapDimens[l].w;
+    int currDimensY = mapDimens[l].h;
+    int kernelSizeX = kernelSizes[lSub1].second;
+    int kernelSizeY = kernelSizes[lSub1].first;
+    int kernelRadiusX = (int) floor(kernelSizeX/2);
+    int kernelRadiusY = (int) floor(kernelSizeY/2);
+    int poolStrideX = strides[l].second;
+    int poolStrideY = strides[l].first;
+    int thisStrideX = strides[lSub1].second;
+    int thisStrideY = strides[lSub1].first;
+    int poolDimensX = mapDimens[lPlus1].w;
+    int poolDimensY = mapDimens[lPlus1].h;
     float*  __restrict__ currMapData = maps[l].getData(); 
     float*  __restrict__ prevMapData = maps[lSub1].getData();
     float*  __restrict__ pooledMapData = maps[lPlus1].getData();
@@ -785,49 +971,49 @@ void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
     std::vector<int> prevMapsChildSizes = maps[lSub1].getChildSizes();
     std::vector<int> pooledMapsChildSizes = maps[lPlus1].getChildSizes();
     std::vector<int> kernelsChildSizes = kernels[lSub1].getChildSizes();
-    for(int i=0;i<numMaps[l];i++){ //prev (l-1) --conv-> curr (l) --pool-> pooled (l+1)
+    for(int i=0;i<mapDimens[l].c;i++){ //prev (l-1) --conv-> curr (l) --pool-> pooled (l+1)
         //pooling is 1:1 between channels
         int currMapChannel = i*currMapsChildSizes[0];
         int pooledMapChannel = i*pooledMapsChildSizes[0];
         int kernelToChannel = i*kernelsChildSizes[0];
-        for(int prevMapI=0;prevMapI<numMaps[l-1];prevMapI++){
+        for(int prevMapI=0;prevMapI<mapDimens[l-1].c;prevMapI++){
             int kernelFromChannel = kernelToChannel + prevMapI*kernelsChildSizes[1];
             int prevMapChannel = prevMapI*prevMapsChildSizes[0];
-            for(int j=0;j<kernelSize;j++){
+            for(int j=0;j<kernelSizeY;j++){
                 int kernelRow = kernelFromChannel + j*kernelsChildSizes[2];
                 int yStart, yEnd;
                 if(padding){
-                    yStart = (j<kernelRadius)? floorMod((j-kernelRadius),thisStride) : j-kernelRadius; //want modulus (positive) not the remainder
-                    yEnd = std::min(prevDimens-kernelRadius+j,prevDimens); //When j>=kernelRadius, it reaches the end item. We don't care about the stride as this is the upper bound
+                    yStart = (j<kernelRadiusY)? floorMod((j-kernelRadiusY),thisStrideY) : j-kernelRadiusY; //want modulus (positive) not the remainder
+                    yEnd = std::min(prevDimensY-kernelRadiusY+j,prevDimensY); //When j>=kernelRadius, it reaches the end item. We don't care about the stride as this is the upper bound
                 }
                 else{
                     yStart = j;
-                    yEnd = prevDimens-kernelSize+j+1;
+                    yEnd = prevDimensY-kernelSizeY+j+1;
                 }
-                for(int k=0;k<kernelSize;k++){ //For each element in the kernel (k,j)
+                for(int k=0;k<kernelSizeX;k++){ //For each element in the kernel (k,j)
                     int kernelIndex = kernelRow + k;
                     //Add up all the activations that it sees
                     float sum = 0;
                     int thisY,thisX;
                     thisY = thisX = 0;
-                    std::vector<std::vector<bool>> done(poolDimens,std::vector<bool>(poolDimens));
+                    std::vector<std::vector<bool>> done(poolDimensY,std::vector<bool>(poolDimensX));
                     int xStart, xEnd;
                     if(padding){
-                        xStart = (k<kernelRadius)? floorMod((k-kernelRadius),thisStride) : k-kernelRadius;
-                        xEnd = std::min(prevDimens-kernelRadius+k,prevDimens); //Same here - makes sense with a drawing
+                        xStart = (k<kernelRadiusX)? floorMod((k-kernelRadiusX),thisStrideX) : k-kernelRadiusX;
+                        xEnd = std::min(prevDimensX-kernelRadiusX+k,prevDimensX); //Same here - makes sense with a drawing
                         //The limits are needed as we have removed the padding and so we have to stop it earlier
                     }
                     else{
                         xStart = k;
-                        xEnd = prevDimens - kernelSize+k+1;
+                        xEnd = prevDimensX - kernelSizeX+k+1;
                     }
-                    for(int y=yStart;y<yEnd;y+=thisStride){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
-                        int poolY = ((thisY)/poolStride);
+                    for(int y=yStart;y<yEnd;y+=thisStrideY){  //For every pixel in the previous layer (x,y) which then corresponds to one in the current (x-k,y-j)
+                        int poolY = ((thisY)/poolStrideY);
                         int currMapRow = currMapChannel + thisY*currMapsChildSizes[1];
                         int pooledMapRow = pooledMapChannel + poolY*pooledMapsChildSizes[1];
                         int prevMapRow = prevMapChannel + y*prevMapsChildSizes[1];
-                        for(int x=xStart;x<xEnd;x+=thisStride){ //Derivatve of the corresponding pixel in the next (backwards) layer
-                            int poolX = ((thisX)/poolStride);
+                        for(int x=xStart;x<xEnd;x+=thisStrideX){ //Derivatve of the corresponding pixel in the next (backwards) layer
+                            int poolX = ((thisX)/poolStrideX);
                             int pooledMapIndex = pooledMapRow+poolX;
                             int currMapIndex = currMapRow+thisX;
                             int prevMapIndex = prevMapRow+x;
@@ -848,13 +1034,13 @@ void CNN::poolingConvBackwards(std::vector<Tensor>& dcDxs, int l,bool padding){
             }
         }
         float biasSum = 0;
-        std::vector<std::vector<bool>> done(poolDimens,std::vector<bool>(poolDimens));
-        for(int y=0;y<currDimens;y++){
-            int poolY = (y/poolStride);
+        std::vector<std::vector<bool>> done(poolDimensY,std::vector<bool>(poolDimensX));
+        for(int y=0;y<currDimensY;y++){
+            int poolY = (y/poolStrideY);
             int currMapRow = currMapChannel + y*currMapsChildSizes[1];
             int pooledMapRow = pooledMapChannel + poolY*pooledMapsChildSizes[1];
-            for(int x=0;x<currDimens;x++){
-                int poolX = (x/poolStride);
+            for(int x=0;x<currDimensX;x++){
+                int poolX = (x/poolStrideX);
                 int currMapIndex = currMapRow + x;
                 int pooledMapIndex = pooledMapRow + poolX;
                 //Bias has to be here as otherwise it would count the same pixels multiple times

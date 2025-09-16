@@ -1,5 +1,5 @@
 cd ./build
-cmake .. -G "MinGW Makefiles" -DPROFILING=1
+cmake .. -G "MinGW Makefiles" -DDEBUG=0 -DPROFILING=1
 mingw32-make
 move "Plant-CNN-CPP.exe" ".."
 cd ..

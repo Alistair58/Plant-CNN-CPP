@@ -1132,3 +1132,68 @@ I could train it on my C++ model but it would take 3x longer than PyTorch
 I could make my C++ model as fast as PyTorch but I don't have infinite time
 The majority of time taken in just loops now and so performance gains seem to be diminishing
 So for those reasons, I'll be training on PyTorch first
+
+But I'll eventually have to train on this and so I'll have to speed it up
+
+------convolutionLayer3: 226.532ms
+------convolutionLayer4: 421.888ms
+
+------convolutionLayer3: 226.532ms
+------convolutionLayer4: 421.888ms
+
+
+With stride 1 no gather:
+
+------convolutionLayer3: 175.889ms
+------convolutionLayer4: 72.373ms
+
+------convolutionLayer3: 97.771ms
+------convolutionLayer4: 47.914ms
+
+Bosh
+
+Added the contiguous loads and stores:
+
+After:
+----mlp: 9.745ms
+----finalPoolingConv: 171.294ms
+----convolutions: 491.137ms
+-----convolutionsLayer3: 182.493ms
+-----convolutionsLayer2: 144.704ms
+-----convolutionsLayer1: 150.324ms
+-----convolutionsLayer0: 13.600ms
+
+----mlp: 7.174ms
+----finalPoolingConv: 165.733ms
+----convolutions: 440.347ms
+-----convolutionsLayer3: 162.729ms
+-----convolutionsLayer2: 136.988ms
+-----convolutionsLayer1: 129.909ms
+-----convolutionsLayer0: 10.705ms
+
+Before:
+----mlp: 5.943ms
+----finalPoolingConv: 170.726ms
+----convolutions: 720.368ms
+-----convolutionsLayer3: 250.450ms
+-----convolutionsLayer2: 232.810ms
+-----convolutionsLayer1: 217.143ms
+-----convolutionsLayer0: 19.948ms
+
+----mlp: 5.886ms
+----finalPoolingConv: 154.450ms
+----convolutions: 644.650ms
+-----convolutionsLayer3: 205.917ms
+-----convolutionsLayer2: 204.207ms
+-----convolutionsLayer1: 209.932ms
+-----convolutionsLayer0: 24.579ms
+
+
+Time for 256 images:
+0:41,0:43
+4 image threads, 8 cnn threads:
+0:40,0:39
+
+Current balance:
+Forwards - 400ms
+Backwards - 600ms

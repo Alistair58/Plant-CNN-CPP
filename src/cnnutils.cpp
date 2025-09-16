@@ -33,12 +33,12 @@ Tensor CnnUtils::parseImg(Tensor& img
     int imWidth = imgDimens[2];
     //ceil so that we take too large steps and so we take <=mapDimens[0] steps
     //If we floor it, we go out of the mapDimens[0] x mapDimens[0] bounds (as we aren't striding far enough)
-    int xStride = (int) std::ceil((float)imWidth/mapDimens[0]); //Reducing size to mapDimens[0] x mapDimens[0] via a Gaussian blur
-    int yStride = (int) std::ceil((float)imHeight/mapDimens[0]); 
+    int xStride = (int) std::ceil((float)imWidth/mapDimens[0].w); //Reducing size to mapDimens[0] x mapDimens[0] via a Gaussian blur
+    int yStride = (int) std::ceil((float)imHeight/mapDimens[0].h); 
     Tensor gKernel = gaussianBlurKernel(xStride,yStride);
     Tensor gKernel3d = Tensor({1,yStride,xStride});
     gKernel3d.slice({0}) = gKernel;
-    Tensor result = Tensor({channels,mapDimens[0],mapDimens[0]});
+    Tensor result = Tensor({channels,mapDimens[0].h,mapDimens[0].w});
     Tensor img4d = Tensor({channels,1,imHeight,imWidth}); //convolution requires a 3d array (image with multiple channels) 
     //but we only want to process one channel at a time and so we have to store each channel in a separate 3d array
     for(int l=0;l<channels;l++){
@@ -47,7 +47,7 @@ Tensor CnnUtils::parseImg(Tensor& img
         //Copy-elision
         Tensor sliced = img4d.slice({l});
         //Deep copy
-        result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0],mapDimens[0],false
+        result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0].w,mapDimens[0].h,false
         #if PROFILING
         ,parentTimer?parseImgTimer:nullptr
         #endif 
@@ -323,114 +323,216 @@ Tensor CnnUtils::convolution(const Tensor& image,Tensor& kernel,const int xStrid
         const int paddedImageChildSizes0 = paddedImageChildSizes[0];
         const int paddedImageChildSizes1 = paddedImageChildSizes[1];
         const int resultChildSizes0 = resultChildSizes[0];
-        for(int l=0;l<paddedImgDimens0;l++){
-            int newY = 0;
-            int newX = 0;
-            const int kernelChannel = l*9; //3x3 = 9
-            const int paddedImageChannel = l*paddedImageChildSizes0;
-            //Need these for scalar tail
-            const float k00 = kernelData[kernelChannel + 0];
-            const float k01 = kernelData[kernelChannel + 1];
-            const float k02 = kernelData[kernelChannel + 2];
-            const float k10 = kernelData[kernelChannel + 3];
-            const float k11 = kernelData[kernelChannel + 4];
-            const float k12 = kernelData[kernelChannel + 5];
-            const float k20 = kernelData[kernelChannel + 6];
-            const float k21 = kernelData[kernelChannel + 7];
-            const float k22 = kernelData[kernelChannel + 8];
+        if(xStride==1){
+            //Don't need to gather
+            for(int l=0;l<paddedImgDimens0;l++){
+                int newY = 0;
+                int newX = 0;
+                const int kernelChannel = l*9; //3x3 = 9
+                const int paddedImageChannel = l*paddedImageChildSizes0;
+                //Need these for scalar tail
+                const float k00 = kernelData[kernelChannel + 0];
+                const float k01 = kernelData[kernelChannel + 1];
+                const float k02 = kernelData[kernelChannel + 2];
+                const float k10 = kernelData[kernelChannel + 3];
+                const float k11 = kernelData[kernelChannel + 4];
+                const float k12 = kernelData[kernelChannel + 5];
+                const float k20 = kernelData[kernelChannel + 6];
+                const float k21 = kernelData[kernelChannel + 7];
+                const float k22 = kernelData[kernelChannel + 8];
 
-            const __m256 K00 = _mm256_set1_ps(k00);
-            const __m256 K01 = _mm256_set1_ps(k01);
-            const __m256 K02 = _mm256_set1_ps(k02);
-            const __m256 K10 = _mm256_set1_ps(k10);
-            const __m256 K11 = _mm256_set1_ps(k11);
-            const __m256 K12 = _mm256_set1_ps(k12);
-            const __m256 K20 = _mm256_set1_ps(k20);
-            const __m256 K21 = _mm256_set1_ps(k21);
-            const __m256 K22 = _mm256_set1_ps(k22);
+                const __m256 K00 = _mm256_set1_ps(k00);
+                const __m256 K01 = _mm256_set1_ps(k01);
+                const __m256 K02 = _mm256_set1_ps(k02);
+                const __m256 K10 = _mm256_set1_ps(k10);
+                const __m256 K11 = _mm256_set1_ps(k11);
+                const __m256 K12 = _mm256_set1_ps(k12);
+                const __m256 K20 = _mm256_set1_ps(k20);
+                const __m256 K21 = _mm256_set1_ps(k21);
+                const __m256 K22 = _mm256_set1_ps(k22);
 
-            const __m256i paddedImageOffsets = _mm256_setr_epi32(
-                0,
-                xStride,
-                2 * xStride,
-                3 * xStride,
-                4 * xStride,
-                5 * xStride,
-                6 * xStride,
-                7 * xStride
-            );
-            for(int y=1;y<originalImgYBound;y+=yStride){
-                const int resultRow = newY*resultChildSizes0;
-                //y is centre of kernel and so we start at y-1
-                const float* __restrict__ paddedRow0Base = paddedImageData+paddedImageChannel+(y-1)*paddedImageChildSizes1;
-                const float* __restrict__ paddedRow1Base = paddedRow0Base+paddedImageChildSizes1;
-                const float* __restrict__ paddedRow2Base = paddedRow1Base+paddedImageChildSizes1;
-                
-                int x=1;
-                //Process different inputs at once
-                //Stop short and we can scalar the rest
-                //originalImgXBound is the last valid padded pixel and so as x is the centre,
-                //when we go to x+1, this will be the last valid padded pixel hence the <
-                for(;x+xStride*7<originalImgXBound;x+=xStride*8){
-                    //x is the centre of the kernel and so we start at x-1
-                    const int xSub1 = x-1; 
-                    //indices where the pixels are located
-                    const __m256i col0Indices = _mm256_add_epi32(paddedImageOffsets,_mm256_set1_epi32(xSub1));
-                    const __m256i col1Indices = _mm256_add_epi32(col0Indices,_mm256_set1_epi32(1));
-                    const __m256i col2Indices = _mm256_add_epi32(col0Indices,_mm256_set1_epi32(2));
+                for(int y=1;y<originalImgYBound;y+=yStride){
+                    const int resultRow = newY*resultChildSizes0;
+                    //y is centre of kernel and so we start at y-1
+                    const float* __restrict__ paddedRow0Base = paddedImageData+paddedImageChannel+(y-1)*paddedImageChildSizes1;
+                    const float* __restrict__ paddedRow1Base = paddedRow0Base+paddedImageChildSizes1;
+                    const float* __restrict__ paddedRow2Base = paddedRow1Base+paddedImageChildSizes1;
                     
-                    //Get all of the pixels that will be in the (0,0) position for the convolutions
-                    const __m256 R00 = _mm256_i32gather_ps(paddedRow0Base,col0Indices,4);    
-                    //And then the (0,1)
-                    const __m256 R01 = _mm256_i32gather_ps(paddedRow0Base,col1Indices,4);
-                    //etc.
-                    const __m256 R02 = _mm256_i32gather_ps(paddedRow0Base,col2Indices,4); 
-                    //(1,0)
-                    const __m256 R10 = _mm256_i32gather_ps(paddedRow1Base,col0Indices,4);
-                    const __m256 R11 = _mm256_i32gather_ps(paddedRow1Base,col1Indices,4);
-                    const __m256 R12 = _mm256_i32gather_ps(paddedRow1Base,col2Indices,4);
+                    int x=1;
+                    //Process different inputs at once
+                    //Stop short and we can scalar the rest
+                    //originalImgXBound is the last valid padded pixel and so as x is the centre,
+                    //when we go to x+1, this will be the last valid padded pixel hence the <
+                    for(;x+7<originalImgXBound;x+=8){
+                        //x is the centre of the kernel and so we start at x-1
+                        const int xSub1 = x-1; 
+                        //indices where the pixels are located
+                        
+                        //Get all of the pixels that will be in the (0,0) position for the convolutions
+                        const __m256 R00 = _mm256_loadu_ps(paddedRow0Base);    
+                        //And then the (0,1)
+                        const __m256 R01 = _mm256_loadu_ps(paddedRow0Base+1);
+                        //etc.
+                        const __m256 R02 = _mm256_loadu_ps(paddedRow0Base+2); 
+                        //(1,0)
+                        const __m256 R10 = _mm256_loadu_ps(paddedRow1Base);
+                        const __m256 R11 = _mm256_loadu_ps(paddedRow1Base+1);
+                        const __m256 R12 = _mm256_loadu_ps(paddedRow1Base+2);
 
-                    const __m256 R20 = _mm256_i32gather_ps(paddedRow2Base,col0Indices,4);
-                    const __m256 R21 = _mm256_i32gather_ps(paddedRow2Base,col1Indices,4);
-                    const __m256 R22 = _mm256_i32gather_ps(paddedRow2Base,col2Indices,4);
+                        const __m256 R20 = _mm256_loadu_ps(paddedRow2Base);
+                        const __m256 R21 = _mm256_loadu_ps(paddedRow2Base+1);
+                        const __m256 R22 = _mm256_loadu_ps(paddedRow2Base+2);
 
-                    //Compute kernel*image for 8 convolutions at once for each kernel element
-                    __m256 acc = _mm256_setzero_ps();
-                    acc = _mm256_fmadd_ps(K00,R00,acc);
-                    acc = _mm256_fmadd_ps(K01,R01,acc);
-                    acc = _mm256_fmadd_ps(K02,R02,acc);
-                    acc = _mm256_fmadd_ps(K10,R10,acc);
-                    acc = _mm256_fmadd_ps(K11,R11,acc);
-                    acc = _mm256_fmadd_ps(K12,R12,acc);
-                    acc = _mm256_fmadd_ps(K20,R20,acc);
-                    acc = _mm256_fmadd_ps(K21,R21,acc);
-                    acc = _mm256_fmadd_ps(K22,R22,acc);
-                    //Save the result
-                    float* __restrict__ resultPtr = resultData + resultRow + newX;
-                    //Load result from previous channels
-                    __m256 prev = _mm256_loadu_ps(resultPtr);     
-                    //Add our result
-                    __m256 sum = _mm256_add_ps(prev, acc);
-                    //Save our result
-                    _mm256_storeu_ps(resultPtr, sum);
-                    newX += 8;
+                        //Compute kernel*image for 8 convolutions at once for each kernel element
+                        __m256 acc = _mm256_setzero_ps();
+                        acc = _mm256_fmadd_ps(K00,R00,acc);
+                        acc = _mm256_fmadd_ps(K01,R01,acc);
+                        acc = _mm256_fmadd_ps(K02,R02,acc);
+                        acc = _mm256_fmadd_ps(K10,R10,acc);
+                        acc = _mm256_fmadd_ps(K11,R11,acc);
+                        acc = _mm256_fmadd_ps(K12,R12,acc);
+                        acc = _mm256_fmadd_ps(K20,R20,acc);
+                        acc = _mm256_fmadd_ps(K21,R21,acc);
+                        acc = _mm256_fmadd_ps(K22,R22,acc);
+                        //Save the result
+                        float* __restrict__ resultPtr = resultData + resultRow + newX;
+                        //Load result from previous channels
+                        __m256 prev = _mm256_loadu_ps(resultPtr);     
+                        //Add our result
+                        __m256 sum = _mm256_add_ps(prev, acc);
+                        //Save our result
+                        _mm256_storeu_ps(resultPtr, sum);
+                        newX += 8;
+                    }
+                    //scalar tail - remaining outputs for this row
+                    for (;x<originalImgXBound;x++) {
+                        //x-1 as x is the centre
+                        const int row0 = paddedImageChannel + x-1;
+                        const int row1 = row0 + paddedImageChildSizes1;
+                        const int row2 = row1 + paddedImageChildSizes1;
+                        resultData[resultRow + newX] +=
+                            k00 * paddedImageData[row0] +     k01 * paddedImageData[row0 + 1] +
+                            k02 * paddedImageData[row0 + 2] + k10 * paddedImageData[row1]     +
+                            k11 * paddedImageData[row1 + 1] + k12 * paddedImageData[row1 + 2] +
+                            k20 * paddedImageData[row2]     + k21 * paddedImageData[row2 + 1] +
+                            k22 * paddedImageData[row2 + 2];
+                        newX++;
+                    }
+                    newX=0;
+                    newY++;
                 }
-                //scalar tail - remaining outputs for this row
-                for (;x<originalImgXBound;x+=xStride) {
-                    //x-1 as x is the centre
-                    const int row0 = paddedImageChannel + x-1;
-                    const int row1 = row0 + paddedImageChildSizes1;
-                    const int row2 = row1 + paddedImageChildSizes1;
-                    resultData[resultRow + newX] +=
-                        k00 * paddedImageData[row0] +     k01 * paddedImageData[row0 + 1] +
-                        k02 * paddedImageData[row0 + 2] + k10 * paddedImageData[row1]     +
-                        k11 * paddedImageData[row1 + 1] + k12 * paddedImageData[row1 + 2] +
-                        k20 * paddedImageData[row2]     + k21 * paddedImageData[row2 + 1] +
-                        k22 * paddedImageData[row2 + 2];
-                    newX++;
+            }
+        }
+        else{
+            for(int l=0;l<paddedImgDimens0;l++){
+                int newY = 0;
+                int newX = 0;
+                const int kernelChannel = l*9; //3x3 = 9
+                const int paddedImageChannel = l*paddedImageChildSizes0;
+                //Need these for scalar tail
+                const float k00 = kernelData[kernelChannel + 0];
+                const float k01 = kernelData[kernelChannel + 1];
+                const float k02 = kernelData[kernelChannel + 2];
+                const float k10 = kernelData[kernelChannel + 3];
+                const float k11 = kernelData[kernelChannel + 4];
+                const float k12 = kernelData[kernelChannel + 5];
+                const float k20 = kernelData[kernelChannel + 6];
+                const float k21 = kernelData[kernelChannel + 7];
+                const float k22 = kernelData[kernelChannel + 8];
+
+                const __m256 K00 = _mm256_set1_ps(k00);
+                const __m256 K01 = _mm256_set1_ps(k01);
+                const __m256 K02 = _mm256_set1_ps(k02);
+                const __m256 K10 = _mm256_set1_ps(k10);
+                const __m256 K11 = _mm256_set1_ps(k11);
+                const __m256 K12 = _mm256_set1_ps(k12);
+                const __m256 K20 = _mm256_set1_ps(k20);
+                const __m256 K21 = _mm256_set1_ps(k21);
+                const __m256 K22 = _mm256_set1_ps(k22);
+
+                const __m256i paddedImageOffsets = _mm256_setr_epi32(
+                    0,
+                    xStride,
+                    2 * xStride,
+                    3 * xStride,
+                    4 * xStride,
+                    5 * xStride,
+                    6 * xStride,
+                    7 * xStride
+                );
+                for(int y=1;y<originalImgYBound;y+=yStride){
+                    const int resultRow = newY*resultChildSizes0;
+                    //y is centre of kernel and so we start at y-1
+                    const float* __restrict__ paddedRow0Base = paddedImageData+paddedImageChannel+(y-1)*paddedImageChildSizes1;
+                    const float* __restrict__ paddedRow1Base = paddedRow0Base+paddedImageChildSizes1;
+                    const float* __restrict__ paddedRow2Base = paddedRow1Base+paddedImageChildSizes1;
+                    
+                    int x=1;
+                    //Process different inputs at once
+                    //Stop short and we can scalar the rest
+                    //originalImgXBound is the last valid padded pixel and so as x is the centre,
+                    //when we go to x+1, this will be the last valid padded pixel hence the <
+                    for(;x+xStride*7<originalImgXBound;x+=xStride*8){
+                        //x is the centre of the kernel and so we start at x-1
+                        const int xSub1 = x-1; 
+                        //indices where the pixels are located
+                        const __m256i col0Indices = _mm256_add_epi32(paddedImageOffsets,_mm256_set1_epi32(xSub1));
+                        const __m256i col1Indices = _mm256_add_epi32(col0Indices,_mm256_set1_epi32(1));
+                        const __m256i col2Indices = _mm256_add_epi32(col0Indices,_mm256_set1_epi32(2));
+                        
+                        //Get all of the pixels that will be in the (0,0) position for the convolutions
+                        const __m256 R00 = _mm256_i32gather_ps(paddedRow0Base,col0Indices,4);    
+                        //And then the (0,1)
+                        const __m256 R01 = _mm256_i32gather_ps(paddedRow0Base,col1Indices,4);
+                        //etc.
+                        const __m256 R02 = _mm256_i32gather_ps(paddedRow0Base,col2Indices,4); 
+                        //(1,0)
+                        const __m256 R10 = _mm256_i32gather_ps(paddedRow1Base,col0Indices,4);
+                        const __m256 R11 = _mm256_i32gather_ps(paddedRow1Base,col1Indices,4);
+                        const __m256 R12 = _mm256_i32gather_ps(paddedRow1Base,col2Indices,4);
+
+                        const __m256 R20 = _mm256_i32gather_ps(paddedRow2Base,col0Indices,4);
+                        const __m256 R21 = _mm256_i32gather_ps(paddedRow2Base,col1Indices,4);
+                        const __m256 R22 = _mm256_i32gather_ps(paddedRow2Base,col2Indices,4);
+
+                        //Compute kernel*image for 8 convolutions at once for each kernel element
+                        __m256 acc = _mm256_setzero_ps();
+                        acc = _mm256_fmadd_ps(K00,R00,acc);
+                        acc = _mm256_fmadd_ps(K01,R01,acc);
+                        acc = _mm256_fmadd_ps(K02,R02,acc);
+                        acc = _mm256_fmadd_ps(K10,R10,acc);
+                        acc = _mm256_fmadd_ps(K11,R11,acc);
+                        acc = _mm256_fmadd_ps(K12,R12,acc);
+                        acc = _mm256_fmadd_ps(K20,R20,acc);
+                        acc = _mm256_fmadd_ps(K21,R21,acc);
+                        acc = _mm256_fmadd_ps(K22,R22,acc);
+                        //Save the result
+                        float* __restrict__ resultPtr = resultData + resultRow + newX;
+                        //Load result from previous channels
+                        __m256 prev = _mm256_loadu_ps(resultPtr);     
+                        //Add our result
+                        __m256 sum = _mm256_add_ps(prev, acc);
+                        //Save our result
+                        _mm256_storeu_ps(resultPtr, sum);
+                        newX += 8;
+                    }
+                    //scalar tail - remaining outputs for this row
+                    for (;x<originalImgXBound;x+=xStride) {
+                        //x-1 as x is the centre
+                        const int row0 = paddedImageChannel + x-1;
+                        const int row1 = row0 + paddedImageChildSizes1;
+                        const int row2 = row1 + paddedImageChildSizes1;
+                        resultData[resultRow + newX] +=
+                            k00 * paddedImageData[row0] +     k01 * paddedImageData[row0 + 1] +
+                            k02 * paddedImageData[row0 + 2] + k10 * paddedImageData[row1]     +
+                            k11 * paddedImageData[row1 + 1] + k12 * paddedImageData[row1 + 2] +
+                            k20 * paddedImageData[row2]     + k21 * paddedImageData[row2 + 1] +
+                            k22 * paddedImageData[row2 + 2];
+                        newX++;
+                    }
+                    newX=0;
+                    newY++;
                 }
-                newX=0;
-                newY++;
             }
         }
     }
@@ -774,14 +876,14 @@ std::vector<Tensor> CnnUtils::loadKernels(bool loadNew
         if(parentTimer) loadKernelsTimer = parentTimer->addChildTimer("loadKernels");
     #endif
     if(loadNew){
-        std::vector<Tensor> result(numMaps.size()-1);
-        for(int l=0;l<(numMaps.size()-1);l++){
-            if(kernelSizes[l]==0){
+        std::vector<Tensor> result(mapDimens.size()-1);
+        for(int l=0;l<(mapDimens.size()-1);l++){
+            if(kernelSizes[l].first==0 || kernelSizes[l].second==0){
                 result[l] = Tensor({0,0,0,0});
             }
             else{
-                result[l] = Tensor({numMaps[l+1],numMaps[l],kernelSizes[l],kernelSizes[l]});
-                Tensor biases = Tensor({numMaps[l+1]});
+                result[l] = Tensor({mapDimens[l+1].c,mapDimens[l].c,kernelSizes[l].first,kernelSizes[l].second});
+                Tensor biases = Tensor({mapDimens[l+1].c});
                 //only 1 bias for each new map
                 result[l].setBiases(biases);
             }
