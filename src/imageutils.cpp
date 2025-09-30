@@ -18,7 +18,11 @@ Tensor ImageUtils::fileToImageTensor(std::string fName
 
     int width,height,channels;
     unsigned char *img = stbi_load(fName.c_str(),&width,&height,&channels,0);
-
+    
+    if(channels!=3 && channels!=4){
+        stbi_image_free(img);
+        throw std::runtime_error("Image must have 3 or 4 channels");
+    }
     if(img==nullptr){
         #if PROFILING
             if(parentTimer){
@@ -57,7 +61,7 @@ Tensor ImageUtils::fileToImageTensor(std::string fName
             resultData[rRow+x] = img[imgI]; //R
             resultData[gRow+x] = img[imgI+1];//G
             resultData[bRow+x] = img[imgI+2]; //B
-            //A, if present, is the 3rd offset
+            //A, if present, is the 3rd offset  
         }
     }
     stbi_image_free(img);

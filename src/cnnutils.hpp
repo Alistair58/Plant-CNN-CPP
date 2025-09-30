@@ -66,11 +66,11 @@ class CnnUtils {
 
     public:
         //IMAGE-RELATED
-        Tensor parseImg(Tensor& img
+        Tensor parseImg(const Tensor& img
         #if PROFILING
             ,Timer *parentTimer = nullptr
         #endif
-        );
+        ) const;
         static void normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs
         #if PROFILING
             ,Timer *parentTimer = nullptr
@@ -169,7 +169,7 @@ class CnnUtils {
         std::vector<dimens> getMapDimens(){ return mapDimens; }
     private:
         //INTERNAL UTILS
-        void applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient,int batchSize);
+        int applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient,int batchSize);
 };
 
 inline float CnnUtils::dotProduct8f(float *X,float *Y){

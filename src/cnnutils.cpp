@@ -11,11 +11,11 @@
 //The pretty looking [{i,j,k}] is too slow for these inner loops
 //So the raw pointer is used
 
-Tensor CnnUtils::parseImg(Tensor& img
+Tensor CnnUtils::parseImg(const Tensor& img
 #if PROFILING
     ,Timer *parentTimer
 #endif
-){
+) const{
     #if PROFILING
         Timer *parseImgTimer = nullptr;
         if(parentTimer) parseImgTimer = parentTimer->addChildTimer("parseImg");
@@ -31,6 +31,30 @@ Tensor CnnUtils::parseImg(Tensor& img
     int channels = imgDimens[0];
     int imHeight = imgDimens[1];
     int imWidth = imgDimens[2];
+    if(channels!=mapDimens[0].c){
+        throw std::runtime_error("parseImg requires the input to have the same number of channels as the input to the CNN");
+    }
+    if(imHeight==mapDimens[0].h && imWidth==mapDimens[0].w){
+        //If it's already the same size, we don't have to do anything
+        return img;
+    }
+    //TODO remove
+    float *imgData = img.getData();
+    const float largePixelThreshold = 500;
+    std::vector<int> imgChildSizes = img.getChildSizes();
+    for(int c=0;c<imgDimens[0];c++){
+        for(int y=0;y<imgDimens[1];y++){
+            for(int x=0;x<imgDimens[2];x++){
+                float pixelVal = imgData[c*imgChildSizes[0]+y*imgChildSizes[1]+x];
+                if(fabs(pixelVal)>largePixelThreshold){
+                    std::cout << "parseImg input img large pixel value of " << pixelVal << " at (" << c << ", " << y << ", " << x << ")" <<std::endl;
+                }
+            }
+        }
+    }
+
+
+    Tensor result = Tensor({channels,mapDimens[0].h,mapDimens[0].w});
     //ceil so that we take too large steps and so we take <=mapDimens[0] steps
     //If we floor it, we go out of the mapDimens[0] x mapDimens[0] bounds (as we aren't striding far enough)
     int xStride = (int) std::ceil((float)imWidth/mapDimens[0].w); //Reducing size to mapDimens[0] x mapDimens[0] via a Gaussian blur
@@ -38,14 +62,45 @@ Tensor CnnUtils::parseImg(Tensor& img
     Tensor gKernel = gaussianBlurKernel(xStride,yStride);
     Tensor gKernel3d = Tensor({1,yStride,xStride});
     gKernel3d.slice({0}) = gKernel;
-    Tensor result = Tensor({channels,mapDimens[0].h,mapDimens[0].w});
+    
     Tensor img4d = Tensor({channels,1,imHeight,imWidth}); //convolution requires a 3d array (image with multiple channels) 
     //but we only want to process one channel at a time and so we have to store each channel in a separate 3d array
     for(int l=0;l<channels;l++){
         //Deep copy
         img4d.slice({l,0}) = img.slice({l});
+
+        //TODO remove
+        float *img4dData = img4d.getData();
+        std::vector<int> img4dDimens = img4d.getDimens();
+        std::vector<int> img4dChildSizes = img4d.getChildSizes();
+        for(int c=0;c<img4dDimens[0];c++){
+            for(int y=0;y<img4dDimens[2];y++){
+                for(int x=0;x<img4dDimens[3];x++){
+                    float pixelVal = img4dData[c*img4dChildSizes[0]+y*img4dChildSizes[2]+x];
+                    if(fabs(pixelVal)>largePixelThreshold){
+                        std::cout << "parseImg img4d slice large pixel value of " << pixelVal << " at (" << c << ", " << y << ", " << x << ")" <<std::endl;
+                    }
+                }
+            }
+        }
+    
         //Copy-elision
         Tensor sliced = img4d.slice({l});
+
+        //TODO remove
+        float *slicedData = sliced.getData();
+        std::vector<int> slicedDimens = sliced.getDimens();
+        std::vector<int> slicedChildSizes = sliced.getChildSizes();
+        for(int c=0;c<slicedDimens[0];c++){
+            for(int y=0;y<slicedDimens[1];y++){
+                for(int x=0;x<slicedDimens[2];x++){
+                    float pixelVal = slicedData[c*slicedChildSizes[0]+y*slicedChildSizes[1]+x];
+                    if(fabs(pixelVal)>largePixelThreshold){
+                        std::cout << "parseImg sliced large pixel value of " << pixelVal << " at (" << c << ", " << y << ", " << x << ")" <<std::endl;
+                    }
+                }
+            }
+        }
         //Deep copy
         result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0].w,mapDimens[0].h,false
         #if PROFILING
@@ -58,6 +113,7 @@ Tensor CnnUtils::parseImg(Tensor& img
     #endif 
     return result;
 }
+
 
 void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vector<float> pixelStdDevs
 #if PROFILING
@@ -74,14 +130,51 @@ void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vecto
     }
     float*  __restrict__ imgData = img.getData();
     std::vector<int> imgChildSizes = img.getChildSizes();
+    int largePreCount = 0;
+    int largePostCount = 0;
+    const float postThreshold = 10; //255/50 = 5.1
+    float maxPostValue = 0; 
+    float maxPreValue = 0; 
+    const float preThreshold = 1000;
+    dimens maxPostPos,maxPrePos;
     for(int c=0;c<imgDimens[0];c++){
         int imageChannel = c*imgChildSizes[0];
         for(int i=0;i<imgDimens[1];i++){
             int imageRow = imageChannel + i*imgChildSizes[1];
             for(int j=0;j<imgDimens[2];j++){
+                if(fabs(imgData[imageRow+j])>preThreshold){
+                    largePreCount++;
+                    if(fabs(imgData[imageRow+j])>fabs(maxPreValue)){
+                        maxPreValue = imgData[imageRow+j];
+                        maxPrePos.c = c;
+                        maxPrePos.w = j;
+                        maxPrePos.h = i;
+                    }
+                }
                 imgData[imageRow+j] = ((imgData[imageRow+j])-pixelMeans[c])/pixelStdDevs[c];
+                if(fabs(imgData[imageRow+j])>postThreshold){
+                    largePostCount++;
+                    if(fabs(imgData[imageRow+j])>fabs(maxPostValue)){
+                        maxPostValue = imgData[imageRow+j];
+                        maxPostPos.c = c;
+                        maxPostPos.w = j;
+                        maxPostPos.h = i;
+                    }
+                }
             }
         }
+    }
+    if(largePreCount>0){
+        std::cout << "PRE. Large input image. " << largePreCount << 
+        " pixels with absolute value > " << preThreshold << 
+        ". With a max absolute value of " << maxPreValue << 
+        ". At ("<< maxPrePos.c <<", " << maxPrePos.w << ", " <<maxPrePos.h <<")" << std::endl;
+    }
+    if(largePostCount>0){
+        std::cout << "POST. Large input image. " << largePostCount << 
+        " pixels with absolute value > " << postThreshold << 
+        ". With a max absolute value of " << maxPostValue << 
+        ". At ("<< maxPostPos.c <<", " << maxPostPos.w << ", " <<maxPostPos.h <<")" << std::endl;
     }
     #if PROFILING
         if(parentTimer) normaliseImgTimer->stop();
@@ -786,6 +879,22 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         Timer *fixedSizedConvolutionTimer = nullptr;
         if(parentTimer) fixedSizedConvolutionTimer = parentTimer->addChildTimer("fixedSizedConvolution");
     #endif
+    //TODO remove
+    float *imageData = image.getData();
+    std::vector<int> imageDimens = image.getDimens();
+    std::vector<int> imageChildSizes = image.getChildSizes();
+    for(int c=0;c<imageDimens[0];c++){
+        int imageChannel = c*imageChildSizes[0];
+        for(int y=0;y<imageDimens[1];y++){
+            int imageRow = imageChannel + y*imageChildSizes[1];
+            for(int x=0;x<imageDimens[2];x++){
+                if(fabs(imageData[imageRow+x]) > 1e6){
+                    std::cout << "Massive imageData of "<< imageData[imageRow+x] << " at (" << x << ", " << y << ")" << std::endl;
+                }
+            }
+        }
+    }
+
     //by padding a normal convolution with 0s
     Tensor convResult = convolution(image, kernel, xStride, yStride,padding
     #if PROFILING
@@ -798,6 +907,11 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
             fixedSizedConvolutionTimer->stop();
         #endif
         return convResult;
+    }
+    if(newHeight<convResultDimens[0] || newWidth<convResultDimens[1]){
+        std::cout << "newHeight: " << newHeight << " newWidth: " << newWidth <<
+        " convResultDimens[0]: " << convResultDimens[0] << " convResultDimens[1]: " << convResultDimens[1];
+        //TODO add a fix
     }
     #if PROFILING
         Timer *paddingTimer = nullptr;
@@ -812,6 +926,12 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         int convResultRow = y*convResult.getChildSizes()[0];
         for(int x=0;x<convResultDimens[1];x++){
             resultData[resultRow+x] = convResultData[convResultRow+x];
+            //TODO remove
+            if(fabs(resultData[resultRow+x]) > 1e6){
+                std::cout << "Massive resultData of "<< resultData[resultRow+x] << " at (" << x << ", " << y << ")" << std::endl;
+                std::cout << "Height: " << imageDimens[1] << " Width: " << imageDimens[2] << " xStride: " << xStride << " yStride: "<< yStride << std::endl;
+                std::cout << "Conv result height: " << convResultDimens[0] << " width: " << convResultDimens[1] << std::endl;
+            }
         }
     }
     #if PROFILING
@@ -1038,6 +1158,7 @@ void CnnUtils::applyGradients(int batchSize
     #endif
 }
 
+//Can exit if a large gradient is hit
 void CnnUtils::applyGradients(std::vector<CNN*>& cnns,int batchSize
 #if PROFILING
     ,Timer *parentTimer
@@ -1048,16 +1169,37 @@ void CnnUtils::applyGradients(std::vector<CNN*>& cnns,int batchSize
         if(parentTimer) applyGradientsMultipleTimer = parentTimer->addChildTimer("applyGradientsMultiple");
     #endif
     //this cnn must be included in cnns
+    bool largeGradient = false;
     for(int n=0;n<cnns.size();n++){
-        applyGradient(kernels,(cnns[n]->kernelsGrad),batchSize);
-        applyGradient(weights,(cnns[n]->weightsGrad),batchSize);
+        int kernelsRetVal = applyGradient(kernels,(cnns[n]->kernelsGrad),batchSize);
+        //<0 if there was a gradient larger than the maximum gradient
+        if(kernelsRetVal<0){
+            std::cout << "Kernels, CNN index: " << n << std::endl;
+            if(kernelsRetVal < -1) largeGradient = true;
+        }
+        int weightsRetVal = applyGradient(weights,(cnns[n]->weightsGrad),batchSize);
+        if(weightsRetVal<0){
+            std::cout << "Weights, CNN index: " << n << std::endl;
+            if(weightsRetVal < -1) largeGradient = true;
+        }
     }
+
     #if PROFILING
         if(parentTimer) applyGradientsMultipleTimer->stop();
     #endif
+
+    //When a large gradient is hit, it always seems to turn into a snowball effect
+    //Better to stop now
+    if(largeGradient){
+        saveWeights();
+        saveKernels();
+        exit(1);
+    }
+    
 }
 
-void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient,int batchSize){ //Main values and biases
+//Returns negative value if 
+int CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient,int batchSize){ //Main values and biases
     const float maxGrad = 1;
     //we could do weights -= sum(gradients[i]/batchSize) * LR
     // or just weights -= sum(gradients[i]) * averagedLR
@@ -1065,6 +1207,8 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
     if(values.size()!=gradient.size()){
         throw std::invalid_argument("Values and gradient must have the same number of layers for the gradient to be applied");
     }
+    std::vector<int> nanGradCount(values.size(),0);
+    std::vector<int> largeGradCount(values.size(),0);
     for(int l=0;l<values.size();l++){
         std::vector<int> valuesDimens = values[l].getDimens();
         std::vector<int> gradientDimens = gradient[l].getDimens();
@@ -1082,22 +1226,28 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
             float gradVal = gradData[i];
             if(!(floatCmp(gradVal,0.0f))){
                 if(std::isnan(gradVal)){
-                    std::cout << "NaN gradient i: "+std::to_string(i) << std::endl;
+                    nanGradCount[l]++;
                     gradData[i] = 0;
                     continue;
                 }
                 float adjustedGrad = gradVal * averagedLR;
                 if(abs(adjustedGrad)>maxGrad){
-                    std::cout << "Very large gradient: "+std::to_string(adjustedGrad) << std::endl;
+                    largeGradCount[l]++;
                     adjustedGrad = (adjustedGrad>0)?maxGrad:-maxGrad;
                 }
                 valuesData[i] -= adjustedGrad; 
                 gradData[i] = 0;
             }   
         }
+        if(largeGradCount[l]>0){
+            std::cout << "Num large gradients: "<<largeGradCount[l] << " layer " << l << std::endl;
+        }
+        if(nanGradCount[l]>0){
+            std::cout << "Num NaN gradients: " <<nanGradCount[l] << " layer " << l << std::endl;
+        }
     }
-    std::vector<Tensor> valuesBiases;
-    std::vector<Tensor> gradientBiases;
+    std::vector<int> nanBiasesGradCount(values.size(),0);
+    std::vector<int> largeBiasesGradCount(values.size(),0);
     for(int l=0;l<values.size();l++){
         Tensor *valLayerBiases = values[l].getBiases();
         Tensor *gradLayerBiases = gradient[l].getBiases();
@@ -1124,21 +1274,38 @@ void CnnUtils::applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& g
                 float gradVal = gradBiasesData[i];
                 if(!(floatCmp(gradVal,0.0f))){
                     if(std::isnan(gradVal)){
-                        std::cout << "NaN bias gradient i: "+std::to_string(i) << std::endl;
+                        nanBiasesGradCount[l]++;
                         gradBiasesData[i] = 0;
                         continue;
                     }
                     float adjustedGrad = gradVal * averagedLR;
                     if(abs(adjustedGrad)>maxGrad){
-                        std::cout << "Very large bias gradient: "+std::to_string(adjustedGrad) << std::endl;
+                        largeBiasesGradCount[l]++;
                         adjustedGrad = (adjustedGrad>0)?maxGrad:-maxGrad;
                     }
                     valBiasesData[i] -= adjustedGrad; 
                     gradBiasesData[i] = 0;
                 }   
             }
+            if(largeBiasesGradCount[l]>0){
+                std::cout << "Num large biases gradients: "<<largeBiasesGradCount[l] << " layer " << l << std::endl;
+            }
+            if(nanBiasesGradCount[l]>0){
+                std::cout << "Num NaN biases gradients: " << nanBiasesGradCount[l] << " layer " << l << std::endl;
+            }
         }
     }
+
+    int totalBadGradients = 0;
+    for(int l=0;l<values.size();l++){
+        totalBadGradients += largeGradCount[l];
+        totalBadGradients += largeBiasesGradCount[l];
+        totalBadGradients += nanGradCount[l];
+        totalBadGradients += nanBiasesGradCount[l];
+    }
+    if(totalBadGradients==0) return 0;
+    if(totalBadGradients<100) return -1;
+    return -2;
 }
 
 void CnnUtils::resetKernels(
