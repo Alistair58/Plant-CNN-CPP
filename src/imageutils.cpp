@@ -1,6 +1,7 @@
 #include "imageutils.hpp"
 #include "cnnutils.hpp"
 
+//Returns empty result if image could not be loaded
 Tensor ImageUtils::fileToImageTensor(std::string fName
 #if PROFILING
     ,Timer *parentTimer
@@ -21,7 +22,8 @@ Tensor ImageUtils::fileToImageTensor(std::string fName
     
     if(channels!=3 && channels!=4){
         stbi_image_free(img);
-        throw std::runtime_error("Image must have 3 or 4 channels");
+        //Don't throw an error e.g. loading the wrong file extension isn't the end of the world
+        return result; //empty - caller checks
     }
     if(img==nullptr){
         #if PROFILING
@@ -227,7 +229,7 @@ void ImageUtils::horizontalFlip(Tensor &inp
         for(int y_p=0;y_p<height;y_p++){
             int row = channel + y_p*width;
             for(int x_p=0;x_p<width;x_p++){
-                int x = width-x_p;
+                int x = width-x_p-1;
                 resData[row+x_p] = origData[channel+y_p*width+x];
             }
         }

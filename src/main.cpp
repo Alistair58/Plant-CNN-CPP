@@ -46,9 +46,11 @@ static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool ou
 
 //DONE
 
+
 //TODO
-//Speed up
 //Test new larger model
+//Speed up
+
 
 
 int main(int argc,char **argv){
@@ -58,8 +60,8 @@ int main(int argc,char **argv){
     //out => output every single test result
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = nullptr;
-    const int numImageThreads = 1; //4
-    const int numCnnThreads = 1; //8
+    const int numImageThreads = 4;
+    const int numCnnThreads = 8;
     int mode = -1;
     int numBatches = -1;
     bool restart = false;
@@ -363,24 +365,6 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
                         if(cnnThreadTimer) waitingForImageTimer->stop();
                     #endif
                     if(p!=nullptr && p->index!=-1 && p->label.length()>0){
-
-                        //TODO remove
-                        float *imgData = p->data.getData();
-                        const float largePixelThreshold = 500;
-                        std::vector<int> imgDimens = p->data.getDimens();
-                        std::vector<int> imgChildSizes = p->data.getChildSizes();
-                        for(int c=0;c<imgDimens[0];c++){
-                            for(int y=0;y<imgDimens[1];y++){
-                                for(int x=0;x<imgDimens[2];x++){
-                                    float pixelVal = imgData[c*imgChildSizes[0]+y*imgChildSizes[1]+x];
-                                    if(fabs(pixelVal)>largePixelThreshold){
-                                        std::cout << "Plant image large pixel value of " << pixelVal << " at (" << c << ", " << y << ", " << x << ")" <<std::endl;
-                                    }
-                                }
-                            }
-                        }
-
-
                         (*cnns)[threadId]->backwards(p->data,p->label
                         #if PROFILING
                             ,cnnThreadTimer?cnnThreadTimer:nullptr
@@ -421,13 +405,11 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
         #endif
         i++;
     }
-    //TODO turn on
-    //(was on before I switched to the 5 dodgy images)
-    // n->applyGradients(cnns,batchSize
-    // #if PROFILING
-    //     ,parentTimer?batchTimer:nullptr
-    // #endif
-    // );
+    n->applyGradients(cnns,batchSize
+    #if PROFILING
+        ,parentTimer?batchTimer:nullptr
+    #endif
+    );
     for(i=0;i<batchSize;i++){
         PlantImage *p = plantImages[i].load(std::memory_order_acquire);
         if(p!=nullptr){

@@ -1512,3 +1512,5 @@ Conv result height: 9 width: 9
 PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of -inf. At (2, 0, 8)
 POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of -inf. At (2, 0, 8)
 [          ] (3/100) 3% complete ^C
+
+Address sanitiser caught an off-by-one in the horizontal flip code

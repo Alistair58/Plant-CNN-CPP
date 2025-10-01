@@ -38,21 +38,6 @@ Tensor CnnUtils::parseImg(const Tensor& img
         //If it's already the same size, we don't have to do anything
         return img;
     }
-    //TODO remove
-    float *imgData = img.getData();
-    const float largePixelThreshold = 500;
-    std::vector<int> imgChildSizes = img.getChildSizes();
-    for(int c=0;c<imgDimens[0];c++){
-        for(int y=0;y<imgDimens[1];y++){
-            for(int x=0;x<imgDimens[2];x++){
-                float pixelVal = imgData[c*imgChildSizes[0]+y*imgChildSizes[1]+x];
-                if(fabs(pixelVal)>largePixelThreshold){
-                    std::cout << "parseImg input img large pixel value of " << pixelVal << " at (" << c << ", " << y << ", " << x << ")" <<std::endl;
-                }
-            }
-        }
-    }
-
 
     Tensor result = Tensor({channels,mapDimens[0].h,mapDimens[0].w});
     //ceil so that we take too large steps and so we take <=mapDimens[0] steps
@@ -68,39 +53,8 @@ Tensor CnnUtils::parseImg(const Tensor& img
     for(int l=0;l<channels;l++){
         //Deep copy
         img4d.slice({l,0}) = img.slice({l});
-
-        //TODO remove
-        float *img4dData = img4d.getData();
-        std::vector<int> img4dDimens = img4d.getDimens();
-        std::vector<int> img4dChildSizes = img4d.getChildSizes();
-        for(int c=0;c<img4dDimens[0];c++){
-            for(int y=0;y<img4dDimens[2];y++){
-                for(int x=0;x<img4dDimens[3];x++){
-                    float pixelVal = img4dData[c*img4dChildSizes[0]+y*img4dChildSizes[2]+x];
-                    if(fabs(pixelVal)>largePixelThreshold){
-                        std::cout << "parseImg img4d slice large pixel value of " << pixelVal << " at (" << c << ", " << y << ", " << x << ")" <<std::endl;
-                    }
-                }
-            }
-        }
-    
         //Copy-elision
         Tensor sliced = img4d.slice({l});
-
-        //TODO remove
-        float *slicedData = sliced.getData();
-        std::vector<int> slicedDimens = sliced.getDimens();
-        std::vector<int> slicedChildSizes = sliced.getChildSizes();
-        for(int c=0;c<slicedDimens[0];c++){
-            for(int y=0;y<slicedDimens[1];y++){
-                for(int x=0;x<slicedDimens[2];x++){
-                    float pixelVal = slicedData[c*slicedChildSizes[0]+y*slicedChildSizes[1]+x];
-                    if(fabs(pixelVal)>largePixelThreshold){
-                        std::cout << "parseImg sliced large pixel value of " << pixelVal << " at (" << c << ", " << y << ", " << x << ")" <<std::endl;
-                    }
-                }
-            }
-        }
         //Deep copy
         result.slice({l}) = convolution(sliced,gKernel3d, xStride, yStride,mapDimens[0].w,mapDimens[0].h,false
         #if PROFILING
@@ -130,51 +84,14 @@ void CnnUtils::normaliseImg(Tensor& img,std::vector<float> pixelMeans,std::vecto
     }
     float*  __restrict__ imgData = img.getData();
     std::vector<int> imgChildSizes = img.getChildSizes();
-    int largePreCount = 0;
-    int largePostCount = 0;
-    const float postThreshold = 10; //255/50 = 5.1
-    float maxPostValue = 0; 
-    float maxPreValue = 0; 
-    const float preThreshold = 1000;
-    dimens maxPostPos,maxPrePos;
     for(int c=0;c<imgDimens[0];c++){
         int imageChannel = c*imgChildSizes[0];
         for(int i=0;i<imgDimens[1];i++){
             int imageRow = imageChannel + i*imgChildSizes[1];
             for(int j=0;j<imgDimens[2];j++){
-                if(fabs(imgData[imageRow+j])>preThreshold){
-                    largePreCount++;
-                    if(fabs(imgData[imageRow+j])>fabs(maxPreValue)){
-                        maxPreValue = imgData[imageRow+j];
-                        maxPrePos.c = c;
-                        maxPrePos.w = j;
-                        maxPrePos.h = i;
-                    }
-                }
                 imgData[imageRow+j] = ((imgData[imageRow+j])-pixelMeans[c])/pixelStdDevs[c];
-                if(fabs(imgData[imageRow+j])>postThreshold){
-                    largePostCount++;
-                    if(fabs(imgData[imageRow+j])>fabs(maxPostValue)){
-                        maxPostValue = imgData[imageRow+j];
-                        maxPostPos.c = c;
-                        maxPostPos.w = j;
-                        maxPostPos.h = i;
-                    }
-                }
             }
         }
-    }
-    if(largePreCount>0){
-        std::cout << "PRE. Large input image. " << largePreCount << 
-        " pixels with absolute value > " << preThreshold << 
-        ". With a max absolute value of " << maxPreValue << 
-        ". At ("<< maxPrePos.c <<", " << maxPrePos.w << ", " <<maxPrePos.h <<")" << std::endl;
-    }
-    if(largePostCount>0){
-        std::cout << "POST. Large input image. " << largePostCount << 
-        " pixels with absolute value > " << postThreshold << 
-        ". With a max absolute value of " << maxPostValue << 
-        ". At ("<< maxPostPos.c <<", " << maxPostPos.w << ", " <<maxPostPos.h <<")" << std::endl;
     }
     #if PROFILING
         if(parentTimer) normaliseImgTimer->stop();
@@ -879,21 +796,6 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         Timer *fixedSizedConvolutionTimer = nullptr;
         if(parentTimer) fixedSizedConvolutionTimer = parentTimer->addChildTimer("fixedSizedConvolution");
     #endif
-    //TODO remove
-    float *imageData = image.getData();
-    std::vector<int> imageDimens = image.getDimens();
-    std::vector<int> imageChildSizes = image.getChildSizes();
-    for(int c=0;c<imageDimens[0];c++){
-        int imageChannel = c*imageChildSizes[0];
-        for(int y=0;y<imageDimens[1];y++){
-            int imageRow = imageChannel + y*imageChildSizes[1];
-            for(int x=0;x<imageDimens[2];x++){
-                if(fabs(imageData[imageRow+x]) > 1e6){
-                    std::cout << "Massive imageData of "<< imageData[imageRow+x] << " at (" << x << ", " << y << ")" << std::endl;
-                }
-            }
-        }
-    }
 
     //by padding a normal convolution with 0s
     Tensor convResult = convolution(image, kernel, xStride, yStride,padding
@@ -926,12 +828,6 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
         int convResultRow = y*convResult.getChildSizes()[0];
         for(int x=0;x<convResultDimens[1];x++){
             resultData[resultRow+x] = convResultData[convResultRow+x];
-            //TODO remove
-            if(fabs(resultData[resultRow+x]) > 1e6){
-                std::cout << "Massive resultData of "<< resultData[resultRow+x] << " at (" << x << ", " << y << ")" << std::endl;
-                std::cout << "Height: " << imageDimens[1] << " Width: " << imageDimens[2] << " xStride: " << xStride << " yStride: "<< yStride << std::endl;
-                std::cout << "Conv result height: " << convResultDimens[0] << " width: " << convResultDimens[1] << std::endl;
-            }
         }
     }
     #if PROFILING

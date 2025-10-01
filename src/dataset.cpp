@@ -104,23 +104,11 @@ PlantImage *Dataset::randomImage(bool test
             std::string plantName = plantNames[i];
             std::string fname = dirPath+"/"+plantName+"/"+std::to_string(subIndex);
             for(std::string fileExtension:fileExtensions){ //Try all file extensions
-                // PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName
-                // #if PROFILING
-                //     ,parentTimer
-                // #endif
-                // );
-                //TODO switch back to normal
-                std::uniform_int_distribution<int> realDist(0,0);
-                std::vector<std::pair<std::string,std::string>> realPlants = 
-                    {
-                        // {"/Daffodils (Narcissus spp.)/167.jpg","Daffodils (Narcissus spp.)"},
-                        // {"/Daffodils (Narcissus spp.)/252.jpg","Daffodils (Narcissus spp.)"},
-                        // {"/Daffodils (Narcissus spp.)/257.jpg","Daffodils (Narcissus spp.)"},
-                        //{"/Tulip/208.jpg","Tulip"},
-                        {"/Tulip/72.jpg","Tulip"}
-                    };
-                int realIndex = realDist(localRng);
-                PlantImage *plantImage = new PlantImage(realPlants[realIndex].first,realPlants[realIndex].second);
+                PlantImage *plantImage = new PlantImage(fname+fileExtension,plantName
+                #if PROFILING
+                    ,parentTimer
+                #endif
+                );
                 if(plantImage->data.getTotalSize() > 0){ //valid image
                     #if DEBUG
                         std::cout << "Loaded: "+fname+fileExtension << std::endl;
@@ -130,20 +118,6 @@ PlantImage *Dataset::randomImage(bool test
                         ,parentTimer
                     #endif
                     );
-                    float *imgData = plantImage->data.getData();
-                    const float largePixelThreshold = 500;
-                    std::vector<int> imgChildSizes = plantImage->data.getChildSizes();
-                    std::vector<int> imgDimens = plantImage->data.getDimens();
-                    for(int c=0;c<imgDimens[0];c++){
-                        for(int y=0;y<imgDimens[1];y++){
-                            for(int x=0;x<imgDimens[2];x++){
-                                float pixelVal = imgData[c*imgChildSizes[0]+y*imgChildSizes[1]+x];
-                                if(fabs(pixelVal)>largePixelThreshold){
-                                    std::cout << "randomImage loaded img large pixel value of " << pixelVal << " at (" << c << ", " << y << ", " << x << ")" <<std::endl;
-                                }
-                            }
-                        }
-                    }
                     return plantImage;
                 }
                 delete plantImage;
