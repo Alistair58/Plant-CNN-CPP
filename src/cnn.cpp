@@ -8,6 +8,17 @@
 
 //Creating a fresh CNN
 CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
+    //Model 7:
+    // 256x256x3
+    // 128x128x32 (3x3 conv stride 2)
+    // 64x64x64 (3x3 conv stride 2)
+    // 32x32x128 (3x3 conv stride 2)
+    // 16x16x256 (3x3 conv stride 2)
+    // 16x16x256 (3x3 conv stride 1)
+    // 4x4x256 (max pool)
+    // 4096
+    // 1028 (FC)
+    // 47 (FC)
     numNeurons = {4096,1028,47};
     //includes the result of pooling (except final pooling)
     mapDimens = std::vector<dimens>(6);
@@ -88,7 +99,7 @@ CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
     }
 }
 
-//Creating a copy from a template CNN (I can't call it template)
+//Creating a copy from a template (original) CNN
 CNN::CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights) {
     numNeurons = original->numNeurons;
     mapDimens = original->mapDimens;
@@ -176,12 +187,16 @@ std::string CNN::forwards(Tensor& imageInt,bool training
     #if PROFILING
         Timer *forwardsTimer = parentTimer->addChildTimer("forwards");
     #endif
+    //reset all the values in maps and activations
     reset();
+
+    //Downsize the input such that it fits in the first layer
     maps[0] = parseImg(imageInt
     #if PROFILING
         ,parentTimer?forwardsTimer:nullptr
     #endif
     );
+
     normaliseImg(maps[0],d->getPixelMeans(),d->getPixelStdDevs()
     #if PROFILING
         ,parentTimer?forwardsTimer:nullptr
@@ -232,82 +247,21 @@ std::string CNN::forwards(Tensor& imageInt,bool training
         #endif
     }
     #if PROFILING
-        Timer *poolingTimer;
-        if(parentTimer){
-            convolutionalLayersTimer->stop();
-            poolingTimer = forwardsTimer->addChildTimer("pooling");
-        }
+        if(parentTimer) convolutionalLayersTimer->stop();
     #endif
-    //Final pooling 
-    int poolingDimenX = mapDimens[mapDimens.size()-1].w/strides[strides.size()-1].second;
-    int poolingDimenY = mapDimens[mapDimens.size()-1].h/strides[strides.size()-1].first;
-    int poolingArea = poolingDimenY*poolingDimenX;
-    Tensor pooled({mapDimens[mapDimens.size()-1].c,poolingDimenY,poolingDimenX});
-    float *pooledData = pooled.getData();
-    float *activations0Data = activations[0].getData();
-    std::vector<int> pooledChildSizes = pooled.getChildSizes();
-    for(int i=0;i<mapDimens[mapDimens.size()-1].c;i++){
-        Tensor pooledChannel = pooled.slice({i});
-        Tensor prevChannel = maps[mapDimens.size()-1].slice({i});
-        int *maxPoolIndicesMap = &(maxPoolIndices[maxPoolIndices.size()-1][i*poolingArea]);
-        pooledChannel = maxPool(prevChannel,strides[strides.size()-1].second,strides[strides.size()-1].first,maxPoolIndicesMap);
-        int activationsPoolingArea = i*poolingArea;
-        int poolingChannel = i*pooledChildSizes[0];
-        for(int y=0;y<poolingDimenY;y++){
-            int activationsPoolingRow = activationsPoolingArea + y*poolingDimenX;
-            int poolingRow = poolingChannel + y*pooledChildSizes[1];
-            std::memcpy(
-                activations0Data+activationsPoolingRow,
-                pooledData+poolingRow,
-                poolingDimenX*sizeof(float)
-            );
-        }
-    }
-    #if PROFILING
-        Timer *mlpTimer = nullptr;
-        if(parentTimer){
-            poolingTimer->stop();
-            mlpTimer = forwardsTimer->addChildTimer("mlp");
-        }
-    #endif
-    //MLP
-    std::uniform_real_distribution dropoutDist(0.0f,1.0f);
-    //Dropout the first layer (the result of pooling)
-    if(training && numNeurons.size()!=1){
-        float* __restrict__ firstLayerActivations = activations[0].getData();
-        for(int i=0;i<numNeurons[0];i++){
-            if(dropoutDist(localRng)<=dropoutProb){
-                firstLayerActivations[i] = 0;
-            }
-        }
-    }
 
-    for(int l=0;l<weights.size();l++){
-        float *biasesData = weights[l].getBiases()->getData();
-        float* __restrict__ prevActivations = activations[l].getData();
-        float* __restrict__ currActivations = activations[l+1].getData();
-        float *currWeights = weights[l].getData();
-        for(int i=0;i<numNeurons[l+1];i++){
-            if(training && l!=weights.size()-1 && dropoutDist(localRng)<=dropoutProb) continue; //drop it out
-            int weightsTo = i*numNeurons[l];
-            int j=0;
-            float *currWeightsTo = currWeights + weightsTo;
-            for(;j+7<numNeurons[l];j+=8){
-                __m256 prevActivationsM256 = _mm256_loadu_ps(&prevActivations[j]);
-                __m256 currWeightsM256 = _mm256_loadu_ps(&currWeightsTo[j]);
-                currActivations[i] += dotProduct8f(prevActivationsM256,currWeightsM256);
-            }
-            //scalar tail
-            for(;j<numNeurons[l];j++){
-                currActivations[i] += prevActivations[j] * currWeightsTo[j]; 
-            }
-            currActivations[i] += biasesData[i]; //add bias
-            if(l!=weights.size()-1){ //We'll softmax the last layer and so relu is unnecessary
-                currActivations[i]= leakyRelu(currActivations[i]);
-            }
-        }
-    }
-    activations[activations.size()-1] = softmax(activations[activations.size()-1].toVector<d1>());
+    finalPooling(
+    #if PROFILING
+        parentTimer?forwardsTimer:nullptr
+    #endif
+    );
+    
+    mlpForwards(training
+    #if PROFILING
+        ,parentTimer?forwardsTimer:nullptr
+    #endif
+    );
+    
     float largestActivation = *(activations[activations.size()-1][0]);
     int result = 0;
     for(int i=1;i<numNeurons[numNeurons.size()-1];i++){
@@ -316,9 +270,7 @@ std::string CNN::forwards(Tensor& imageInt,bool training
             result = i;
         }
     }
-    #if PROFILING
-        if(parentTimer) mlpTimer->stop();
-    #endif
+
     #if DEBUG
         d1 outputVec = activations[activations.size()-1].toVector<d1>();
         std::cout << "[";
@@ -327,13 +279,16 @@ std::string CNN::forwards(Tensor& imageInt,bool training
         }
         std::cout << std::to_string(outputVec[outputVec.size()-1])+"]" << std::endl;
     #endif
+
     #if DEBUG >= 2
         saveMaps();
         saveActivations();
     #endif
+
     #if PROFILING
         if(parentTimer) forwardsTimer->stop();
     #endif
+
     return d->plantNames[result];
 } 
 
@@ -341,22 +296,26 @@ void CNN::backwards(Tensor& imageInt,std::string answer
 #if PROFILING
     ,Timer *parentTimer
 #endif
-){ //adds the gradient to its internal gradient arrays
+){ 
+    //Adds the gradient to its internal gradient arrays
     #if PROFILING
         Timer *backwardsTimer = nullptr;
         if(parentTimer) backwardsTimer = parentTimer->addChildTimer("backwards");
     #endif
-    //set all the activations
+
+    //Set all the activations
     forwards(imageInt,true
     #if PROFILING
         ,parentTimer?backwardsTimer:nullptr
     #endif
     ); 
+
     //Gradients are not reset each time to enable batches
     #if PROFILING
         Timer *mlpTimer = nullptr;
         if(parentTimer) mlpTimer = backwardsTimer->addChildTimer("mlp");
     #endif
+
     //MLP derivs
     if(!(d->plantToIndex.contains(answer))){
         std::cout << "\""+answer+"\" does not exist" << std::endl;
@@ -368,7 +327,7 @@ void CNN::backwards(Tensor& imageInt,std::string answer
     //The derivative includes the activation derivative
     //z_i = w_j_i*a_j + ... + b_i
     for(int l=0;l<numNeurons.size();l++){
-        dcDzs[l] = Tensor({numNeurons[l]}); //all layers need activation derivatives
+        dcDzs[l] = Tensor({numNeurons[l]}); //All layers need activation derivatives
     }
     int lastLayer = numNeurons.size()-1;
     for(int i=0;i<numNeurons[lastLayer];i++){
@@ -445,6 +404,98 @@ void CNN::backwards(Tensor& imageInt,std::string answer
     #endif
 }
 
+//----------------------------------------------------
+//FORWARDS-RELATED
+
+void CNN::finalPooling(
+#if PROFILING
+    Timer *parentTimer
+#endif
+){
+    #if PROFILING
+        Timer *finalPoolingTimer = nullptr;
+        if(parentTimer) finalPoolingTimer = parentTimer->addChildTimer("finalPooling");
+    #endif
+
+    //Max pool the elements in the final convolutional layer and 
+    // set the values in the first MLP layer to the result of this
+    int poolingDimenX = mapDimens[mapDimens.size()-1].w/strides[strides.size()-1].second;
+    int poolingDimenY = mapDimens[mapDimens.size()-1].h/strides[strides.size()-1].first;
+    int poolingArea = poolingDimenY*poolingDimenX;
+    //Temporary result store - maxPool returns a Tensor
+    Tensor pooled({mapDimens[mapDimens.size()-1].c,poolingDimenY,poolingDimenX});
+    float *pooledData = pooled.getData();
+    float *activations0Data = activations[0].getData();
+    std::vector<int> pooledChildSizes = pooled.getChildSizes();
+    for(int i=0;i<mapDimens[mapDimens.size()-1].c;i++){
+        Tensor pooledChannel = pooled.slice({i});
+        Tensor prevChannel = maps[mapDimens.size()-1].slice({i});
+        int *maxPoolIndicesMap = &(maxPoolIndices[maxPoolIndices.size()-1][i*poolingArea]);
+        pooledChannel = maxPool(prevChannel,strides[strides.size()-1].second,strides[strides.size()-1].first,maxPoolIndicesMap);
+        int activationsPoolingArea = i*poolingArea;
+        int poolingChannel = i*pooledChildSizes[0];
+        for(int y=0;y<poolingDimenY;y++){
+            int activationsPoolingRow = activationsPoolingArea + y*poolingDimenX;
+            int poolingRow = poolingChannel + y*pooledChildSizes[1];
+            //memcpy can be vectorised
+            std::memcpy(
+                activations0Data+activationsPoolingRow,
+                pooledData+poolingRow,
+                poolingDimenX*sizeof(float)
+            );
+        }
+    }
+
+    #if PROFILING
+        if(parentTimer) finalPoolingTimer->stop();
+    #endif
+}
+
+void CNN::mlpForwards(bool training
+#if PROFILING
+    ,Timer *parentTimer
+#endif
+){
+    #if PROFILING
+        Timer *mlpForwardsTimer = nullptr;
+        if(parentTimer) mlpForwardsTimer = parentTimer->addChildTimer("mlpForwards");
+    #endif
+
+    std::uniform_real_distribution dropoutDist(0.0f,1.0f);
+
+    for(int l=0;l<weights.size();l++){
+        float *biasesData = weights[l].getBiases()->getData();
+        float* __restrict__ prevActivations = activations[l].getData();
+        float* __restrict__ currActivations = activations[l+1].getData();
+        float *currWeights = weights[l].getData();
+        for(int i=0;i<numNeurons[l+1];i++){
+            //Dropout
+            if(training && l!=weights.size()-1 && dropoutDist(localRng)<=dropoutProb) continue; 
+            int weightsTo = i*numNeurons[l];
+            int j=0;
+            float *currWeightsTo = currWeights + weightsTo;
+            //Process 8 previous layer activations and their corresponding weights simultaneously
+            for(;j+7<numNeurons[l];j+=8){
+                __m256 prevActivationsM256 = _mm256_loadu_ps(&prevActivations[j]);
+                __m256 currWeightsM256 = _mm256_loadu_ps(&currWeightsTo[j]);
+                currActivations[i] += dotProduct8f(prevActivationsM256,currWeightsM256);
+            }
+            //scalar tail
+            for(;j<numNeurons[l];j++){
+                currActivations[i] += prevActivations[j] * currWeightsTo[j]; 
+            }
+            currActivations[i] += biasesData[i]; //add bias
+            if(l!=weights.size()-1){ //We'll softmax the last layer and so relu is unnecessary
+                currActivations[i]= leakyRelu(currActivations[i]);
+            }
+        }
+    }
+    activations[activations.size()-1] = softmax(activations[activations.size()-1].toVector<d1>());
+
+    #if PROFILING
+        if(parentTimer) mlpForwardsTimer->stop();
+    #endif
+}
 
 //----------------------------------------------------
 //BACKPROPAGATION-RELATED
@@ -760,7 +811,6 @@ void CNN::convBackwards(std::vector<Tensor>& dcDxs,const int l,bool padding
                     for(int k=0;k<kernelSizeX;k++){ //For each element in the kernel (k,j)
                         //Add up all the activations that it sees
                         int kernelIndex = kernelRow + k;
-                        float kernelVal = kernelData[kernelIndex];
                         float sum = 0;
                         int thisY,thisX;
                         thisY = thisX = 0;
@@ -836,9 +886,6 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     int lastMapsL = maps.size()-1;
     int prevMapsL = maps.size()-2;
     int lastKernelsL = kernels.size()-1;
-    Tensor *kernelBiasesGrad = kernelsGrad[lastKernelsL].getBiases(); //only 1 for each channel (1d)
-    float*  __restrict__ activations0Data = activations[0].getData();
-    float*  __restrict__ lastMapData = maps[lastMapsL].getData();
     float*  __restrict__ prevMapsData = maps[prevMapsL].getData();
     float*  __restrict__ dcDzs0Data = dcDzs[0].getData();
     float*  __restrict__ lastDcDxsData = nullptr;
@@ -857,8 +904,6 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     int kernelSizeY = kernelSizes[lastKernelsL].first;
     int kernelRadiusX = (int) floor(kernelSizeX/2);
     int kernelRadiusY = (int) floor(kernelSizeY/2);
-    int poolStrideX = strides[strides.size()-1].second;
-    int poolStrideY = strides[strides.size()-1].first;
     int thisStrideX = strides[strides.size()-2].second;
     int thisStrideY = strides[strides.size()-2].first;
     int poolWidth = mapDimens[lastMapsL].w/strides[strides.size()-1].second;
@@ -867,13 +912,11 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
     std::vector<int> lastMapsChildSizes = maps[lastMapsL].getChildSizes();
     std::vector<int> prevMapsChildSizes = maps[prevMapsL].getChildSizes();
     std::vector<int> lastKernelsChildSizes = kernels[lastKernelsL].getChildSizes();
-    const int lastMapsChildSizes1 = lastMapsChildSizes[1];
     const int prevMapsChildSizes1 = prevMapsChildSizes[1];
     //don't count the max pixel more than once
     //ChatGPT says uint8_t is quicker than bool as bool does bit packing
     for(int i=0;i<mapDimens[lastMapsL].c;i++){ //for each final map
         const int mlpRegion = i*poolArea; 
-        int lastMapChannel = i*lastMapsChildSizes[0];
         int kernelToChannel = i*lastKernelsChildSizes[0];
         for(int prevMapI=0;prevMapI<mapDimens[prevMapsL].c;prevMapI++){
             int prevMapChannel = prevMapI*prevMapsChildSizes[0];
@@ -921,7 +964,6 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                             //We set xStart and yStart such that it can't happen at the start
                             continue;
                         }      
-                        int lastMapIndex = lastMapChannel + thisY*lastMapsChildSizes1 + thisX;
                         int prevMapIndex = prevMapChannel + y*prevMapsChildSizes1 + x;
                         //In the first MLP layer a=relu(x) where x is the max activation pixel from pooling
                         sum += prevMapsData[prevMapIndex] * dcDzs0Data[mlpIndex]; //The activation of the previous layer * the correct derivative from pooling

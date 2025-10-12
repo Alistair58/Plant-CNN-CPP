@@ -26,6 +26,17 @@ class CNN : public CnnUtils{
         #endif
         );
     private:
+        //FORWARDS-RELATED
+        void finalPooling(
+        #if PROFILING
+            Timer *parentTimer = nullptr
+        #endif
+        );
+        void mlpForwards(bool training
+        #if PROFILING
+            ,Timer *parentTimer = nullptr
+        #endif
+        );
         //BACKPROPAGATION-RELATED
         void mlpBackwards(std::vector<Tensor>& dcDzs);
         void convBackwards(std::vector<Tensor>& dcDxs, int l,bool padding

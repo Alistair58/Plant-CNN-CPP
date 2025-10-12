@@ -49,7 +49,6 @@ Tensor ImageUtils::fileToImageTensor(std::string fName
     
     result = Tensor({3,height,width}); //RGB
     //There is no alpha as most images in this dataset are jpeg which don't have an alpha channel
-    int pixel;
     float *resultData = result.getData();
     int gChannel = result.getChildSizes()[0];
     int bChannel = 2*result.getChildSizes()[0];
@@ -220,8 +219,6 @@ void ImageUtils::horizontalFlip(Tensor &inp
     const int height = dimens[1];
     const int width = dimens[2];
     Tensor res = Tensor(dimens);
-    const int c_y = height/2;
-    const int c_x = width/2;
     float* __restrict__ resData = res.getData();
     float *origData = inp.getData();
     for(int c=0;c<dimens[0];c++){

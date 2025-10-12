@@ -1198,319 +1198,291 @@ Current balance:
 Forwards - 400ms
 Backwards - 600ms
 
-Gradients are exploding within about 40 batches 
-LR = 0.01?
+Address sanitiser caught an off-by-one in the horizontal flip code
 
-Gone at least 100 batches
+16,000: 11.800000% 12.200000%
+48,000: 18.299999% 16.900000%
+80,000: 23.299999% 21.299999%
+112,000: 24.100000% 25.100000%
+144,000: 14.200000% 13.200000%
+176,000: 20.000000% 23.000000%
+208,000: 23.799999% 25.500000%
+240,000: 26.900000% 26.700001%
+272,000: 26.500000% 27.600000%
+304,000: 24.600000% 28.500000%
+336,000: 25.200001% 25.799999%
+PyTorch was at 52% by this point
+342,400:
 
-Debug required 
-Set a nice printf and run in performance mode for roughly 50 batches with LR = 0.02
+Ran 2 batches under asan - no errors
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>Plant-CNN-CPP.exe train 250 rs=true 
+14.900000% 14.500000%
+14.800000% 16.000000%
+16.799999% 18.600000%
+18.799999% 19.100000%
+20.900000% 22.000000%
+18.900000% 23.600000%
+24.299999% 22.200001%
+19.600000% 20.900000%
+17.000000% 16.600000%
+20.600000% 25.400000%
+20.100000% 19.299999%
+9.800000% 8.600000%
+
+
+No augmentations, no dropout:
+Intervals of 250 batches:
+
+C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
+echo 29
+ Plant-CNN-CPP.exe train 250
+ Plant-CNN-CPP.exe test 1000
+ Plant-CNN-CPP.exe test 1000 ds=train
+)
+29
 Dataset has 14790 items
-Are you sure you want to reset the model to random weights? (Y/N)
-y
-Model reset
-[#         ] (49/250) 19% complete   Most recent save at batch 25Num large gradients: 192 layer 0
-Num large gradients: 6144 layer 1
-Num large gradients: 24576 layer 2
-Num large gradients: 98304 layer 3
-Num large gradients: 121344 layer 4
-Kernels, CNN index: 7
-Num large gradients: 405032 layer 0
-Num large gradients: 38728 layer 1
-Weights, CNN index: 7
-
-[###       ] (79/250) 31% complete   Most recent save at batch 75Num large gradients: 64 layer 0
-Num large gradients: 6144 layer 1
-Num large gradients: 24576 layer 2
-Num large gradients: 98304 layer 3
-Num large gradients: 129536 layer 4
-Kernels, CNN index: 1
-Num large gradients: 681564 layer 0
-Num large gradients: 38258 layer 1
-Weights, CNN index: 1
-
-It's only 1 CNN and so likely 1 image causing the large gradient 
-It originates in the final layer as isn't just one output neuron
-There's 47*1028 = 48,316 weights in the final layer 38,258/48,316 = 79%
-So it's unlikley to be 1 output neuron
-All outputs are large?
-But they are softmaxxed
-The previous layer activations could be large
-
-We got him 
-
-Model reset
-[##        ] (60/250) 24% complete   Most recent save at batch 50Large input image. 1 pixels with absolute value > 10. With a max absolute value of 8.02325e+32
-Num large gradients: 64 layer 0
-Num large gradients: 6144 layer 1
-Num large gradients: 24576 layer 2
-Num large gradients: 98304 layer 3
-Num large gradients: 98304 layer 4
-Kernels, CNN index: 0
-Num large gradients: 400920 layer 0
-Num large gradients: 38587 layer 1
-Weights, CNN index: 0
-
-1 large pixel with a value of 8.02325e+32
-Corruption or numerical error?
-
-The pixel has been loaded, blurred and normalised
-It only causes 64 large gradients in the first layer 
-There are 32 output channels and so it only features in 2 convolution operations
-The kernel is 3x3 and padded and hence this pixel must be in a corner OOB?
-The image pixels are unsigned chars when loaded and so this isn't the issue 
-Gaussian blur or corrpution?
-Not a problem with Gaussian kernel as it would affect multiple pixels 
-Problem with convolution of certain size?
-
-[######    ] (152/250) 60% complete   Most recent save at batch 150Large input image. 1 pixels with absolute value > 10. With a max absolute value of 3.29318e+18. At (2, 0, 149)
-Num large gradients: 64 layer 0
-Num large gradients: 6144 layer 1
-Num large gradients: 24576 layer 2
-Num large gradients: 98304 layer 3
-Num large gradients: 105984 layer 4
-Kernels, CNN index: 4
-Num large gradients: 408116 layer 0
-Num large gradients: 21866 layer 1
-Weights, CNN index: 4
-
-
-[          ] (9/250) 3% complete Massive resultData of 6.6442e+20 at (0, 149)
-PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 6.6442e+20. At (2, 0, 149)      
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 1.02198e+19. At (2, 0, 149)
-Num large gradients: 64 layer 0
-Num large gradients: 6144 layer 1
-Num large gradients: 24576 layer 2
-Num large gradients: 98304 layer 3
-Num large gradients: 110592 layer 4
-Kernels, CNN index: 5
-Num large gradients: 429704 layer 0
-Num large gradients: 19464 layer 1
-Weights, CNN index: 5
-
-Did 250 batches
-
-
-Model reset
-[######### ] (248/250) 99% complete   Most recent save at batch 225^CTerminate batch job (Y/N)? Y
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>Plant-CNN-CPP.exe train 250
-Dataset has 14790 items
-[          ] (10/250) 4% complete Massive imageData of 1.12416e+17 at (0, 147)
-Massive imageData of 8.16304e+16 at (1, 147)
-Massive imageData of 3.12557e+16 at (2, 147)
-Massive imageData of 2.93595e+17 at (0, 148)
-Massive imageData of 2.13194e+17 at (1, 148)
-Massive imageData of 8.16304e+16 at (2, 148)
-Massive imageData of 4.04318e+17 at (0, 149)
-Massive imageData of 2.93595e+17 at (1, 149)
-Massive imageData of 1.12416e+17 at (2, 149)
-Massive resultData of 2.86264e+17 at (0, 147)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-Massive resultData of 2.0787e+17 at (1, 147)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-Massive resultData of 7.9592e+16 at (2, 147)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-Massive resultData of 7.47634e+17 at (0, 148)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-Massive resultData of 5.42894e+17 at (1, 148)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-Massive resultData of 2.0787e+17 at (2, 148)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-Massive resultData of 1.02959e+18 at (0, 149)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-Massive resultData of 7.47634e+17 at (1, 149)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-Massive resultData of 2.86264e+17 at (2, 149)
-Height: 150 Width: 200 xStride: 1 yStride: 1
-Conv result height: 150 width: 200
-PRE. Large input image. 9 pixels with absolute value > 1000. With a max absolute value of 1.02959e+18. At (2, 0, 149)
-POST. Large input image. 9 pixels with absolute value > 10. With a max absolute value of 1.58366e+16. At (2, 0, 149)      
-Num large gradients: 288 layer 0
+Num large gradients: 864 layer 0
 Num large gradients: 18432 layer 1
 Num large gradients: 73728 layer 2
 Num large gradients: 294912 layer 3
-Num large gradients: 230400 layer 4
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 248 layer 4
+Kernels, CNN index: 0
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 0
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 237 layer 4
+Kernels, CNN index: 1
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 1
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 232 layer 4
 Kernels, CNN index: 2
-Num large gradients: 412228 layer 0
-Num large gradients: 16680 layer 1
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
 Weights, CNN index: 2
-
-Seems to be a single 150x200 image
-((248+10)+9+152+60+79+49)/6 = 101
-With 1 image, there's a 0.5 change of it turning up at 128 batches 
-With 2 images, it's at 64 batches 
-
-I don't think it's a smaller than the input size problem as others are smaller than the input size
-
-Images with those dimensions:
-Daffodils (Narcissus spp.)/167.jpg 200x150
-Daffodils (Narcissus spp.)/252.jpg 200x150
-Daffodils (Narcissus spp.)/257.jpg 200x150
-Tulip/72.jpg 200x150
-Tulip/208.jpg 200x150
-
-Seems to work fine when just loading and doing backwards on them sequentially
-Gives small errors when just using these 5 in batches 
-Model reset
-[          ] (5/100) 5% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 12.638. At (2, 0, 149)
-[#         ] (14/100) 14% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 1006.61. At (2, 0, 149)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 13.7721. At (2, 0, 149)
-[#         ] (15/100) 15% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 1417.14. At (2, 0, 149)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 20.0866. At (2, 0, 149)    
-[##        ] (21/100) 21% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 1303.4. At (2, 0, 149)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 18.3371. At (2, 0, 149)
-[##        ] (25/100) 25% complete   Most recent save at batch 25POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 13.0285. At (2, 0, 149)
-
-Single-threaded (1 for images, 1 for CNN):
-Model reset
-[#         ] (15/100) 15% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 10.6569. At (2, 0, 149)
-[##        ] (26/100) 26% complete
-
-Multi-threaded again:
-Model reset
-[          ] (9/100) 9% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 1303.4. At (2, 0, 149)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 18.3371. At (2, 0, 149)
-[#         ] (11/100) 11% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 12.3525. At (2, 0, 149)
-[#         ] (17/100) 17% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 1089.41. At (2, 0, 149)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 15.0456. At (2, 0, 149)
-[#         ] (18/100) 18% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 10.2579. At (2, 0, 149)
-[##        ] (20/100) 20% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 13.35. At (2, 0, 149)
-
-Single-threaded again:
-Model reset
-[##        ] (25/100) 25% complete   Most recent save at batch 25
-
-Removing the tulips, multi-threaded:
-Model reset
-[          ] (9/100) 9% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 1273.14. At (2, 0, 149)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 17.8717. At (2, 0, 149)
-[#         ] (13/100) 13% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 1004.08. At (2, 0, 149)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 13.7331. At (2, 0, 149)    
-[#         ] (15/100) 15% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 10.6569. At (2, 0, 149)
-[#         ] (18/100) 18% complete
-
-Just the tulips, multi-threaded:
-[          ] (0/100) 0% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 1167.22. At (2, 0, 149)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 16.2425. At (2, 0, 149)    
-[          ] (2/100) 2% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 12.1531. At (2, 0, 149)
-[#         ] (18/100) 18% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 11.6543. At (2, 0, 149)
-[##        ] (24/100) 24% complete POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 11.2285. At (2, 0, 149)
-[##        ] (25/100) 25% complete   Most recent save at batch 25POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 11.6543. At (2, 0, 149)
-
-They're all bad
-
-Really small image (9x9 image)
-Multi-threaded and it only ever trains on the same tiny image:
-[          ] (0/100) 0% complete PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of -inf. At (2, 0, 8)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of -inf. At (2, 0, 8)
-[#         ] (19/100) 19% complete PRE. Large input image. 3 pixels with absolute value > 1000. With a max absolute value of -1.48929e+36. At (0, 0, 8)
-POST. Large input image. 3 pixels with absolute value > 10. With a max absolute value of -2.54274e+34. At (1, 0, 8)
-[##        ] (25/100) 25% complete   Most recent save at batch 25^C
-
-Forgot to log negatives in the fixed size convolution
-
-Got 30 batches of the really small image muli-threaded with no problems
-
-However, when attempting it again:
-
-[##        ] (21/100) 21% complete Massive imageData of 2.3677e+14 at (0, 8)
-Massive resultData of 6.0293e+14 at (0, 8)
-Height: 9 Width: 9 xStride: 1 yStride: 1
-Conv result height: 9 width: 9
-PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 6.0293e+14. At (2, 0, 8)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 9.27399e+12. At (2, 0, 8)
-[##        ] (25/100) 25% complete   Most recent save at batch 25Massive imageData of -1.10482e+37 at (0, 8)
-Massive resultData of -2.81341e+35 at (0, 8)
-Height: 9 Width: 9 xStride: 1 yStride: 1
-Conv result height: 9 width: 9
-PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of -2.81341e+35. At (2, 0, 8)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of -4.32746e+33. At (2, 0, 8)   
-
-So images are large when being passed to the fixed-sized output convolution 
-This function is only called by parseImg 
-parseImg uses slicing - dodgy?
-
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 225 layer 4
+Kernels, CNN index: 3
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 3
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 237 layer 4
+Kernels, CNN index: 4
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 4
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 253 layer 4
+Kernels, CNN index: 5
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 5
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 256 layer 4
+Kernels, CNN index: 6
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 6
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 237 layer 4
+Kernels, CNN index: 7
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 7
 Dataset has 14790 items
-Are you sure you want to reset the model to random weights? (Y/N)
-y
-Model reset
-[          ] (4/100) 4% complete parseImg input img large pixel value of -4.65744e+21 at (2, 8, 0)
-parseImg img4d slice large pixel value of -4.65744e+21 at (2, 8, 0)
-parseImg sliced large pixel value of -4.65744e+21 at (0, 8, 0)
-Massive imageData of -4.65744e+21 at (0, 8)
-Massive resultData of -1.18601e+20 at (0, 8)
-Height: 9 Width: 9 xStride: 1 yStride: 1
-Conv result height: 9 width: 9
-PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of -1.18601e+20. At (2, 0, 8)      
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of -1.82426e+18. At (2, 0, 8)       
-[#         ] (18/100) 18% complete parseImg input img large pixel value of 2.3677e+14 at (2, 8, 0)
-parseImg img4d slice large pixel value of 2.3677e+14 at (2, 8, 0)
-parseImg sliced large pixel value of 2.3677e+14 at (0, 8, 0)
-Massive imageData of 2.3677e+14 at (0, 8)
-Massive resultData of 6.0293e+14 at (0, 8)
-Height: 9 Width: 9 xStride: 1 yStride: 1
-Conv result height: 9 width: 9
-PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of 6.0293e+14. At (2, 0, 8)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of 9.27399e+12. At (2, 0, 8)        
-[#         ] (19/100) 19% complete ^C
+Accuracy: 1.300000%
+Dataset has 14790 items
+Accuracy: 2.100000%
 
-The actual image has large values?
+C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
+echo 30
+ Plant-CNN-CPP.exe train 250
+ Plant-CNN-CPP.exe test 1000
+ Plant-CNN-CPP.exe test 1000 ds=train
+)
+30
+Dataset has 14790 items
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 249 layer 4
+Kernels, CNN index: 0
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 0
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 251 layer 4
+Kernels, CNN index: 1
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 1
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 237 layer 4
+Kernels, CNN index: 2
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 2
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 237 layer 4
+Kernels, CNN index: 3
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 3
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 256 layer 4
+Kernels, CNN index: 4
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 4
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 253 layer 4
+Kernels, CNN index: 5
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 5
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 256 layer 4
+Kernels, CNN index: 6
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 6
+Num large gradients: 864 layer 0
+Num large gradients: 18432 layer 1
+Num large gradients: 73728 layer 2
+Num large gradients: 294912 layer 3
+Num large gradients: 589824 layer 4
+Num large biases gradients: 32 layer 0
+Num large biases gradients: 64 layer 1
+Num large biases gradients: 128 layer 2
+Num large biases gradients: 256 layer 3
+Num large biases gradients: 251 layer 4
+Kernels, CNN index: 7
+Num large gradients: 4210688 layer 0
+Num large gradients: 48316 layer 1
+Weights, CNN index: 7
+Dataset has 14790 items
+Accuracy: 2.100000%
+Dataset has 14790 items
+Accuracy: 2.200000%
 
-[          ] (0/100) 0% complete Plant image large pixel value of 6.73099e+32 at (0, 8, 0)
-Plant image large pixel value of 6.73099e+32 at (1, 8, 0)
-Plant image large pixel value of 6.73099e+32 at (2, 8, 0)
-parseImg input img large pixel value of 6.73099e+32 at (0, 8, 0)
-parseImg input img large pixel value of 6.73099e+32 at (1, 8, 0)
-parseImg input img large pixel value of 6.73099e+32 at (2, 8, 0)
-parseImg img4d slice large pixel value of 6.73099e+32 at (0, 8, 0)
-parseImg sliced large pixel value of 6.73099e+32 at (0, 8, 0)
-Massive imageData of 6.73099e+32 at (0, 8)
-Massive resultData of 1.71403e+33 at (0, 8)
-Height: 9 Width: 9 xStride: 1 yStride: 1
-Conv result height: 9 width: 9
-parseImg img4d slice large pixel value of 6.73099e+32 at (0, 8, 0)
-parseImg img4d slice large pixel value of 6.73099e+32 at (1, 8, 0)
-parseImg sliced large pixel value of 6.73099e+32 at (0, 8, 0)
-Massive imageData of 6.73099e+32 at (0, 8)
-Massive resultData of 1.71403e+33 at (0, 8)
-Height: 9 Width: 9 xStride: 1 yStride: 1
-Conv result height: 9 width: 9
-parseImg img4d slice large pixel value of 6.73099e+32 at (0, 8, 0)
-parseImg img4d slice large pixel value of 6.73099e+32 at (1, 8, 0)
-parseImg img4d slice large pixel value of 6.73099e+32 at (2, 8, 0)
-parseImg sliced large pixel value of 6.73099e+32 at (0, 8, 0)
-Massive imageData of 6.73099e+32 at (0, 8)
-Massive resultData of 1.71403e+33 at (0, 8)
-Height: 9 Width: 9 xStride: 1 yStride: 1
-Conv result height: 9 width: 9
-PRE. Large input image. 3 pixels with absolute value > 1000. With a max absolute value of 1.71403e+33. At (0, 0, 8)       
-POST. Large input image. 3 pixels with absolute value > 10. With a max absolute value of 2.92645e+31. At (1, 0, 8)
-[          ] (1/100) 1% complete ^C
 
-Single threaded (1 image, 1 cnn):
-Model reset
-[          ] (2/100) 2% complete randomImage loaded img large pixel value of -2.8711e+38 at (2, 8, 0)
-Plant image large pixel value of -2.8711e+38 at (2, 8, 0)
-parseImg input img large pixel value of -2.8711e+38 at (2, 8, 0)
-parseImg img4d slice large pixel value of -2.8711e+38 at (2, 8, 0)
-parseImg sliced large pixel value of -2.8711e+38 at (0, 8, 0)
-Massive imageData of -2.8711e+38 at (0, 8)
-Massive resultData of -inf at (0, 8)
-Height: 9 Width: 9 xStride: 1 yStride: 1
-Conv result height: 9 width: 9
-PRE. Large input image. 1 pixels with absolute value > 1000. With a max absolute value of -inf. At (2, 0, 8)
-POST. Large input image. 1 pixels with absolute value > 10. With a max absolute value of -inf. At (2, 0, 8)
-[          ] (3/100) 3% complete ^C
 
-Address sanitiser caught an off-by-one in the horizontal flip code
+Fixed an issue with 3x3 kernels of stride 1

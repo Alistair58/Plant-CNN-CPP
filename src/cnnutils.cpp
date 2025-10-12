@@ -132,7 +132,8 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride){
     for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
         int resultRow = newY*resWidth;
         for(int x=xKernelRadius;x<=imWidth-xKernelRadius;x+=xStride){
-            float max = -std::numeric_limits<float>::infinity();
+            //std::numeric_limits<float>::infinity() is UB on clang-cl /O2
+            float max = -1e38;//std::numeric_limits<float>::infinity();
             for(int j=0;j<yStride;j++){
                 int imageRow = (y+j-yKernelRadius)*imWidth +x-xKernelRadius;
                 for(int i=0;i<xStride;i++){
@@ -169,7 +170,8 @@ Tensor CnnUtils::maxPool(Tensor& image,int xStride,int yStride,int *maxPoolIndic
     for(int y=yKernelRadius;y<=imHeight-yKernelRadius;y+=yStride){
         int resultRow = newY*resWidth;
         for(int x=xKernelRadius;x<=imWidth-xKernelRadius;x+=xStride){
-            float max = -std::numeric_limits<float>::infinity();
+            //std::numeric_limits<float>::infinity() is UB on clang-cl /O2
+            float max = -1e38; //std::numeric_limits<float>::infinity();
             for(int j=0;j<yStride;j++){
                 int imageRow = (y+j-yKernelRadius)*imWidth +x-xKernelRadius;
                 for(int i=0;i<xStride;i++){
@@ -214,7 +216,7 @@ Tensor CnnUtils::convolution(const Tensor& image,Tensor& kernel,const int xStrid
     if(kernelDimens[0]!=imgDimens[0]){
         throw std::invalid_argument("The image and kernel must have the same number of channels for convolution");
     }
-    if(kernelDimens[1]&1==0 || kernelDimens[2]&1==0){
+    if((kernelDimens[1]&1)==0 || (kernelDimens[2]&1)==0){
         throw std::invalid_argument("convolution only works for odd-sized kernels");
     }
     const int xKernelRadius = (int) floor(kernelDimens[2]/2); //Not actually a radius, actually half the width
@@ -376,22 +378,23 @@ Tensor CnnUtils::convolution(const Tensor& image,Tensor& kernel,const int xStrid
                     for(;x+7<originalImgXBound;x+=8){
                         //x is the centre of the kernel and so we start at x-1
                         const int xSub1 = x-1; 
+                        const int xPlus1 = x+1;
                         //indices where the pixels are located
                         
                         //Get all of the pixels that will be in the (0,0) position for the convolutions
-                        const __m256 R00 = _mm256_loadu_ps(paddedRow0Base);    
+                        const __m256 R00 = _mm256_loadu_ps(paddedRow0Base+xSub1);    
                         //And then the (0,1)
-                        const __m256 R01 = _mm256_loadu_ps(paddedRow0Base+1);
+                        const __m256 R01 = _mm256_loadu_ps(paddedRow0Base+x);
                         //etc.
-                        const __m256 R02 = _mm256_loadu_ps(paddedRow0Base+2); 
+                        const __m256 R02 = _mm256_loadu_ps(paddedRow0Base+xPlus1); 
                         //(1,0)
-                        const __m256 R10 = _mm256_loadu_ps(paddedRow1Base);
-                        const __m256 R11 = _mm256_loadu_ps(paddedRow1Base+1);
-                        const __m256 R12 = _mm256_loadu_ps(paddedRow1Base+2);
+                        const __m256 R10 = _mm256_loadu_ps(paddedRow1Base+xSub1);
+                        const __m256 R11 = _mm256_loadu_ps(paddedRow1Base+x);
+                        const __m256 R12 = _mm256_loadu_ps(paddedRow1Base+xPlus1);
 
-                        const __m256 R20 = _mm256_loadu_ps(paddedRow2Base);
-                        const __m256 R21 = _mm256_loadu_ps(paddedRow2Base+1);
-                        const __m256 R22 = _mm256_loadu_ps(paddedRow2Base+2);
+                        const __m256 R20 = _mm256_loadu_ps(paddedRow2Base+xSub1);
+                        const __m256 R21 = _mm256_loadu_ps(paddedRow2Base+x);
+                        const __m256 R22 = _mm256_loadu_ps(paddedRow2Base+xPlus1);
 
                         //Compute kernel*image for 8 convolutions at once for each kernel element
                         __m256 acc = _mm256_setzero_ps();

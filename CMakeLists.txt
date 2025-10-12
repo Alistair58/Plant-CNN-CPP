@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
 
-set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -35,6 +33,19 @@ elseif(${PROFILING})
         -funroll-loops
         -mfma
         -ffp-contract=fast
+    )
+elseif(${ASAN})
+    set(CMAKE_BUILD_TYPE RelWithDebInfo)
+    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0 PROFILING=0)
+    target_compile_options(Plant-CNN-CPP PRIVATE
+        -O3
+        -fsanitize=address
+        -fno-omit-frame-pointer
+        -march=native
+        -mavx2
+    )
+    target_link_libraries(Plant-CNN-CPP PRIVATE
+    -fsanitize=address
     )
 else()
     target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0 PROFILING=0)

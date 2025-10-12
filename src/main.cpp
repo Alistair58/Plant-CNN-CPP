@@ -2,7 +2,6 @@
 #include <filesystem>
 #include <iostream>
 #include <chrono>
-#include <unistd.h>
 #include <thread>
 #include <atomic>
 #include "cnn.hpp"
@@ -63,14 +62,13 @@ int main(int argc,char **argv){
     const int numImageThreads = 4;
     const int numCnnThreads = 8;
     int mode = -1;
-    int numBatches = -1;
     bool restart = false;
     float dropoutProbability = 0.2;
     if(argc<3){
         throw std::invalid_argument("argv must contain at least 2 arguments");
     }
-    if(stricmp(argv[1],"train")==0) mode = TRAIN;
-    else if(stricmp(argv[1],"test")==0) mode = TEST;
+    if(_stricmp(argv[1],"train")==0) mode = TRAIN;
+    else if(_stricmp(argv[1],"test")==0) mode = TEST;
     else{
         throw std::invalid_argument("Argument 1 must either be \"train\" or \"test\"");
     }
@@ -261,7 +259,7 @@ static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageT
             10-percentageComplete/10, "          ",
             i,numBatches,
             percentageComplete,
-            i>=savePeriod?lastSavedStr.length():0,lastSavedStr.c_str()
+            i>=savePeriod?(int)lastSavedStr.length():0,lastSavedStr.c_str()
         );
         //stdout is line-buffered but we're not writing a new line with \n and so flush
         fflush(stdout);
@@ -359,7 +357,7 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
                         #if DEBUG
                             std::cout << "CNN thread "<<threadId << " waiting" << std::endl;
                         #endif
-                        usleep(10000); //10ms
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10)); //10ms
                     }
                     #if PROFILING
                         if(cnnThreadTimer) waitingForImageTimer->stop();
