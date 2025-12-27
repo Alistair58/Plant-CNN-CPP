@@ -216,9 +216,6 @@ Tensor CnnUtils::convolution(const Tensor& image,Tensor& kernel,const int xStrid
     if(kernelDimens[0]!=imgDimens[0]){
         throw std::invalid_argument("The image and kernel must have the same number of channels for convolution");
     }
-    if((kernelDimens[1]&1)==0 || (kernelDimens[2]&1)==0){
-        throw std::invalid_argument("convolution only works for odd-sized kernels");
-    }
     const int xKernelRadius = (int) floor(kernelDimens[2]/2); //Not actually a radius, actually half the width
     const int yKernelRadius = (int) floor(kernelDimens[1]/2);
 

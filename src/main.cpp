@@ -30,7 +30,7 @@ static int batchSize = 64;
 #endif
 
 std::string currDir = std::filesystem::current_path().string();
-std::string datasetDirPath = "C:/Users/Alistair/Pictures/house_plant_species";
+std::string datasetDirPath = "/home/alistair/Pictures/house_plant_species";
 
 std::atomic<int> missedCount{0};
 
@@ -47,6 +47,7 @@ static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool ou
 
 
 //TODO
+//Fix large gradient problem
 //Test new larger model
 //Speed up
 
@@ -59,16 +60,18 @@ int main(int argc,char **argv){
     //out => output every single test result
     Dataset *d = new Dataset(datasetDirPath,0.8f);
     CNN *cnn = nullptr;
-    const int numImageThreads = 4;
-    const int numCnnThreads = 8;
+    //TODO turn back on multiple threads
+    const int numImageThreads = 1;
+    const int numCnnThreads = 1;
     int mode = -1;
     bool restart = false;
-    float dropoutProbability = 0.2;
+    //TODO turn back on dropout
+    float dropoutProbability = 0;
     if(argc<3){
         throw std::invalid_argument("argv must contain at least 2 arguments");
     }
-    if(_stricmp(argv[1],"train")==0) mode = TRAIN;
-    else if(_stricmp(argv[1],"test")==0) mode = TEST;
+    if(toLower(argv[1]) == toLower("train")) mode = TRAIN;
+    else if(toLower(argv[1]) == toLower("test")) mode = TEST;
     else{
         throw std::invalid_argument("Argument 1 must either be \"train\" or \"test\"");
     }
@@ -301,122 +304,135 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
     ,Timer *parentTimer
 #endif
 ){ //batch size must be a multiple of numThreads
-    #if PROFILING
-        Timer *batchTimer = nullptr;
-        if(parentTimer) batchTimer = parentTimer->addChildTimer("batch");
-    #endif
-    int numCnnThreads = cnns.size();
-    std::vector<std::thread> cnnThreads(numCnnThreads);
-    std::vector<std::thread> imageThreads(numImageThreads);
-    std::vector<std::atomic<PlantImage*>> plantImages(batchSize);
-    for(int i=0;i<batchSize;i++) plantImages[i].store(nullptr,std::memory_order_relaxed);
-    for(int iT=0;iT<numImageThreads;iT++){
-        imageThreads[iT] = std::thread(
-            [](int threadId,int batchSize,int numImageThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d
-            #if PROFILING
-                ,Timer *imageThreadTimer
-            #endif
-            ){
-                for(int i=threadId;i<batchSize;i+=numImageThreads){
-                    PlantImage *p = d->randomImage(false
-                    #if PROFILING 
-                        ,imageThreadTimer?imageThreadTimer:nullptr
-                    #endif
-                    );
-                    (*plantImages)[i].store(p,std::memory_order_release); 
-                }
-                #if PROFILING 
-                    if(imageThreadTimer) imageThreadTimer->stop();
-                #endif
-            },iT,batchSize,numImageThreads,&plantImages,d
-            #if PROFILING
-                ,parentTimer?batchTimer->addChildTimer("imageThread"+std::to_string(iT)):nullptr
-            #endif
-        );
-    }
-    for(int cT=0;cT<numCnnThreads;cT++){ 
-        cnnThreads[cT]= std::thread(
-            [](int threadId,int batchSize,int numCnnThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d,std::vector<CNN*> *cnns
-            #if PROFILING
-                ,Timer *cnnThreadTimer
-            #endif
-            ){
-                for (int i=threadId;i<batchSize;i+=numCnnThreads) {
-                    uint64_t startTime = getCurrTimeMs();
-                    PlantImage* p = (*plantImages)[i].load(std::memory_order_acquire);
-                    #if PROFILING
-                        Timer *waitingForImageTimer = nullptr;
-                        if(cnnThreadTimer){
-                            waitingForImageTimer = cnnThreadTimer->addChildTimer("waitingForImage");
-                        }
-                    #endif
-                    while (p == nullptr && (getCurrTimeMs() - startTime) < 5000){
-                        //Give up if we can't get the image in 5 seconds
-                        //Note: this doesn't stop the image from being loaded (if it's still loading)
-                        p = (*plantImages)[i].load(std::memory_order_acquire);
-                        #if DEBUG
-                            std::cout << "CNN thread "<<threadId << " waiting" << std::endl;
-                        #endif
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10)); //10ms
-                    }
-                    #if PROFILING
-                        if(cnnThreadTimer) waitingForImageTimer->stop();
-                    #endif
-                    if(p!=nullptr && p->index!=-1 && p->label.length()>0){
-                        (*cnns)[threadId]->backwards(p->data,p->label
-                        #if PROFILING
-                            ,cnnThreadTimer?cnnThreadTimer:nullptr
-                        #endif
-                        );
-                    }
-                    else missedCount.fetch_add(1, std::memory_order_relaxed);
-                    if(p!=nullptr){
-                        (*plantImages)[i].store(nullptr, std::memory_order_release);
-                        delete p;
-                    }
-                    //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
-                }
-                #if PROFILING
-                    if(cnnThreadTimer) cnnThreadTimer->stop();
-                #endif 
-            },cT,batchSize,numCnnThreads,&plantImages,d,&cnns
-            #if PROFILING
-                ,parentTimer?batchTimer->addChildTimer("cnnThread"+std::to_string(cT)):nullptr
-            #endif
-        );
-    }
-    int i=0;
-    for(std::thread& imageThread:imageThreads){
-         //No easy way to kill a thread which calls a blocking external function (without processes)
-        //and so we can't have a timeout
-        imageThread.join();
-        #if DEBUG
-            std::cout << "Image thread: "+std::to_string(i)+" joined" << std::endl;
-        #endif 
-        i++;
-    }
-    i=0;
-    for(std::thread& cnnThread:cnnThreads){
-        cnnThread.join();
-        #if DEBUG
-            std::cout << "CNN thread: "+std::to_string(i)+" joined" << std::endl;
-        #endif
-        i++;
-    }
-    n->applyGradients(cnns,batchSize
-    #if PROFILING
-        ,parentTimer?batchTimer:nullptr
-    #endif
-    );
-    for(i=0;i<batchSize;i++){
-        PlantImage *p = plantImages[i].load(std::memory_order_acquire);
+    // #if PROFILING
+    //     Timer *batchTimer = nullptr;
+    //     if(parentTimer) batchTimer = parentTimer->addChildTimer("batch");
+    // #endif
+
+    for(int i{};i<batchSize;i++){
+        PlantImage *p = d->randomImage(false);
+        if(p!=nullptr && p->index!=-1 && p->label.length()>0){
+            n->backwards(p->data,p->label);
+        }
+        else missedCount.fetch_add(1, std::memory_order_relaxed);
         if(p!=nullptr){
-            plantImages[i].store(nullptr, std::memory_order_release);
             delete p;
         }
     }
-    #if PROFILING
-        if(parentTimer) batchTimer->stop();
-    #endif
+    n->applyGradients(batchSize);
+
+    // int numCnnThreads = cnns.size();
+    // std::vector<std::thread> cnnThreads(numCnnThreads);
+    // std::vector<std::thread> imageThreads(numImageThreads);
+    // std::vector<std::atomic<PlantImage*>> plantImages(batchSize);
+    // for(int i=0;i<batchSize;i++) plantImages[i].store(nullptr,std::memory_order_relaxed);
+    // for(int iT=0;iT<numImageThreads;iT++){
+    //     imageThreads[iT] = std::thread(
+    //         [](int threadId,int batchSize,int numImageThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d
+    //         #if PROFILING
+    //             ,Timer *imageThreadTimer
+    //         #endif
+    //         ){
+    //             for(int i=threadId;i<batchSize;i+=numImageThreads){
+    //                 PlantImage *p = d->randomImage(false
+    //                 #if PROFILING 
+    //                     ,imageThreadTimer?imageThreadTimer:nullptr
+    //                 #endif
+    //                 );
+    //                 (*plantImages)[i].store(p,std::memory_order_release); 
+    //             }
+    //             #if PROFILING 
+    //                 if(imageThreadTimer) imageThreadTimer->stop();
+    //             #endif
+    //         },iT,batchSize,numImageThreads,&plantImages,d
+    //         #if PROFILING
+    //             ,parentTimer?batchTimer->addChildTimer("imageThread"+std::to_string(iT)):nullptr
+    //         #endif
+    //     );
+    // }
+    // for(int cT=0;cT<numCnnThreads;cT++){ 
+    //     cnnThreads[cT]= std::thread(
+    //         [](int threadId,int batchSize,int numCnnThreads,std::vector<std::atomic<PlantImage*>> *plantImages,Dataset *d,std::vector<CNN*> *cnns
+    //         #if PROFILING
+    //             ,Timer *cnnThreadTimer
+    //         #endif
+    //         ){
+    //             for (int i=threadId;i<batchSize;i+=numCnnThreads) {
+    //                 uint64_t startTime = getCurrTimeMs();
+    //                 PlantImage* p = (*plantImages)[i].load(std::memory_order_acquire);
+    //                 #if PROFILING
+    //                     Timer *waitingForImageTimer = nullptr;
+    //                     if(cnnThreadTimer){
+    //                         waitingForImageTimer = cnnThreadTimer->addChildTimer("waitingForImage");
+    //                     }
+    //                 #endif
+    //                 while (p == nullptr && (getCurrTimeMs() - startTime) < 5000){
+    //                     //Give up if we can't get the image in 5 seconds
+    //                     //Note: this doesn't stop the image from being loaded (if it's still loading)
+    //                     p = (*plantImages)[i].load(std::memory_order_acquire);
+    //                     #if DEBUG
+    //                         std::cout << "CNN thread "<<threadId << " waiting" << std::endl;
+    //                     #endif
+    //                     std::this_thread::sleep_for(std::chrono::milliseconds(10)); //10ms
+    //                 }
+    //                 #if PROFILING
+    //                     if(cnnThreadTimer) waitingForImageTimer->stop();
+    //                 #endif
+    //                 if(p!=nullptr && p->index!=-1 && p->label.length()>0){
+    //                     (*cnns)[threadId]->backwards(p->data,p->label
+    //                     #if PROFILING
+    //                         ,cnnThreadTimer?cnnThreadTimer:nullptr
+    //                     #endif
+    //                     );
+    //                 }
+    //                 else missedCount.fetch_add(1, std::memory_order_relaxed);
+    //                 if(p!=nullptr){
+    //                     (*plantImages)[i].store(nullptr, std::memory_order_release);
+    //                     delete p;
+    //                 }
+    //                 //Sometimes we won't actually do the batch size but it's only a (relatively) arbitrary number
+    //             }
+    //             #if PROFILING
+    //                 if(cnnThreadTimer) cnnThreadTimer->stop();
+    //             #endif 
+    //         },cT,batchSize,numCnnThreads,&plantImages,d,&cnns
+    //         #if PROFILING
+    //             ,parentTimer?batchTimer->addChildTimer("cnnThread"+std::to_string(cT)):nullptr
+    //         #endif
+    //     );
+    // }
+    // int i=0;
+    // for(std::thread& imageThread:imageThreads){
+    //      //No easy way to kill a thread which calls a blocking external function (without processes)
+    //     //and so we can't have a timeout
+    //     imageThread.join();
+    //     #if DEBUG
+    //         std::cout << "Image thread: "+std::to_string(i)+" joined" << std::endl;
+    //     #endif 
+    //     i++;
+    // }
+    // i=0;
+    // for(std::thread& cnnThread:cnnThreads){
+    //     cnnThread.join();
+    //     #if DEBUG
+    //         std::cout << "CNN thread: "+std::to_string(i)+" joined" << std::endl;
+    //     #endif
+    //     i++;
+    // }
+    // n->applyGradients(cnns,batchSize
+    // #if PROFILING
+    //     ,parentTimer?batchTimer:nullptr
+    // #endif
+    // );
+    // for(i=0;i<batchSize;i++){
+    //     PlantImage *p = plantImages[i].load(std::memory_order_acquire);
+    //     if(p!=nullptr){
+    //         plantImages[i].store(nullptr, std::memory_order_release);
+    //         delete p;
+    //     }
+    // }
+    // #if PROFILING
+    //     if(parentTimer) batchTimer->stop();
+    // #endif
 }
 

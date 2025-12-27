@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 
 project(Plant-CNN-CPP CXX)
 add_executable(Plant-CNN-CPP
@@ -18,7 +18,7 @@ add_executable(Plant-CNN-CPP
 
 if(${DEBUG})
     set(CMAKE_BUILD_TYPE Debug)
-    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=${DEBUG} PROFILING=1)
+    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=${DEBUG})
     target_compile_options(Plant-CNN-CPP PRIVATE
     -mavx2
     -march=native
@@ -35,17 +35,24 @@ elseif(${PROFILING})
         -ffp-contract=fast
     )
 elseif(${ASAN})
-    set(CMAKE_BUILD_TYPE RelWithDebInfo)
-    target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0 PROFILING=0)
+    set(CMAKE_BUILD_TYPE Debug)
+
+    target_compile_definitions(Plant-CNN-CPP PRIVATE
+        DEBUG=0
+        PROFILING=0
+    )
+
     target_compile_options(Plant-CNN-CPP PRIVATE
-        -O3
-        -fsanitize=address
+        -fsanitize=address,undefined
         -fno-omit-frame-pointer
+        -g
+        -O1
         -march=native
         -mavx2
     )
-    target_link_libraries(Plant-CNN-CPP PRIVATE
-    -fsanitize=address
+
+    target_link_options(Plant-CNN-CPP PRIVATE
+        -fsanitize=address,undefined
     )
 else()
     target_compile_definitions(Plant-CNN-CPP PRIVATE DEBUG=0 PROFILING=0)
@@ -67,8 +74,6 @@ target_compile_definitions(Plant-CNN-CPP PRIVATE
 )
 
 
-target_link_libraries(Plant-CNN-CPP PRIVATE
-)
 
 target_include_directories(Plant-CNN-CPP PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/src

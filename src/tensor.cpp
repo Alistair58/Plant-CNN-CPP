@@ -1,6 +1,8 @@
 #include "tensor.hpp"
 #include <immintrin.h>
 
+//TODO remove
+#include <assert.h>
 Tensor::Tensor(const std::vector<int>& inputDimens){
     dimens = inputDimens;
     int numElems = 1;
@@ -119,12 +121,16 @@ Tensor& Tensor::operator=(Tensor&& t){
         }
     }
     this->biases = std::move(t.biases);
-    //More efficient than a loop
-    std::memcpy(
-        this->getData(),
-        t.getData(),
-        sizeof(float)*totalSize
-    );
+    
+    if(t.getData()!=nullptr){
+        //More efficient than a loop
+        std::memcpy(
+            this->getData(),
+            t.getData(),
+            sizeof(float)*totalSize
+        );
+    }
+    
     t.offset = 0;
     t.totalSize = 0;
     return *this;

@@ -34,9 +34,15 @@ Dataset::Dataset(std::string dirPathInp,float trainTestSplitRatio){
     for(const fs::directory_entry &entry: fs::directory_iterator(dirPath)){
         if(fs::is_directory(entry)){
             indices.push_back(i);
-            //e.g. "C:/Users/Alistair/Pictures/house_plant_species\\African Violet (Saintpaulia ionantha)""
+            
             std::string folderPath = entry.path().string();
-            std::regex parentFoldersRegex(".+\\\\");
+            #if _WIN32
+                //e.g. "C:/Users/Alistair/Pictures/house_plant_species\\African Violet (Saintpaulia ionantha)"
+                std::regex parentFoldersRegex(".+\\\\");
+            #else
+                //e.g. "C:/Users/Alistair/Pictures/house_plant_species/African Violet (Saintpaulia ionantha)"
+                std::regex parentFoldersRegex(".+/");
+            #endif
             std::string folderName = std::regex_replace(folderPath,parentFoldersRegex,"");
             plantNames.push_back(folderName);
             for(const auto &subEntry:fs::directory_iterator(entry)){
@@ -113,11 +119,12 @@ PlantImage *Dataset::randomImage(bool test
                     #if DEBUG
                         std::cout << "Loaded: "+fname+fileExtension << std::endl;
                     #endif 
-                    if(!test) ImageUtils::augment(plantImage->data
+                    //TODO turn back on
+                    /*if(!test) ImageUtils::augment(plantImage->data
                     #if PROFILING
                         ,parentTimer
                     #endif
-                    );
+                    );*/
                     return plantImage;
                 }
                 delete plantImage;

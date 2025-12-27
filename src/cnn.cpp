@@ -8,41 +8,33 @@
 
 //Creating a fresh CNN
 CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
-    //Model 7:
-    // 256x256x3
-    // 128x128x32 (3x3 conv stride 2)
-    // 64x64x64 (3x3 conv stride 2)
-    // 32x32x128 (3x3 conv stride 2)
-    // 16x16x256 (3x3 conv stride 2)
-    // 16x16x256 (3x3 conv stride 1)
-    // 4x4x256 (max pool)
-    // 4096
-    // 1028 (FC)
+    //Model 5:
+    // 128x128x3
+    // 64x64x30 (3x3 conv stride 2)
+    // 32x32x60 (3x3 conv stride 2)
+    // 16x16x120 (3x3 conv stride 2)
+    // 4x4x120 (max pool)
+    // 1920
+    // 1920 (FC)
     // 47 (FC)
-    numNeurons = {4096,1028,47};
+    numNeurons = {1920,1920,47};
     //includes the result of pooling (except final pooling)
-    mapDimens = std::vector<dimens>(6);
-    mapDimens[0] = {3,256,256};
-    mapDimens[1] = {32,128,128};
-    mapDimens[2] = {64,64,64};
-    mapDimens[3] = {128,32,32};
-    mapDimens[4] = {256,16,16};
-    mapDimens[5] = {256,16,16};
+    mapDimens = std::vector<dimens>(4);
+    mapDimens[0] = {3,128,128};
+    mapDimens[1] = {30,64,64};
+    mapDimens[2] = {60,32,32};
+    mapDimens[3] = {120,16,16};
     //0 represents a pooling layer, the last one is excluded
-    kernelSizes = std::vector<std::pair<int,int>>(5);
+    kernelSizes = std::vector<std::pair<int,int>>(3);
     kernelSizes[0] = {3,3}; //h,w
     kernelSizes[1] = {3,3};
     kernelSizes[2] = {3,3};
-    kernelSizes[3] = {3,3};
-    kernelSizes[4] = {3,3}; 
     //pooling strides are included
-    strides = std::vector<std::pair<int,int>>(6);
+    strides = std::vector<std::pair<int,int>>(4);
     strides[0] = {2,2};//y,x - pooling strides are included
     strides[1] = {2,2};
     strides[2] = {2,2};
-    strides[3] = {2,2};
-    strides[4] = {1,1};
-    strides[5] = {4,4};
+    strides[3] = {4,4};
     padding = true;
     this->dropoutProb = dropoutProbability;
 

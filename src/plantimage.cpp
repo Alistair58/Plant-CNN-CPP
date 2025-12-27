@@ -5,9 +5,16 @@ PlantImage::PlantImage(std::string fname, std::string plantName
     ,Timer *parentTimer
 #endif
 ){ //fname can be relative or absolute
-    if(fname.length()>2 && fname.substr(0,3)!="C:/"){
-        fname = datasetDirPath+fname; 
-    }
+    #ifdef __linux__ 
+        if(fname.length()>0 && fname[0]!='/'){
+            fname = datasetDirPath+fname; 
+        }
+    #elif _WIN32
+        if(fname.length()>2 && fname.substr(0,3)!="C:/"){
+            fname = datasetDirPath+fname; 
+        }   
+    #endif
+    
     this->data = fileToImageTensor(fname
     #if PROFILING
             ,parentTimer
