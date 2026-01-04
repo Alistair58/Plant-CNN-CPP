@@ -10,7 +10,17 @@ class CNN : public CnnUtils{
     public:
         //CONSTRUCTORS 
         //Creating a fresh CNN
-        CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability);
+        CNN(
+            float LR,
+            Dataset *dataset,
+            bool restart,
+            float dropoutProbability,
+            std::vector<int> numNeurons,
+            std::vector<dimens> mapDimens,
+            std::vector<std::pair<int,int>> kernelSizes,
+            std::vector<std::pair<int,int>> strides,
+            bool padding 
+        );
         //Creating a copy from an original CNN
         CNN(CNN *original,float LR,Dataset *dataset,bool deepCopyWeights=true);
     

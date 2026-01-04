@@ -1233,12 +1233,8 @@ Ran 2 batches under asan - no errors
 No augmentations, no dropout:
 Intervals of 250 batches:
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 29
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 29
 Dataset has 14790 items
 Num large gradients: 864 layer 0
@@ -1358,12 +1354,8 @@ Accuracy: 1.300000%
 Dataset has 14790 items
 Accuracy: 2.100000%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 30
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 30
 Dataset has 14790 items
 Num large gradients: 864 layer 0
@@ -1511,12 +1503,8 @@ echo %x
  Plant-CNN-CPP.exe test 1000 ds=train
 )
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 1
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 1
 Dataset has 14790 items
 Done
@@ -1561,12 +1549,8 @@ echo %x
  Plant-CNN-CPP.exe test 1000 ds=train
 )
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 1
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 1
 Dataset has 14790 items
 [####      ] (106/250) 42% complete   Most recent save a[####      ] (107/250) 42% complete   Most recent save a[####      ] ([####      ] (109/250) 43% complete   Most recent save at baDone
@@ -1577,12 +1561,8 @@ Accuracy: 21.100000%
 Dataset has 14790 items
 Accuracy: 31.799999%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 2
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 2
 Dataset has 14790 items
 Done
@@ -1593,12 +1573,8 @@ Accuracy: 25.500000%
 Dataset has 14790 items
 Accuracy: 40.299999%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 3
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 3
 Dataset has 14790 items
 Done
@@ -1609,7 +1585,7 @@ Accuracy: 26.100000%
 Dataset has 14790 items
 Accuracy: 42.500000%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
+
 echo 4  
  Plant-CNN-CPP.exe train 250
  Plant-CNN-CPP.exe test 1000
@@ -1625,12 +1601,8 @@ Accuracy: 26.700001%
 Dataset has 14790 items
 Accuracy: 54.099998%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 5
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 5
 Dataset has 14790 items
 Done
@@ -1641,12 +1613,8 @@ Accuracy: 33.099998%
 Dataset has 14790 items
 Accuracy: 62.200001%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 6
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 6
 Dataset has 14790 items
 Done
@@ -1657,12 +1625,8 @@ Accuracy: 31.799999%
 Dataset has 14790 items
 Accuracy: 60.799999%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 7
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 7
 Dataset has 14790 items
 Done
@@ -1673,12 +1637,8 @@ Accuracy: 29.900000%
 Dataset has 14790 items
 Accuracy: 65.199997%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 8
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 8
 Dataset has 14790 items
 Done
@@ -1689,12 +1649,8 @@ Accuracy: 32.400002%
 Dataset has 14790 items
 Accuracy: 72.500000%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 9
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 9
 Dataset has 14790 items
 Done
@@ -1705,12 +1661,8 @@ Accuracy: 27.700001%
 Dataset has 14790 items
 Accuracy: 65.400002%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 10
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-) 
+
+ 
 10
 Dataset has 14790 items
 Done
@@ -1721,12 +1673,8 @@ Accuracy: 27.799999%
 Dataset has 14790 items
 Accuracy: 69.800003%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 11
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 11
 Dataset has 14790 items
 Done
@@ -1737,15 +1685,12 @@ Accuracy: 19.600000%
 Dataset has 14790 items
 Accuracy: 40.000000%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 12
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 12
 Dataset has 14790 items
-[######### ] (227/250) 90% complete   Most recent save at batch 225Num large gradients: 269 layer 0
+[######### ] (227/250) 90% complete   Most recent save at batch 225
+Num large gradients: 269 layer 0
 Num large gradients: 76 layer 1
 Num large biases gradients: 11 layer 0
 Kernels, CNN index: 0
@@ -1754,12 +1699,8 @@ Accuracy: 1.600000%
 Dataset has 14790 items
 Accuracy: 0.900000%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 13
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 13
 Dataset has 14790 items
 Num large gradients: 707 layer 0
@@ -1770,12 +1711,8 @@ Accuracy: 2.000000%
 Dataset has 14790 items
 Accuracy: 2.100000%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 14
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 14
 Dataset has 14790 items
 Num large gradients: 538 layer 0
@@ -1792,12 +1729,8 @@ Accuracy: 1.400000%
 Dataset has 14790 items
 Accuracy: 1.600000%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 15
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
+
+
 15
 Dataset has 14790 items
 Num large gradients: 810 layer 0
@@ -1815,351 +1748,6 @@ Accuracy: 1.500000%
 Dataset has 14790 items
 Accuracy: 1.500000%
 
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 16
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-16
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16175 layer 1
-Num large gradients: 45214 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 44 layer 2
-Kernels, CNN index: 0
-Num large gradients: 1558218 layer 0
-Num large gradients: 68427 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 2.300000%
-Dataset has 14790 items
-Accuracy: 2.100000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 17
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-17
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 15760 layer 1
-Num large gradients: 56055 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 59 layer 1
-Num large biases gradients: 71 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2953740 layer 0
-Num large gradients: 80176 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 1.900000%
-Dataset has 14790 items
-Accuracy: 3.300000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 18
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-18
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16116 layer 1
-Num large gradients: 61738 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 47 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2134741 layer 0
-Num large gradients: 86345 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 3.300000%
-Dataset has 14790 items
-Accuracy: 3.500000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 19
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-19
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16161 layer 1
-Num large gradients: 64577 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 117 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2827369 layer 0
-Num large gradients: 74702 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 2.400000%
-Dataset has 14790 items
-Accuracy: 2.100000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 20
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-20
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16199 layer 1
-Num large gradients: 64636 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 117 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2967948 layer 0
-Num large gradients: 76735 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 1.900000%
-Dataset has 14790 items
-Accuracy: 0.900000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 21
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-21
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 15982 layer 1
-Num large gradients: 63566 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 79 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2204285 layer 0
-Num large gradients: 72897 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 2.500000%
-Dataset has 14790 items
-Accuracy: 2.000000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 22
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-22
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16186 layer 1
-Num large gradients: 63149 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 89 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2835131 layer 0
-Num large gradients: 80586 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 2.300000%
-Dataset has 14790 items
-Accuracy: 2.400000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 23
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-) 
-23
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16199 layer 1
-Num large gradients: 63094 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 102 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2506653 layer 0
-Num large gradients: 72366 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 1.800000%
-Dataset has 14790 items
-Accuracy: 1.900000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 24
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-24
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16125 layer 1
-Num large gradients: 63572 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 63 layer 2
-Kernels, CNN index: 0
-Num large gradients: 1802462 layer 0
-Num large gradients: 77999 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 1.100000%
-Dataset has 14790 items
-Accuracy: 1.100000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 25
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-25
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16200 layer 1
-Num large gradients: 64604 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 116 layer 2
-Kernels, CNN index: 0
-Num large gradients: 3190665 layer 0
-Num large gradients: 78685 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 2.600000%
-Dataset has 14790 items
-Accuracy: 2.500000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 26
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-26
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16190 layer 1
-Num large gradients: 63149 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 84 layer 2
-Kernels, CNN index: 0
-Num large gradients: 1527506 layer 0
-Num large gradients: 81919 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 1.200000%
-Dataset has 14790 items
-Accuracy: 0.900000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 27
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-27
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16085 layer 1
-Num large gradients: 63239 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 41 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2646846 layer 0
-Num large gradients: 86236 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 2.700000%
-Dataset has 14790 items
-Accuracy: 2.500000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 28
- Plant-CNN-CPP.exe train 250  
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-28
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 15723 layer 1
-Num large gradients: 63490 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 42 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2112925 layer 0
-Num large gradients: 70912 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 1.200000%
-Dataset has 14790 items
-Accuracy: 1.200000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 29
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train
-)
-29
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 15897 layer 1
-Num large gradients: 62274 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 16 layer 2
-Kernels, CNN index: 0
-Num large gradients: 1838339 layer 0
-Num large gradients: 84934 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 2.000000%
-Dataset has 14790 items
-Accuracy: 2.700000%
-
-C:\Users\Alistair\VS-Code-Projects\Plant-CNN-CPP>(
-echo 30
- Plant-CNN-CPP.exe train 250
- Plant-CNN-CPP.exe test 1000
- Plant-CNN-CPP.exe test 1000 ds=train 
-)
-30
-Dataset has 14790 items
-Num large gradients: 810 layer 0
-Num large gradients: 16195 layer 1
-Num large gradients: 64397 layer 2
-Num large biases gradients: 30 layer 0
-Num large biases gradients: 60 layer 1
-Num large biases gradients: 119 layer 2
-Kernels, CNN index: 0
-Num large gradients: 2724236 layer 0
-Num large gradients: 78215 layer 1
-Weights, CNN index: 0
-Dataset has 14790 items
-Accuracy: 2.800000%
-Dataset has 14790 items
-Accuracy: 1.300000%
-
 
 1 thread that does images and cnn (still no augmentation or dropout):
 
@@ -2167,3 +1755,292 @@ Around 6 hours and it still did it
 
 Likely to be some sort of out of bounds error in the maths somewhere 
 That only affects memory sometimes? e.g. when things are next to each other?
+
+Running under Asan on Linux (still 1 sequential thread, no aug, no dropout)
+No errors after 250 batches of 64
+
+Back to multiple threads (but with no augmentation and no dropout)
+16 CNN threads and 6 image threads 
+Still running under Asan
+
+alistair@AMH-Prestige-14:~/VS-Code-Projects/Plant-CNN-CPP$ ./trainingSession.sh
+Dataset has 14790 items
+Are you sure you want to reset the model to random weights? (Y/N) 
+y
+Model reset
+Done
+Took: 0 hr(s) 16 min(s) 22 sec(s)
+Missed: 230
+Dataset has 14790 items
+Accuracy: 15.500000%
+Dataset has 14790 items
+Accuracy: 23.100000%
+1
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 15 min(s) 46 sec(s)
+Missed: 222
+Dataset has 14790 items
+Accuracy: 20.100000%
+Dataset has 14790 items
+Accuracy: 31.900000%
+2
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 15 min(s) 43 sec(s)
+Missed: 212
+Dataset has 14790 items
+Accuracy: 25.100000%
+Dataset has 14790 items
+Accuracy: 41.900002%
+3
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 15 min(s) 42 sec(s)
+Missed: 199
+Dataset has 14790 items
+Accuracy: 24.299999%
+Dataset has 14790 items
+Accuracy: 42.700001%
+4
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 16 min(s) 2 sec(s)
+Missed: 216
+Dataset has 14790 items
+Accuracy: 28.299999%
+Dataset has 14790 items
+Accuracy: 49.400002%
+5
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 15 min(s) 50 sec(s)
+Missed: 222
+Dataset has 14790 items
+Accuracy: 26.799999%
+Dataset has 14790 items
+Accuracy: 59.799999%
+6
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 15 min(s) 51 sec(s)
+Missed: 200
+Dataset has 14790 items
+Accuracy: 27.000000%
+Dataset has 14790 items
+Accuracy: 59.299999%
+7
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 16 min(s) 23 sec(s)
+Missed: 232
+Dataset has 14790 items
+Accuracy: 27.799999%
+Dataset has 14790 items
+Accuracy: 69.300003%
+8
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 16 min(s) 8 sec(s)
+Missed: 218
+Dataset has 14790 items
+Accuracy: 8.500000%
+Dataset has 14790 items
+Accuracy: 9.000000%
+9
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 16 min(s) 8 sec(s)
+Missed: 232
+Dataset has 14790 items
+Accuracy: 21.700001%
+Dataset has 14790 items
+Accuracy: 33.900002%
+10
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 16 min(s) 12 sec(s)
+Missed: 230
+Dataset has 14790 items
+Accuracy: 26.500000%
+Dataset has 14790 items
+Accuracy: 47.000000%
+11
+Dataset has 14790 items
+Done
+Took: 0 hr(s) 15 min(s) 37 sec(s)
+Missed: 183
+Dataset has 14790 items
+Accuracy: 8.400000%
+Dataset has 14790 items
+Accuracy: 12.400000%
+12
+Dataset has 14790 items
+[#         ] (44/250) 17% complete   Most recent save at batch 25
+Num large gradients: 1 layer 1
+Weights, CNN index: 0
+Num large gradients: 6 layer 1
+Weights, CNN index: 1
+Num large gradients: 3 layer 1
+Weights, CNN index: 3
+Num large gradients: 6 layer 1
+Weights, CNN index: 4
+Num large gradients: 10 layer 1
+Weights, CNN index: 5
+Num large gradients: 7 layer 1
+Weights, CNN index: 6
+Num large gradients: 7 layer 1
+Weights, CNN index: 7
+Num large gradients: 4 layer 1
+Weights, CNN index: 8
+Num large gradients: 2 layer 1
+Weights, CNN index: 9
+Num large gradients: 3 layer 1
+Weights, CNN index: 10
+Num large gradients: 5 layer 1
+Weights, CNN index: 11
+Num large gradients: 2 layer 1
+Weights, CNN index: 12
+Num large gradients: 5 layer 1
+Weights, CNN index: 13
+Num large gradients: 2 layer 1
+Weights, CNN index: 14
+Num large gradients: 5 layer 1
+Weights, CNN index: 15
+[#         ] (45/250) 18% complete   Most recent save at batch 25
+Num large gradients: 160 layer 0
+Num large gradients: 808 layer 1
+Num large gradients: 1826 layer 2
+Num large biases gradients: 5 layer 0
+Kernels, CNN index: 0
+Num large gradients: 1482 layer 0
+Num large gradients: 1085 layer 1
+Weights, CNN index: 0
+Num large gradients: 188 layer 0
+Num large gradients: 854 layer 1
+Num large gradients: 2017 layer 2
+Num large biases gradients: 6 layer 0
+Kernels, CNN index: 1
+Num large gradients: 2034 layer 0
+Num large gradients: 1109 layer 1
+Weights, CNN index: 1
+Num large gradients: 297 layer 0
+Num large gradients: 2539 layer 1
+Num large gradients: 4113 layer 2
+Num large biases gradients: 8 layer 0
+Kernels, CNN index: 2
+Num large gradients: 4673 layer 0
+Num large gradients: 1210 layer 1
+Weights, CNN index: 2
+Num large gradients: 228 layer 0
+Num large gradients: 1542 layer 1
+Num large gradients: 2859 layer 2
+Num large biases gradients: 6 layer 0
+Kernels, CNN index: 3
+Num large gradients: 2729 layer 0
+Num large gradients: 1037 layer 1
+Weights, CNN index: 3
+Num large gradients: 183 layer 0
+Num large gradients: 1195 layer 1
+Num large gradients: 2521 layer 2
+Num large biases gradients: 6 layer 0
+Kernels, CNN index: 4
+Num large gradients: 2678 layer 0
+Num large gradients: 1153 layer 1
+Weights, CNN index: 4
+Num large gradients: 394 layer 1
+Num large gradients: 974 layer 2
+Kernels, CNN index: 5
+Num large gradients: 426 layer 0
+Num large gradients: 935 layer 1
+Weights, CNN index: 5
+Num large gradients: 148 layer 0
+Num large gradients: 625 layer 1
+Num large gradients: 1433 layer 2
+Num large biases gradients: 3 layer 0
+Kernels, CNN index: 6
+Num large gradients: 1748 layer 0
+Num large gradients: 1187 layer 1
+Weights, CNN index: 6
+Num large gradients: 1 layer 0
+Num large gradients: 191 layer 1
+Num large gradients: 519 layer 2
+Kernels, CNN index: 7
+Num large gradients: 280 layer 0
+Num large gradients: 950 layer 1
+Weights, CNN index: 7
+Num large gradients: 178 layer 0
+Num large gradients: 783 layer 1
+Num large gradients: 1736 layer 2
+Num large biases gradients: 5 layer 0
+Kernels, CNN index: 8
+Num large gradients: 1771 layer 0
+Num large gradients: 1154 layer 1
+Weights, CNN index: 8
+Num large gradients: 212 layer 0
+Num large gradients: 1310 layer 1
+Num large gradients: 2842 layer 2
+Num large biases gradients: 7 layer 0
+Kernels, CNN index: 9
+Num large gradients: 3455 layer 0
+Num large gradients: 1130 layer 1
+Weights, CNN index: 9
+Num large gradients: 75 layer 0
+Num large gradients: 484 layer 1
+Num large gradients: 1333 layer 2
+Num large biases gradients: 2 layer 0
+Kernels, CNN index: 10
+Num large gradients: 905 layer 0
+Num large gradients: 971 layer 1
+Weights, CNN index: 10
+Num large gradients: 208 layer 0
+Num large gradients: 1512 layer 1
+Num large gradients: 3061 layer 2
+Num large biases gradients: 7 layer 0
+Kernels, CNN index: 11
+Num large gradients: 3305 layer 0
+Num large gradients: 1136 layer 1
+Weights, CNN index: 11
+Num large gradients: 133 layer 0
+Num large gradients: 945 layer 1
+Num large gradients: 1913 layer 2
+Num large biases gradients: 3 layer 0
+Kernels, CNN index: 12
+Num large gradients: 1469 layer 0
+Num large gradients: 1148 layer 1
+Weights, CNN index: 12
+Num large gradients: 189 layer 0
+Num large gradients: 1317 layer 1
+Num large gradients: 2552 layer 2
+Num large biases gradients: 6 layer 0
+Kernels, CNN index: 13
+Num large gradients: 2318 layer 0
+Num large gradients: 1048 layer 1
+Weights, CNN index: 13
+Num large gradients: 189 layer 0
+Num large gradients: 905 layer 1
+Num large gradients: 2150 layer 2
+Num large biases gradients: 5 layer 0
+Kernels, CNN index: 14
+Num large gradients: 2462 layer 0
+Num large gradients: 1213 layer 1
+Weights, CNN index: 14
+Num large gradients: 391 layer 1
+Num large gradients: 1032 layer 2
+Kernels, CNN index: 15
+Num large gradients: 351 layer 0
+Num large gradients: 775 layer 1
+Weights, CNN index: 15
+Dataset has 14790 items
+Accuracy: 1.800000%
+Dataset has 14790 items
+[#######   ] (771/1000) 77% 
+
+Some sort of wrong maths in backprop that builds up over time?
+ChatGPT found an actual bug in the pooling but it had no effect for my current setup (where all maps are square)
+
+
+Options 
+- Test functions individually - add unit tests 
+- Small model testing - is the gradient the same every time?
+

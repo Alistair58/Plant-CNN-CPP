@@ -7,38 +7,26 @@
 //CONSTRUCTORS 
 
 //Creating a fresh CNN
-CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
-    //Model 5:
-    // 128x128x3
-    // 64x64x30 (3x3 conv stride 2)
-    // 32x32x60 (3x3 conv stride 2)
-    // 16x16x120 (3x3 conv stride 2)
-    // 4x4x120 (max pool)
-    // 1920
-    // 1920 (FC)
-    // 47 (FC)
-    numNeurons = {1920,1920,47};
-    //includes the result of pooling (except final pooling)
-    mapDimens = std::vector<dimens>(4);
-    mapDimens[0] = {3,128,128};
-    mapDimens[1] = {30,64,64};
-    mapDimens[2] = {60,32,32};
-    mapDimens[3] = {120,16,16};
-    //0 represents a pooling layer, the last one is excluded
-    kernelSizes = std::vector<std::pair<int,int>>(3);
-    kernelSizes[0] = {3,3}; //h,w
-    kernelSizes[1] = {3,3};
-    kernelSizes[2] = {3,3};
-    //pooling strides are included
-    strides = std::vector<std::pair<int,int>>(4);
-    strides[0] = {2,2};//y,x - pooling strides are included
-    strides[1] = {2,2};
-    strides[2] = {2,2};
-    strides[3] = {4,4};
-    padding = true;
-    this->dropoutProb = dropoutProbability;
-
+CNN::CNN(
+    float LR,
+    Dataset *dataset,
+    bool restart,
+    float dropoutProbability,
+    std::vector<int> numNeurons,
+    std::vector<dimens> mapDimens,
+    std::vector<std::pair<int,int>> kernelSizes,
+    std::vector<std::pair<int,int>> strides,
+    bool padding 
+){
+    this->LR = LR;
     this->d = dataset;
+    this->dropoutProb= dropoutProbability;
+    this->numNeurons = numNeurons;
+    this->mapDimens = mapDimens;
+    this->kernelSizes = kernelSizes;
+    this->strides = strides;
+    this->padding = padding;
+        
     this->kernels = loadKernels(restart);
     this->weights = loadWeights(restart);
     kernelsGrad = std::vector<Tensor>(kernels.size());
@@ -53,7 +41,6 @@ CNN::CNN(float LR,Dataset *dataset,bool restart,float dropoutProbability){
         Tensor biasesGrad(weights[i].getBiases()->getDimens());
         weightsGrad[i].setBiases(biasesGrad);
     }
-    this->LR = LR;
     this->activations = std::vector<Tensor>(numNeurons.size());
     for(int l=0;l<numNeurons.size();l++){
         activations[l] = Tensor({numNeurons[l]});
@@ -945,7 +932,7 @@ void CNN::finalPoolingConvBackwards(std::vector<Tensor>& dcDzs,std::vector<Tenso
                         if(dcDzs0Data[mlpIndex]==0.0f) continue;
                         int maxPixelIndex = maxPoolIndicesData[mlpIndex];
                         //Curr layer indices
-                        int thisY = maxPixelIndex/currDimensY;
+                        int thisY = maxPixelIndex/currDimensX;
                         int thisX = maxPixelIndex - thisY*currDimensX;
                         //Prev layer indices
                         int y = yStart + thisY*thisStrideY;

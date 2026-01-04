@@ -87,7 +87,7 @@ class CnnUtils {
         );
         //Saving the padding allocation
         //prePaddingImage doesn't contain the image data, it just needs to be the correct size
-        Tensor convolution(const Tensor& image,Tensor& prePaddedImage,Tensor& kernel,const int xStride,const int yStride
+        static Tensor convolution(const Tensor& image,Tensor& prePaddedImage,Tensor& kernel,const int xStride,const int yStride
         #if PROFILING
             ,Timer *parentTimer
         #endif
@@ -153,12 +153,12 @@ class CnnUtils {
             Timer *parentTimer = nullptr
         #endif
         );
-        void saveWeights(
+        virtual void saveWeights(
         #if PROFILING
             Timer *parentTimer = nullptr
         #endif    
         );
-        void saveKernels(
+        virtual void saveKernels(
         #if PROFILING
             Timer *parentTimer = nullptr
         #endif
