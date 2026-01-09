@@ -2044,3 +2044,4 @@ Options
 - Test functions individually - add unit tests 
 - Small model testing - is the gradient the same every time?
 
+My softmax magnitude limiting was a bit dodgy

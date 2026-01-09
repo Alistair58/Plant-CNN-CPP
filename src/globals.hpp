@@ -15,6 +15,10 @@ extern std::string datasetDirPath;
 extern const std::string ANSI_RED;
 extern const std::string ANSI_RESET;
 extern const std::string ANSI_GREEN;
+extern const std::string ANSI_CLEAR_LINE;
+extern const std::string ANSI_COLOURS[6];
+extern const int NUM_ANSI_COLOURS;
+
 
 typedef std::vector<float> d1;
 typedef std::vector<d1> d2; 

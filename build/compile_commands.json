@@ -43,6 +43,12 @@
 },
 {
   "directory": "/home/alistair/VS-Code-Projects/Plant-CNN-CPP/build",
+  "command": "/usr/bin/c++ -DDEBUG=0 -DPROFILING=0 -I/home/alistair/VS-Code-Projects/Plant-CNN-CPP/test -I/home/alistair/VS-Code-Projects/Plant-CNN-CPP/src -I/home/alistair/VS-Code-Projects/Plant-CNN-CPP/lib -isystem /home/alistair/VS-Code-Projects/Plant-CNN-CPP/build/_deps/googletest-src/googletest/include -isystem /home/alistair/VS-Code-Projects/Plant-CNN-CPP/build/_deps/googletest-src/googletest -isystem /home/alistair/VS-Code-Projects/Plant-CNN-CPP/build/_deps/googletest-src/googlemock/include -isystem /home/alistair/VS-Code-Projects/Plant-CNN-CPP/build/_deps/googletest-src/googlemock -g -std=gnu++20 -fsanitize=address,undefined -fno-omit-frame-pointer -g -O1 -march=native -mavx2 -o CMakeFiles/Plant-CNN-CPP.dir/src/globals.cpp.o -c /home/alistair/VS-Code-Projects/Plant-CNN-CPP/src/globals.cpp",
+  "file": "/home/alistair/VS-Code-Projects/Plant-CNN-CPP/src/globals.cpp",
+  "output": "CMakeFiles/Plant-CNN-CPP.dir/src/globals.cpp.o"
+},
+{
+  "directory": "/home/alistair/VS-Code-Projects/Plant-CNN-CPP/build",
   "command": "/usr/bin/c++ -DDEBUG=0 -DPROFILING=0 -I/home/alistair/VS-Code-Projects/Plant-CNN-CPP/test -I/home/alistair/VS-Code-Projects/Plant-CNN-CPP/src -I/home/alistair/VS-Code-Projects/Plant-CNN-CPP/lib -isystem /home/alistair/VS-Code-Projects/Plant-CNN-CPP/build/_deps/googletest-src/googletest/include -isystem /home/alistair/VS-Code-Projects/Plant-CNN-CPP/build/_deps/googletest-src/googletest -isystem /home/alistair/VS-Code-Projects/Plant-CNN-CPP/build/_deps/googletest-src/googlemock/include -isystem /home/alistair/VS-Code-Projects/Plant-CNN-CPP/build/_deps/googletest-src/googlemock -g -std=gnu++20 -fsanitize=address,undefined -fno-omit-frame-pointer -g -O1 -march=native -mavx2 -o CMakeFiles/Plant-CNN-CPP.dir/test/cnnutilstest.cpp.o -c /home/alistair/VS-Code-Projects/Plant-CNN-CPP/test/cnnutilstest.cpp",
   "file": "/home/alistair/VS-Code-Projects/Plant-CNN-CPP/test/cnnutilstest.cpp",
   "output": "CMakeFiles/Plant-CNN-CPP.dir/test/cnnutilstest.cpp.o"

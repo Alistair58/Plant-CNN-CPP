@@ -12,6 +12,7 @@ add_executable(Plant-CNN-CPP
     src/utils.cpp
     src/tensor.cpp
     src/imageutils.cpp
+    src/globals.cpp
 )
 
 

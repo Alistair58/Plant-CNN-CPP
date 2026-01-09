@@ -13,12 +13,6 @@
 #include "tensor.hpp"
 #include <numbers>
 
-//The only include with the macro defined
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 //Default values
 static float LR = 0.02;
 static int batchSize = 64;
@@ -29,8 +23,7 @@ static int batchSize = 64;
     #include "timer.hpp"
 #endif
 
-std::string currDir = std::filesystem::current_path().string();
-std::string datasetDirPath = "/home/alistair/Pictures/house_plant_species";
+
 
 std::atomic<int> missedCount{0};
 
@@ -48,6 +41,8 @@ static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool ou
 
 //TODO
 //Fix large gradient problem
+// - Run it again
+// - More unit tests
 //Test new larger model
 //Speed up
 

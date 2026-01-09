@@ -52,17 +52,3 @@ thread_local std::mt19937 localRng([]{
     return std::mt19937((uint32_t)seed);
 }());
 
-const std::string ANSI_RED = "\u001B[31m";
-const std::string ANSI_RESET = "\u001B[0m";
-const std::string ANSI_GREEN = "\u001B[32m";
-const std::string ANSI_CLEAR_LINE = "\033[2K";
-//I don't want black or white
-const std::string ANSI_COLOURS[6] = {
-    "\u001B[31m", //Red
-    "\u001B[32m", //Green
-    "\u001B[33m", //Yellow
-    "\u001B[34m", //Blue
-    "\u001B[35m", //Purple
-    "\u001B[36m"  //Cyan
-};
-const int NUM_ANSI_COLOURS = 6;

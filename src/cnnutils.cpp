@@ -845,13 +845,13 @@ Tensor CnnUtils::convolution(Tensor& image,Tensor& kernel,int xStride,int yStrid
 
 std::vector<float> CnnUtils::softmax(std::vector<float> inp){
     std::vector<float> result(inp.size());
-    float sum = 0.0f;
+    double sum = 0.0;
     for(int i=0;i<inp.size();i++){
         //e^15 is quite big (roughly 2^22)
-        sum += exp(std::max(std::min(15.0f,inp[i]),-15.0f)); 
+        sum += exp(inp[i]); 
     }
     for(int i=0;i<inp.size();i++){
-        result[i] = (float) (exp(std::max(std::min(15.0f,inp[i]),-15.0f))/sum);
+        result[i] = (float) (exp(inp[i])/sum);
     }
     return result;
 }

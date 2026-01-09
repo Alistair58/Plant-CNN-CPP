@@ -1,4 +1,4 @@
-#include "src/cnn.hpp"
+#include "cnn.hpp"
 #include <gtest/gtest.h>
 
 class CnnTest : public testing::Test{
@@ -11,10 +11,10 @@ class CnnTest : public testing::Test{
         // Code here will be called immediately after each test (right
         // before the destructor).
     }
-}
+};
 
 
-TEST_F(){
+// TEST_F(){
     
-    EXPECT_EQ
-}
+//     EXPECT_EQ
+// }

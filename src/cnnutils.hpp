@@ -50,12 +50,12 @@ class CnnUtils {
 
         //UTILS
         void reset();
-        std::vector<Tensor> loadKernels(bool loadNew
+        virtual std::vector<Tensor> loadKernels(bool loadNew
         #if PROFILING
             ,Timer *parentTimer = nullptr
         #endif 
         );
-        std::vector<Tensor> loadWeights(bool loadNew
+        virtual std::vector<Tensor> loadWeights(bool loadNew
         #if PROFILING
             ,Timer *parentTimer = nullptr
         #endif 
@@ -143,12 +143,12 @@ class CnnUtils {
             ,Timer *parentTimer = nullptr
         #endif
         );
-        void resetKernels(
+        virtual void resetKernels(
         #if PROFILING
             Timer *parentTimer = nullptr
         #endif
         );
-        void resetWeights(
+        virtual void resetWeights(
         #if PROFILING
             Timer *parentTimer = nullptr
         #endif
