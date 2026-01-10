@@ -1506,11 +1506,7 @@ echo %x
 
 
 1
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 43 min(s) 45 sec(s)
-Missed: 195
-Dataset has 14790 items
+
 Accuracy: 18.100000%
 Dataset has 14790 items
 Accuracy: 20.299999%
@@ -1564,11 +1560,7 @@ Accuracy: 31.799999%
 
 
 2
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 18 min(s) 24 sec(s)
-Missed: 226
-Dataset has 14790 items
+
 Accuracy: 25.500000%
 Dataset has 14790 items
 Accuracy: 40.299999%
@@ -1576,11 +1568,7 @@ Accuracy: 40.299999%
 
 
 3
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 18 min(s) 27 sec(s)
-Missed: 219
-Dataset has 14790 items
+
 Accuracy: 26.100000%
 Dataset has 14790 items
 Accuracy: 42.500000%
@@ -1592,11 +1580,7 @@ echo 4
  Plant-CNN-CPP.exe test 1000 ds=train
 )
 4
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 18 min(s) 30 sec(s)
-Missed: 231
-Dataset has 14790 items
+
 Accuracy: 26.700001%
 Dataset has 14790 items
 Accuracy: 54.099998%
@@ -1604,11 +1588,7 @@ Accuracy: 54.099998%
 
 
 5
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 18 min(s) 15 sec(s)
-Missed: 206
-Dataset has 14790 items
+
 Accuracy: 33.099998%
 Dataset has 14790 items
 Accuracy: 62.200001%
@@ -1616,11 +1596,7 @@ Accuracy: 62.200001%
 
 
 6
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 18 min(s) 57 sec(s)
-Missed: 211
-Dataset has 14790 items
+
 Accuracy: 31.799999%
 Dataset has 14790 items
 Accuracy: 60.799999%
@@ -1628,11 +1604,7 @@ Accuracy: 60.799999%
 
 
 7
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 18 min(s) 30 sec(s)
-Missed: 233
-Dataset has 14790 items
+
 Accuracy: 29.900000%
 Dataset has 14790 items
 Accuracy: 65.199997%
@@ -1640,11 +1612,7 @@ Accuracy: 65.199997%
 
 
 8
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 18 min(s) 35 sec(s)
-Missed: 219
-Dataset has 14790 items
+
 Accuracy: 32.400002%
 Dataset has 14790 items
 Accuracy: 72.500000%
@@ -1652,11 +1620,7 @@ Accuracy: 72.500000%
 
 
 9
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 18 min(s) 41 sec(s)
-Missed: 208
-Dataset has 14790 items
+
 Accuracy: 27.700001%
 Dataset has 14790 items
 Accuracy: 65.400002%
@@ -1664,11 +1628,7 @@ Accuracy: 65.400002%
 
  
 10
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 21 min(s) 31 sec(s)
-Missed: 202
-Dataset has 14790 items
+
 Accuracy: 27.799999%
 Dataset has 14790 items
 Accuracy: 69.800003%
@@ -1676,11 +1636,7 @@ Accuracy: 69.800003%
 
 
 11
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 19 min(s) 36 sec(s)
-Missed: 222
-Dataset has 14790 items
+
 Accuracy: 19.600000%
 Dataset has 14790 items
 Accuracy: 40.000000%
@@ -1776,101 +1732,57 @@ Accuracy: 15.500000%
 Dataset has 14790 items
 Accuracy: 23.100000%
 1
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 15 min(s) 46 sec(s)
-Missed: 222
-Dataset has 14790 items
+
 Accuracy: 20.100000%
 Dataset has 14790 items
 Accuracy: 31.900000%
 2
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 15 min(s) 43 sec(s)
-Missed: 212
-Dataset has 14790 items
+
 Accuracy: 25.100000%
 Dataset has 14790 items
 Accuracy: 41.900002%
 3
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 15 min(s) 42 sec(s)
-Missed: 199
-Dataset has 14790 items
+
 Accuracy: 24.299999%
 Dataset has 14790 items
 Accuracy: 42.700001%
 4
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 16 min(s) 2 sec(s)
-Missed: 216
-Dataset has 14790 items
+
 Accuracy: 28.299999%
 Dataset has 14790 items
 Accuracy: 49.400002%
 5
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 15 min(s) 50 sec(s)
-Missed: 222
-Dataset has 14790 items
+
 Accuracy: 26.799999%
 Dataset has 14790 items
 Accuracy: 59.799999%
 6
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 15 min(s) 51 sec(s)
-Missed: 200
-Dataset has 14790 items
+
 Accuracy: 27.000000%
 Dataset has 14790 items
 Accuracy: 59.299999%
 7
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 16 min(s) 23 sec(s)
-Missed: 232
-Dataset has 14790 items
+
 Accuracy: 27.799999%
 Dataset has 14790 items
 Accuracy: 69.300003%
 8
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 16 min(s) 8 sec(s)
-Missed: 218
-Dataset has 14790 items
+
 Accuracy: 8.500000%
 Dataset has 14790 items
 Accuracy: 9.000000%
 9
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 16 min(s) 8 sec(s)
-Missed: 232
-Dataset has 14790 items
+
 Accuracy: 21.700001%
 Dataset has 14790 items
 Accuracy: 33.900002%
 10
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 16 min(s) 12 sec(s)
-Missed: 230
-Dataset has 14790 items
+
 Accuracy: 26.500000%
 Dataset has 14790 items
 Accuracy: 47.000000%
 11
-Dataset has 14790 items
-Done
-Took: 0 hr(s) 15 min(s) 37 sec(s)
-Missed: 183
-Dataset has 14790 items
+
 Accuracy: 8.400000%
 Dataset has 14790 items
 Accuracy: 12.400000%
@@ -2045,3 +1957,192 @@ Options
 - Small model testing - is the gradient the same every time?
 
 My softmax magnitude limiting was a bit dodgy
+
+Dataset has 14790 items
+Accuracy: 15.600000%
+Dataset has 14790 items
+Accuracy: 23.500000%
+1
+
+Accuracy: 23.400000%
+Dataset has 14790 items
+Accuracy: 33.799999%
+2
+
+Accuracy: 21.100000%
+Dataset has 14790 items
+Accuracy: 34.000000%
+3
+
+Accuracy: 26.600000%
+Dataset has 14790 items
+Accuracy: 47.700001%
+4
+
+Accuracy: 28.000000%
+Dataset has 14790 items
+Accuracy: 54.000000%
+5
+
+Accuracy: 32.299999%
+Dataset has 14790 items
+Accuracy: 60.599998%
+6
+
+Accuracy: 28.600000%
+Dataset has 14790 items
+Accuracy: 63.200001%
+7
+
+Accuracy: 28.700001%
+Dataset has 14790 items
+Accuracy: 70.000000%
+8
+
+Accuracy: 33.799999%
+Dataset has 14790 items
+Accuracy: 78.300003%
+9
+
+Accuracy: 35.000000%
+Dataset has 14790 items
+Accuracy: 81.800003%
+10
+
+Accuracy: 33.200001%
+Dataset has 14790 items
+Accuracy: 87.300003%
+11
+
+Accuracy: 33.400002%
+Dataset has 14790 items
+Accuracy: 93.599998%
+12
+
+Accuracy: 36.900002%
+Dataset has 14790 items
+Accuracy: 97.599998%
+13
+
+Accuracy: 34.900002%
+Dataset has 14790 items
+Accuracy: 97.800003%
+14
+
+Accuracy: 36.000000%
+Dataset has 14790 items
+Accuracy: 99.199997%
+15
+
+Accuracy: 33.200001%
+Dataset has 14790 items
+Accuracy: 98.800003%
+16
+
+Accuracy: 36.000000%
+Dataset has 14790 items
+Accuracy: 100.000000%
+17
+
+Accuracy: 36.000000%
+Dataset has 14790 items
+Accuracy: 100.000000%
+18
+
+Accuracy: 37.400002%
+Dataset has 14790 items
+Accuracy: 100.000000%
+19
+
+Accuracy: 35.599998%
+Dataset has 14790 items
+Accuracy: 100.000000%
+20
+
+Accuracy: 36.200001%
+Dataset has 14790 items
+Accuracy: 100.000000%
+21
+
+Accuracy: 35.000000%
+Dataset has 14790 items
+Accuracy: 100.000000%
+22
+
+Accuracy: 35.599998%
+Dataset has 14790 items
+Accuracy: 100.000000%
+23
+
+Accuracy: 38.400002%
+Dataset has 14790 items
+Accuracy: 100.000000%
+24
+
+Accuracy: 37.900002%
+Dataset has 14790 items
+Accuracy: 100.000000%
+25
+
+Accuracy: 35.900002%
+Dataset has 14790 items
+Accuracy: 100.000000%
+26
+
+Accuracy: 35.000000%
+Dataset has 14790 items
+Accuracy: 100.000000%
+27
+
+Accuracy: 39.200001%
+Dataset has 14790 items
+Accuracy: 100.000000%
+28
+
+Accuracy: 37.299999%
+Dataset has 14790 items
+Accuracy: 100.000000%
+29
+
+Accuracy: 36.299999%
+Dataset has 14790 items
+Accuracy: 100.000000%
+30
+Accuracy: 36.299999%
+Dataset has 14790 items
+Accuracy: 100.000000%
+
+Bug is fixed 
+It was the magnitude limiting on the softmax
+I assume that after a while of training, raw outputs reached +-15 and then the maths no longer worked and so accuracy collapsed
+
+Back to training models:
+
+Model 7c:
+256x256x3
+128x128x32 (3x3 conv stride 2)
+64x64x64 (3x3 conv stride 2)
+32x32x128 (3x3 conv stride 2)
+32x32x128 (3x3 conv stride 1)
+16x16x256 (3x3 conv stride 2)
+8x8x256 (3x3 conv stride 2)
+4x4x256 (max pool)
+4096
+1024 (FC) 
+47 (FC)
+
+Dropout of 0.2 on hidden layer
+Augmentations:
+Zoom 1.25x-2x p=0.3
+Rotation -90-90 p=0.3
+Horizontal flip p=0.3
+Gaussian blur 5x5 p=0.1
+Brightness 0.5-1.5 p=0.3
+Contrast 0.5-1.5 p=0.3
+Saturation 0.5-1.5 p=0.3
+Greyscale p=0.05
+
+This gives a 0.1 probability of no augmentation
+
+LR = 0.02
+BS = 64

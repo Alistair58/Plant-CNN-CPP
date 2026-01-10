@@ -36,13 +36,7 @@ static void trainBatch(CNN *n, Dataset *d, int batchSize,int numImageThreads,std
 static void train(CNN *n, Dataset *d, int numBatches,int batchSize,int numImageThreads, int numCnnThreads);
 static void test(CNN *n, Dataset *d, int numTest,bool testOnTrainingData,bool outputIndividuals);
 
-//DONE
-
-
 //TODO
-//Fix large gradient problem
-// - Run it again
-// - More unit tests
 //Test new larger model
 //Speed up
 
