@@ -53,38 +53,49 @@ int main(int argc,char **argv){
     const int numCnnThreads = 16;
     int mode = -1;
     bool restart = false;
-    //TODO turn back on dropout
-    float dropoutProbability = 0;
+    float dropoutProbability = 0.2;
 
     /*
-    Model 5:
-        128x128x3
-        64x64x30 (3x3 conv stride 2)
-        32x32x60 (3x3 conv stride 2)
-        16x16x120 (3x3 conv stride 2)
-        4x4x120 (max pool)
-        1920
-        1920 (FC)
+    Model 7c:
+        256x256x3
+        128x128x32 (3x3 conv stride 2)
+        64x64x64 (3x3 conv stride 2)
+        32x32x128 (3x3 conv stride 2)
+        32x32x128 (3x3 conv stride 1)
+        16x16x256 (3x3 conv stride 2)
+        8x8x256 (3x3 conv stride 2)
+        4x4x256 (max pool)
+        4096
+        1024 (FC) 
         47 (FC)
     */
-    std::vector<int> numNeurons = {1920,1920,47};
+    std::vector<int> numNeurons = {4096,1024,47};
     //includes the result of pooling (except final pooling)
-    std::vector<dimens> mapDimens(4);
-    mapDimens[0] = {3,128,128};
-    mapDimens[1] = {30,64,64};
-    mapDimens[2] = {60,32,32};
-    mapDimens[3] = {120,16,16};
+    std::vector<dimens> mapDimens(7);
+    mapDimens[0] = {3,256,256};
+    mapDimens[1] = {32,128,128};
+    mapDimens[2] = {64,64,64};
+    mapDimens[3] = {128,32,32};
+    mapDimens[4] = {128,32,32};
+    mapDimens[5] = {256,16,16};
+    mapDimens[6] = {256,8,8};
     //0 represents a pooling layer, the last one is excluded
-    std::vector<std::pair<int,int>> kernelSizes(3);
+    std::vector<std::pair<int,int>> kernelSizes(6);
     kernelSizes[0] = {3,3}; //h,w
     kernelSizes[1] = {3,3};
     kernelSizes[2] = {3,3};
+    kernelSizes[3] = {3,3};
+    kernelSizes[4] = {3,3};
+    kernelSizes[5] = {3,3};
     //pooling strides are included
-    std::vector<std::pair<int,int>> strides(4);
+    std::vector<std::pair<int,int>> strides(7);
     strides[0] = {2,2};//y,x - pooling strides are included
     strides[1] = {2,2};
     strides[2] = {2,2};
-    strides[3] = {4,4};
+    strides[3] = {1,1};
+    strides[4] = {2,2};
+    strides[5] = {2,2};
+    strides[6] = {2,2};
 
     bool padding = true;
 

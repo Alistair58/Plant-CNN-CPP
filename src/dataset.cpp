@@ -119,12 +119,11 @@ PlantImage *Dataset::randomImage(bool test
                     #if DEBUG
                         std::cout << "Loaded: "+fname+fileExtension << std::endl;
                     #endif 
-                    //TODO turn back on
-                    /*if(!test) ImageUtils::augment(plantImage->data
+                    if(!test) ImageUtils::augment(plantImage->data
                     #if PROFILING
                         ,parentTimer
                     #endif
-                    );*/
+                    );
                     return plantImage;
                 }
                 delete plantImage;

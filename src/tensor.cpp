@@ -1,8 +1,6 @@
 #include "tensor.hpp"
 #include <immintrin.h>
 
-//TODO remove
-#include <assert.h>
 Tensor::Tensor(const std::vector<int>& inputDimens){
     dimens = inputDimens;
     int numElems = 1;

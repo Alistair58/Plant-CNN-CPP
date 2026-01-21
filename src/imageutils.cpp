@@ -77,10 +77,16 @@ Tensor ImageUtils::fileToImageTensor(std::string fName
     return result;
 }
 
-void ImageUtils::saveData(std::string fName) const{
-    if(fName.length()>2 && fName.substr(0,3)!="C:/"){
-        fName = currDir+"\\"+fName; 
-    }
+void ImageUtils::saveData(std::string fname) const{
+    #ifdef __linux__ 
+        if(fname.length()>0 && fname[0]!='/'){
+            fname = currDir+"/"+fname; 
+        }
+    #elif _WIN32
+        if(fname.length()>2 && fname.substr(0,3)!="C:/"){
+            fname = currDir+"\\"+fname; 
+        }   
+    #endif
     std::vector<int> dimens = data.getDimens();
     if(dimens.size()!=3 || (dimens[0]!=3 && dimens[0]!=4)){
         throw std::invalid_argument("saveData can only be used on RGB or ARGB images");
@@ -103,11 +109,11 @@ void ImageUtils::saveData(std::string fName) const{
             outputData[i+2] = (unsigned char) inputData[channel2Row+x];
         }
     }
-    if(!stbi_write_jpg((fName).c_str(),width,height,3,outputData,width*height*3)){
+    if(!stbi_write_jpg((fname).c_str(),width,height,3,outputData,width*height*3)){
         std::cerr << "Could not save image\n";
     }
     else {
-        std::cout << "Saved "<< fName << std::endl;
+        std::cout << "Saved "<< fname << std::endl;
     }
     delete[] outputData;
 }
@@ -435,7 +441,7 @@ void ImageUtils::augment(Tensor &inp
     bool greyscaled = false;
     std::uniform_real_distribution<double> augmentOrNot(0, 1);
     double prob = augmentOrNot(localRng);
-    if(prob<0.25){ //Zoom in on 1 in 4
+    if(prob<0.3){ //Zoom in on 3 in 10
         //If you zoom in somewhere, other than the centre, you might miss the plant
         std::uniform_real_distribution<double> scaleFactorDist(1.25,2);
         ImageUtils::zoom(inp,scaleFactorDist(localRng)
@@ -445,8 +451,8 @@ void ImageUtils::augment(Tensor &inp
         );
     }
     prob = augmentOrNot(localRng);
-    if(prob<0.25){ //Rotate 1 in 4
-        std::uniform_real_distribution<double> angleDist(-std::numbers::pi/4,std::numbers::pi/4);
+    if(prob<0.3){ //Rotate 3 in 10
+        std::uniform_real_distribution<double> angleDist(-std::numbers::pi/2,std::numbers::pi/2);
         ImageUtils::rotate(inp,angleDist(localRng)
         #if PROFILING
             ,augmentTimer
@@ -454,7 +460,7 @@ void ImageUtils::augment(Tensor &inp
         );
     }
     prob = augmentOrNot(localRng);
-    if(prob<0.2){ //Flip 1 in 5
+    if(prob<0.3){ //Flip 3 in 10
         ImageUtils::horizontalFlip(inp
         #if PROFILING
             ,augmentTimer
@@ -472,7 +478,7 @@ void ImageUtils::augment(Tensor &inp
     }
    
     prob = augmentOrNot(localRng);
-    if(prob<0.0625){ //Blur 1 in 16
+    if(prob<0.1){ //Blur 1 in 10
         gaussianBlur(inp,5 //5x5 kernel
         #if PROFILING
             ,augmentTimer
@@ -480,8 +486,8 @@ void ImageUtils::augment(Tensor &inp
         );  
     }
     prob = augmentOrNot(localRng);
-    if(prob<0.2){ //Change brightness on 1 in 5
-        std::uniform_real_distribution<float> brightnessDist(0.5,1.75); 
+    if(prob<0.3){ //Change brightness on 3 in 10
+        std::uniform_real_distribution<float> brightnessDist(0.5,1.5); 
         float brightnessFactor = brightnessDist(localRng);
         changeBrightness(inp,brightnessFactor
         #if PROFILING
@@ -499,8 +505,8 @@ void ImageUtils::augment(Tensor &inp
         return;
     }
     prob = augmentOrNot(localRng);
-    if(prob<0.2){ //Change contrast on 1 in 5
-        std::uniform_real_distribution<float> contrastDist(0.5,2); 
+    if(prob<0.3){ //Change contrast on 3 in 10
+        std::uniform_real_distribution<float> contrastDist(0.5,1.5); 
         float contrastFactor = contrastDist(localRng);
         changeContrast(inp,contrastFactor
         #if PROFILING
@@ -509,8 +515,8 @@ void ImageUtils::augment(Tensor &inp
         );
     }
     prob = augmentOrNot(localRng);
-    if(prob<0.2){ //Change saturation on 1 in 5
-        std::uniform_real_distribution<float> saturationDist(0.5,2); 
+    if(prob<0.3){ //Change saturation on 3 in 10
+        std::uniform_real_distribution<float> saturationDist(0.5,1.5); 
         float saturationFactor = saturationDist(localRng);
         changeSaturation(inp,saturationFactor
         #if PROFILING

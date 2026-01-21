@@ -2146,3 +2146,242 @@ This gives a 0.1 probability of no augmentation
 
 LR = 0.02
 BS = 64
+
+
+Are you sure you want to reset the model to random weights? (Y/N) 
+y
+Model reset
+Done
+Took: 0 hr(s) 14 min(s) 57 sec(s)
+Missed: 201
+Accuracy: 12.500000%
+Accuracy: 13.300000%
+1
+
+Done
+Took: 0 hr(s) 14 min(s) 45 sec(s)
+Missed: 229
+Accuracy: 18.100000%
+Accuracy: 17.700001%
+2
+
+Done
+Took: 0 hr(s) 14 min(s) 29 sec(s)
+Missed: 255
+Accuracy: 22.100000%
+Accuracy: 20.200001%
+3
+
+Done
+Took: 0 hr(s) 15 min(s) 34 sec(s)
+Missed: 231
+Accuracy: 20.900000%
+Accuracy: 21.900000%
+4
+
+Done
+Took: 0 hr(s) 15 min(s) 59 sec(s)
+Missed: 226
+Accuracy: 23.700001%
+Accuracy: 22.799999%
+5
+
+Done
+Took: 0 hr(s) 14 min(s) 18 sec(s)
+Missed: 231
+Accuracy: 23.000000%
+Accuracy: 20.799999%
+6
+
+Done
+Took: 0 hr(s) 14 min(s) 4 sec(s)
+Missed: 219
+Accuracy: 29.600000%
+Accuracy: 26.600000%
+7
+
+Done
+Took: 0 hr(s) 13 min(s) 56 sec(s)
+Missed: 230
+Accuracy: 24.799999%
+Accuracy: 29.799999%
+8
+
+Done
+Took: 0 hr(s) 15 min(s) 25 sec(s)
+Missed: 239
+Accuracy: 25.000000%
+Accuracy: 30.100000%
+9
+
+Done
+Took: 0 hr(s) 14 min(s) 6 sec(s)
+Missed: 224
+Accuracy: 27.000000%
+Accuracy: 28.799999%
+10
+
+Done
+Took: 0 hr(s) 15 min(s) 26 sec(s)
+Missed: 235
+Accuracy: 31.799999%
+Accuracy: 32.799999%
+11
+
+Done
+Took: 0 hr(s) 14 min(s) 16 sec(s)
+Missed: 232
+Accuracy: 32.700001%
+Accuracy: 36.000000%
+12
+
+Done
+Took: 0 hr(s) 14 min(s) 6 sec(s)
+Missed: 231
+Accuracy: 28.799999%
+Accuracy: 34.599998%
+13
+
+Done
+Took: 0 hr(s) 13 min(s) 49 sec(s)
+Missed: 236
+Accuracy: 27.299999%
+Accuracy: 33.200001%
+14
+
+Done
+Took: 0 hr(s) 13 min(s) 57 sec(s)
+Missed: 237
+Accuracy: 35.099998%
+Accuracy: 35.599998%
+15
+
+Done
+Took: 0 hr(s) 14 min(s) 11 sec(s)
+Missed: 215
+Accuracy: 30.900000%
+Accuracy: 34.500000%
+16
+
+Done
+Took: 0 hr(s) 13 min(s) 53 sec(s)
+Missed: 229
+Accuracy: 33.400002%
+Accuracy: 39.099998%
+17
+
+Done
+Took: 0 hr(s) 13 min(s) 54 sec(s)
+Missed: 229
+Accuracy: 29.900000%
+Accuracy: 36.000000%
+18
+
+Done
+Took: 0 hr(s) 14 min(s) 3 sec(s)
+Missed: 220
+Accuracy: 36.400002%
+Accuracy: 40.799999%
+19
+
+Done
+Took: 0 hr(s) 14 min(s) 6 sec(s)
+Missed: 240
+Accuracy: 39.900002%
+Accuracy: 41.799999%
+20
+
+Done
+Took: 0 hr(s) 14 min(s) 17 sec(s)
+Missed: 214
+Accuracy: 34.900002%
+Accuracy: 41.900002%
+21
+
+Done
+Took: 0 hr(s) 14 min(s) 5 sec(s)
+Missed: 263
+Accuracy: 37.900002%
+Accuracy: 46.400002%
+22
+
+Done
+Took: 0 hr(s) 16 min(s) 5 sec(s)
+Missed: 228
+Accuracy: 36.799999%
+Accuracy: 42.900002%
+23
+
+Done
+Took: 0 hr(s) 13 min(s) 58 sec(s)
+Missed: 200
+Accuracy: 37.900002%
+Accuracy: 44.299999%
+24
+
+Done
+Took: 0 hr(s) 14 min(s) 11 sec(s)
+Missed: 228
+Accuracy: 39.500000%
+Accuracy: 46.700001%
+25
+Accuracy: 37.900002%
+Accuracy: 48.900002%
+26
+[#######   ] (175/250) 70% complete   Most recent save at batch 175
+
+Accuracy: 41.000000%
+Accuracy: 46.000000%
+1 (only 75 batches)
+Accuracy: 41.200001%
+Accuracy: 51.200001%
+2
+Accuracy: 33.500000%
+Accuracy: 43.799999%
+3
+Accuracy: 36.799999%
+Accuracy: 50.500000%
+4
+Accuracy: 38.400002%
+Accuracy: 51.500000%
+5
+Accuracy: 42.099998%
+Accuracy: 56.599998%
+6
+Accuracy: 39.000000%
+Accuracy: 47.299999%
+7
+Accuracy: 41.200001%
+Accuracy: 53.099998%
+8
+Accuracy: 42.500000%
+Accuracy: 56.799999%
+9
+Accuracy: 42.799999%
+Accuracy: 56.900002%
+10
+Accuracy: 43.900002%
+Accuracy: 59.400002%
+11
+Accuracy: 42.099998%
+Accuracy: 56.900002%
+12
+Accuracy: 42.099998%
+Accuracy: 58.400002%
+13
+Accuracy: 43.200001%
+Accuracy: 58.400002%
+14
+Accuracy: 45.299999%
+Accuracy: 65.400002%
+15
+Accuracy: 41.099998%
+Accuracy: 60.599998%
+16
+Accuracy: 47.200001%
+Accuracy: 65.199997%
+17
+Accuracy: 42.700001%
+Accuracy: 58.799999%
+18
+[#######   ] (197/250) 78% complete   Most recent save at batch 175^C
