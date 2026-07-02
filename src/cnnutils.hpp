@@ -123,8 +123,8 @@ class CnnUtils {
         //floorMod(5,-2) = -1
         static inline int floorMod(int x, int y) {
             x %= y;
-            if (x<0) {
-                x += y;
+            if (x<0 && y>0 || x>0 && y<0){
+                x = -x;
             }
             return x;
         }
@@ -163,7 +163,6 @@ class CnnUtils {
             Timer *parentTimer = nullptr
         #endif
         );
-        void resetGrad(std::vector<Tensor>& grad);
 
         //(GET|SET)TERS
         std::vector<dimens> getMapDimens(){ return mapDimens; }
@@ -172,6 +171,7 @@ class CnnUtils {
         int applyGradient(std::vector<Tensor>& values, std::vector<Tensor>& gradient,int batchSize);
 };
 
+//Both inputs must have at least 8 floats allocated to them
 inline float CnnUtils::dotProduct8f(float *X,float *Y){
     __m256 a = _mm256_loadu_ps(X);       // Load 8 floats
     __m256 b = _mm256_loadu_ps(Y);       // Load 8 floats

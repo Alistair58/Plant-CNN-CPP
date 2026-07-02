@@ -1379,25 +1379,3 @@ void CnnUtils::saveMaps(){  //For debugging use
     mapsFile << jsonMaps.dump();
     mapsFile.close();
 }
-
-void CnnUtils::resetGrad(std::vector<Tensor>& grad){
-    for(Tensor& t:grad){
-        size_t size = t.getTotalSize();
-        float *tData = t.getData();
-        memset(
-            tData,
-            0,
-            sizeof(float)*size
-        );
-        Tensor *biases = t.getBiases();
-        if(biases!=nullptr){
-            float *biasesData = biases->getData();
-            size_t biasesSize = biases->getTotalSize();
-            memset(
-                biasesData,
-                0,
-                sizeof(float)*biasesSize
-            );
-        }
-    }
-}

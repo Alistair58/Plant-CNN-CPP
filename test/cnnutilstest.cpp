@@ -5,12 +5,12 @@
 class MockCnnUtils: public CnnUtils {
     public:
         //Make some of the attributes public for easier testing
-        std::vector<Tensor> kernels; 
-        std::vector<Tensor> kernelsGrad; 
-        std::vector<Tensor> activations;
-        std::vector<Tensor> weights;
-        std::vector<Tensor> weightsGrad; 
-        std::vector<Tensor> maps; 
+        using CnnUtils::kernels;
+        using CnnUtils::weights;
+        using CnnUtils::maps;
+        using CnnUtils::activations;
+        using CnnUtils::kernelsGrad;
+        using CnnUtils::weightsGrad;
         MockCnnUtils(
             std::vector<int> numNeurons,
             std::vector<dimens> mapDimens,
@@ -44,6 +44,8 @@ MockCnnUtils::MockCnnUtils(
     this->kernelSizes = kernelSizes;
     this->strides = strides;
     this->padding = padding;
+    this->kernels = kernels;
+    this->weights = weights;
     this->LR = LR;
     //Same code as CNN constructor
     kernelsGrad = std::vector<Tensor>(kernels.size());
@@ -221,34 +223,34 @@ TEST_F(CnnUtilsTest,softmaxWorks){
 
 
 TEST_F(CnnUtilsTest,dotProduct8fWorks){
-    float xTypicalCase1[] = {1,2,3,4,5};
-    float yTypicalCase1[] = {11,30,1,0,2};
-    float typicalCase1Correct = 84.0f;
+    float xTypicalCase1[] = {1, 2, 3,4,5,6,7,8};
+    float yTypicalCase1[] = {11,30,1,0,2,1,2,91};
+    float typicalCase1Correct = 832.0f;
     float typicalCase1Res = CnnUtils::dotProduct8f(xTypicalCase1,yTypicalCase1);
     EXPECT_FLOAT_EQ(typicalCase1Res,typicalCase1Correct);
 
-    float xTypicalCase2[] = {1.5f,-2.7f,300,42.1,-67.1};
-    float yTypicalCase2[] = {-1,12.123f,-7,202,3};
-    float typicalCase2Correct = 6168.6679f;
+    float xTypicalCase2[] = { 1.5f,-2.7f,   300,42.1,-67.1,12,   0.01f, -0.22f};
+    float yTypicalCase2[] = {-1,   12.123f,-7,  202,  3,  -1.1f, 0.01f, -101};
+    float typicalCase2Correct = 6177.688;
     float typicalCase2Res = CnnUtils::dotProduct8f(xTypicalCase2,yTypicalCase2);
     EXPECT_FLOAT_EQ(typicalCase2Res,typicalCase2Correct);
 
-    float xSamePtr[] = {-60,1,2,3,44};
-    float samePtrCorrect = 5550.0f;
+    float xSamePtr[] = {-60,1,2,3,44,0.1,-0.1,75.75f};
+    float samePtrCorrect = 11288.0825f;
     float samePtrRes = CnnUtils::dotProduct8f(xSamePtr,xSamePtr);
     EXPECT_FLOAT_EQ(samePtrRes,samePtrCorrect);
 }
 
 TEST_F(CnnUtilsTest,horizontalSumWorks){
-    float typicalCase1Arr[] = {1,2,3,4,5};
+    float typicalCase1Arr[] = {1,2,3,4,5,6,7,8};
     __m256 typicalCase1 = _mm256_loadu_ps(typicalCase1Arr);
-    float typicalCase1Correct = 15;
+    float typicalCase1Correct = 36;
     float typicalCase1Res =  CnnUtils::horizontalSum(typicalCase1);
     EXPECT_FLOAT_EQ(typicalCase1Res,typicalCase1Correct);
 
-    float typicalCase2Arr[] = {-1,2.2,300.34f,-6767.1f,23};
+    float typicalCase2Arr[] = {-1, 2.2, 300.34f, -6767.1f, 23, -0.01f, 0, 1};
     __m256 typicalCase2 = _mm256_loadu_ps(typicalCase2Arr);
-    float typicalCase2Correct = -6442.56f;
+    float typicalCase2Correct = -6441.57f;
     float typicalCase2Res =  CnnUtils::horizontalSum(typicalCase2);
     EXPECT_FLOAT_EQ(typicalCase2Res,typicalCase2Correct);
 }
@@ -406,6 +408,7 @@ TEST_F(CnnUtilsTest,applyGradientsTypicalCase){
     const int batchSize = 4;
     cnnUtils->applyGradients(batchSize);
 
+    //Check that the kernels and weights have been modified correctly
     for(int i=0;i<cnnUtils->kernels[0].getTotalSize();i++){
         EXPECT_FLOAT_EQ(*(cnnUtils->kernels[0])[i],*(kernelsCorrect[0])[i]);
     }
@@ -419,23 +422,59 @@ TEST_F(CnnUtilsTest,applyGradientsTypicalCase){
     for(int i=0;i<cnnUtils->weights[0].getBiases()->getTotalSize();i++){
         EXPECT_FLOAT_EQ(*(*cnnUtils->weights[0].getBiases())[i],*weightsBiasesCorrect[i]);
     }
+
+    //Check that the gradients have been reset to 0
+    for(int i=0;i<cnnUtils->kernelsGrad[0].getTotalSize();i++){
+        EXPECT_FLOAT_EQ(*(cnnUtils->kernelsGrad[0])[i],0);
+    }
+    for(int i=0;i<cnnUtils->kernelsGrad[0].getBiases()->getTotalSize();i++){
+        EXPECT_FLOAT_EQ(*(*cnnUtils->kernelsGrad[0].getBiases())[i],0);
+    }
+
+    for(int i=0;i<cnnUtils->weightsGrad[0].getTotalSize();i++){
+        EXPECT_FLOAT_EQ(*(cnnUtils->weightsGrad[0])[i],0);
+    }
+    for(int i=0;i<cnnUtils->weightsGrad[0].getBiases()->getTotalSize();i++){
+        EXPECT_FLOAT_EQ(*(*cnnUtils->weightsGrad[0].getBiases())[i],0);
+    }
+}
+TEST_F(CnnUtilsTest,variableSizedConvolutionSimpleNoPad){
+    //TODO
+    //Tensor image({3,});
+    //convolution();
 }
 
-TEST_F(CnnUtilsTest,resetGradWorks){
-    //TODO reset grad, and assert it equals 0
+
+
+TEST_F(CnnUtilsTest,variableSizedConvolution5x5Stride2NoPad){
+
 }
+
+//3x3 is treated specially
+//x stride 1 on 3x3 is also treated differently
+TEST_F(CnnUtilsTest,variableSizedConvolution3x3Stride1NoPad){
+
+}
+
+TEST_F(CnnUtilsTest,variableSizedConvolution3x3Stride2NoPad){
+
+}
+
+//Anything with width >= 8 is treated specially
+TEST_F(CnnUtilsTest,variableSizedConvolution9x9Stride2NoPad){
+
+}
+
 
 TEST_F(CnnUtilsTest,fixedSizedConvolutionWorks){
-    //Do a convolution for all possible code paths
+
 }
 
 TEST_F(CnnUtilsTest,prePaddedConvolutionWorks){
 
 }
 
-TEST_F(CnnUtilsTest,variableSizedConvolutionWorks){
 
-}
 
 TEST_F(CnnUtilsTest,maxPoolWorks){
 
