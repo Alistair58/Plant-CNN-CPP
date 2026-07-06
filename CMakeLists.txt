@@ -102,7 +102,7 @@ elseif(${TEST})
         -fsanitize=address,undefined
         -fno-omit-frame-pointer
         -g
-        -O1
+        -O0
         -march=native
         -mavx2
     )

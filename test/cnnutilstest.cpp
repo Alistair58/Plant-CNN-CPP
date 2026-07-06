@@ -320,7 +320,7 @@ TEST_F(CnnUtilsTest,applyGradientsSimpleCase){
                                 0.9,  -1.1,    0.9,
                                 1.9,  -0.6,  1.9};
     kernelsCorrect[0].slice({1,1}) = {-1.1,  1.9, -0.1,
-                                0.1, 1.4, -0.9,
+                                0.1, 1.4, -1.1,
                                 0.9, 0.4,  0.1};
     Tensor kernelsBiasesCorrect({2});
     kernelsBiasesCorrect = {0.9,-1.1};
@@ -399,10 +399,10 @@ TEST_F(CnnUtilsTest,applyGradientsTypicalCase){
 
     std::vector<Tensor> weightsCorrect(1);
     weightsCorrect[0] = Tensor({2,4});
-    weightsCorrect[0].slice({0}) = {0.99,1.02,-2.99,3.98};
+    weightsCorrect[0].slice({0}) = {0.99,2.02,-2.99,3.98};
     weightsCorrect[0].slice({1}) = {0.05,4.98, -0.99, 3.4};
     Tensor weightsBiasesCorrect({2});
-    weightsBiasesCorrect = {1.1,-0.1};
+    weightsBiasesCorrect = {0.2,-0.1};
 
 
     const int batchSize = 4;
@@ -438,10 +438,89 @@ TEST_F(CnnUtilsTest,applyGradientsTypicalCase){
         EXPECT_FLOAT_EQ(*(*cnnUtils->weightsGrad[0].getBiases())[i],0);
     }
 }
-TEST_F(CnnUtilsTest,variableSizedConvolutionSimpleNoPad){
-    //TODO
-    //Tensor image({3,});
-    //convolution();
+
+TEST_F(CnnUtilsTest,variableSizedConvolution3x3SimpleNoPad){
+    Tensor image({3,4,4});
+    image.slice({0}) = {1,1,1,1,
+                        1,1,1,1,
+                        1,1,1,1,
+                        1,1,1,1};
+    image.slice({1}) = {2,2,2,2,
+                        2,2,2,2,
+                        2,2,2,2,
+                        2,2,2,2};
+    image.slice({2}) = {4,4,4,4,
+                        4,4,4,4,
+                        4,4,4,4,
+                        4,4,4,4};
+    Tensor kernel({3,3,3});
+    kernel.slice({0}) = {2,2,2,
+                         2,2,2,
+                         2,2,2};
+    kernel.slice({1}) = {1,1,1,
+                         1,1,1,
+                         1,1,1};
+    kernel.slice({2}) = {0,0,0,
+                         0,0,0,
+                         0,0,0};
+
+    Tensor res = CnnUtils::convolution(image,kernel,1,1,false);
+    
+    std::vector<int> correctDimens = {2,2};
+    Tensor correctRes(correctDimens);
+    correctRes = {36,36,36,36};
+
+
+    std::vector<int> resDimens = res.getDimens();
+    ASSERT_EQ(resDimens.size(),correctDimens.size());
+    for(int i=0;i<resDimens.size();i++){
+        ASSERT_EQ(resDimens[i],correctDimens[i]);
+    }
+    for(int i=0;i<res.getTotalSize();i++){
+        ASSERT_FLOAT_EQ(*res[i],*correctRes[i]);
+    }
+}
+
+TEST_F(CnnUtilsTest,variableSizedConvolution3x3NoPad){
+    Tensor image({3,4,4});
+    image.slice({0}) = {1,1,1,1,
+                        1,1,1,1,
+                        1,1,0,0,
+                        1,1,0,0};
+    image.slice({1}) = {2,2,2,2,
+                        2,-1,2,2,
+                        2,-1,2,2,
+                        2,2,2,2};
+    image.slice({2}) = {0,4,0,4,
+                        4,4,4,4,
+                        4,4,0,4,
+                        4,4,4,4};
+    Tensor kernel({3,3,3});
+    kernel.slice({0}) = {1,2,3,
+                         1,1,1,
+                         3,2,1};
+    kernel.slice({1}) = {0,1,0,
+                         0,1,0,
+                         0,1,0};
+    kernel.slice({2}) = {-1,0,0,
+                         1,-5,0,
+                         0,0,0};
+
+    Tensor res = CnnUtils::convolution(image,kernel,1,1,false);
+    
+    std::vector<int> correctDimens = {2,2};
+    Tensor correctRes(correctDimens);
+    correctRes = {-0.02,-0.02,-0.07,16};
+
+
+    std::vector<int> resDimens = res.getDimens();
+    ASSERT_EQ(resDimens.size(),correctDimens.size());
+    for(int i=0;i<resDimens.size();i++){
+        ASSERT_EQ(resDimens[i],correctDimens[i]);
+    }
+    for(int i=0;i<res.getTotalSize();i++){
+        ASSERT_FLOAT_EQ(*res[i],*correctRes[i]);
+    }
 }
 
 

@@ -417,7 +417,7 @@ Tensor CnnUtils::convolution(const Tensor& image,Tensor& kernel,const int xStrid
                     //scalar tail - remaining outputs for this row
                     for (;x<originalImgXBound;x++) {
                         //x-1 as x is the centre
-                        const int row0 = paddedImageChannel + x-1;
+                        const int row0 = paddedImageChannel+(y-1)*paddedImageChildSizes1 + x-1;
                         const int row1 = row0 + paddedImageChildSizes1;
                         const int row2 = row1 + paddedImageChildSizes1;
                         resultData[resultRow + newX] +=
